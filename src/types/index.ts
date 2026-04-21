@@ -1,3 +1,5 @@
+import { Document, Types } from 'mongoose';
+
 /**
  * Base response interface for notification services.
  */
@@ -16,4 +18,31 @@ export interface MultiChannelNotificationResponse {
   sms?: NotificationResponse | null;
   success?: boolean;
   error?: string;
+}
+
+export type UserRole = 'customer' | 'super_admin' | 'admin' | 'staff' | 'rider';
+
+export interface IUser extends Document {
+  firstName: string;
+  lastName: string;
+  email: string;
+  password: string;
+  roles: UserRole[];
+  phone: string;
+  isActive: boolean;
+  isVerified: boolean;
+  avatar?: string | null;
+  avatarPublicId?: string | null;
+  otpCode?: string;
+  otpExpiry?: Date;
+  resetPasswordToken?: string;
+  resetPasswordExpiry?: Date;
+  lastLoginAt?: Date;
+  notificationPreferences?: {
+    email?: boolean;
+    sms?: boolean;
+    inApp?: boolean;
+  };
+  createdAt: Date;
+  updatedAt: Date;
 }
