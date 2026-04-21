@@ -24,11 +24,12 @@ const userSchema = new Schema<IUser>(
       required: true,
       select: false,
     },
-    roles: {
-      type: [String],
-      enum: ['customer', 'super_admin', 'admin', 'staff', 'rider'],
-      default: ['customer'],
-    },
+    roles: [
+      {
+        type: Schema.Types.ObjectId,
+        ref: 'Role',
+      },
+    ],
     phone: {
       type: String,
       required: true,

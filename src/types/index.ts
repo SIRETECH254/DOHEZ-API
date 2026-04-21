@@ -20,14 +20,25 @@ export interface MultiChannelNotificationResponse {
   error?: string;
 }
 
-export type UserRole = 'customer' | 'super_admin' | 'admin' | 'staff' | 'rider';
+export type UserRoleType = 'customer' | 'super_admin' | 'admin' | 'staff' | 'rider';
+
+export interface IRole extends Document {
+  name: UserRoleType | string;
+  displayName: string;
+  description?: string;
+  permissions: string[];
+  isActive: boolean;
+  isSystemRole: boolean;
+  createdAt: Date;
+  updatedAt: Date;
+}
 
 export interface IUser extends Document {
   firstName: string;
   lastName: string;
   email: string;
   password: string;
-  roles: UserRole[];
+  roles: Types.ObjectId[] | IRole[];
   phone: string;
   isActive: boolean;
   isVerified: boolean;

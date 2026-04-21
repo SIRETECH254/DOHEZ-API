@@ -1,0 +1,68 @@
+import mongoose from 'mongoose';
+import dotenv from 'dotenv';
+import Role from '../models/Role';
+
+dotenv.config();
+
+const roles = [
+  {
+    name: 'super_admin',
+    displayName: 'Super Admin',
+    description: 'Complete system access and management.',
+    isSystemRole: true,
+    permissions: ['all'],
+  },
+  {
+    name: 'admin',
+    displayName: 'Administrator',
+    description: 'Full business and user management.',
+    isSystemRole: true,
+    permissions: ['manage_users', 'manage_vendors', 'manage_orders'],
+  },
+  {
+    name: 'staff',
+    displayName: 'Staff',
+    description: 'Internal operational access.',
+    isSystemRole: true,
+    permissions: ['view_orders', 'update_order_status'],
+  },
+  {
+    name: 'rider',
+    displayName: 'Delivery Rider',
+    description: 'Access to delivery tasks and updates.',
+    isSystemRole: true,
+    permissions: ['view_assigned_orders', 'update_delivery_status'],
+  },
+  {
+    name: 'customer',
+    displayName: 'Customer',
+    description: 'Standard end-user access.',
+    isSystemRole: true,
+    permissions: ['place_order', 'view_own_orders'],
+  },
+];
+
+const seedRoles = async () => {
+  try {
+    const mongoUri = process.env.MONGO_URI || 'mongodb://localhost:27017/dohez';
+    await mongoose.connect(mongoUri);
+    console.log('Connected to MongoDB for seeding roles...');
+
+    for (const roleData of roles) {
+      await Role.findOneAndUpdate(
+        { name: roleData.name },
+        roleData,
+        { upsert: true, new: true }
+      );
+      console.log(`Role seeded: ${roleData.name}`);
+    }
+
+    console.log('Role seeding completed successfully.');
+    process.exit(0);
+  } catch (error) {
+    console.error('Error seeding roles:', error);
+    process.exit(1);
+  }
+};
+
+seedRoles();

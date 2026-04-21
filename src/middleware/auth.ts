@@ -1,7 +1,7 @@
 import jwt from 'jsonwebtoken';
 import { Request, Response, NextFunction } from 'express';
 import User from '../models/User';
-import { IUser, UserRole } from '../types';
+import { IUser, IRole, UserRoleType } from '../types';
 
 declare global {
   namespace Express {
@@ -27,7 +27,7 @@ export const authenticateToken = async (req: Request, res: Response, next: NextF
     }
 
     const decoded = jwt.verify(token, process.env.JWT_SECRET!) as { userId: string };
-    const user = await User.findById(decoded.userId);
+    const user = await User.findById(decoded.userId).populate('roles');
 
     if (!user) {
       return res.status(401).json({
@@ -49,6 +49,7 @@ export const authenticateToken = async (req: Request, res: Response, next: NextF
     return res.status(401).json({
       success: false,
       message: 'Invalid or expired token',
+      error: error instanceof Error ? error.message : 'Unknown error',
     });
   }
 };
@@ -56,7 +57,7 @@ export const authenticateToken = async (req: Request, res: Response, next: NextF
 /**
  * Middleware to authorize roles
  */
-export const authorizeRoles = (...allowedRoles: UserRole[]) => {
+export const authorizeRoles = (allowedRoles: UserRoleType[]) => {
   return (req: Request, res: Response, next: NextFunction) => {
     if (!req.user) {
       return res.status(401).json({
@@ -65,7 +66,8 @@ export const authorizeRoles = (...allowedRoles: UserRole[]) => {
       });
     }
 
-    const hasRole = req.user.roles.some((role) => allowedRoles.includes(role));
+    const roles = req.user.roles as IRole[];
+    const hasRole = roles.some((role) => allowedRoles.includes(role.name as UserRoleType));
 
     if (!hasRole) {
       return res.status(403).json({
@@ -76,4 +78,28 @@ export const authorizeRoles = (...allowedRoles: UserRole[]) => {
 
     next();
   };
+};
+
+/**
+ * Middleware to require admin or super_admin role
+ */
+export const requireAdmin = (req: Request, res: Response, next: NextFunction) => {
+  if (!req.user) {
+    return res.status(401).json({
+      success: false,
+      message: 'Unauthorized',
+    });
+  }
+
+  const roles = req.user.roles as IRole[];
+  const isAdmin = roles.some((role) => ['admin', 'super_admin'].includes(role.name));
+
+  if (!isAdmin) {
+    return res.status(403).json({
+      success: false,
+      message: 'Admin access required',
+    });
+  }
+
+  next();
 };
