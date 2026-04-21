@@ -6,6 +6,8 @@ import path from "path";
 import { createServer } from "http";
 import { Server } from "socket.io";
 import swaggerConfig from "./config/swagger";
+import authRoutes from "./routes/authRoutes";
+import roleRoutes from "./routes/roleRoutes";
 
 // Initialize application
 const app = express();
@@ -102,8 +104,9 @@ app.use(
   swaggerConfig.swaggerUi.setup(swaggerConfig.specs, swaggerConfig.options)
 );
 
-// Route Registrations (Currently empty)
-// Example: app.use("/api/auth", authRoutes);
+// Route Registrations
+app.use("/api/auth", authRoutes);
+app.use("/api/roles", roleRoutes);
 
 // Socket.io setup for real-time features
 const server = createServer(app);
