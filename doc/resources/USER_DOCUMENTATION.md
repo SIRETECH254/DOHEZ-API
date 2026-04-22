@@ -341,7 +341,7 @@ export const getAllUsers = async (req: Request, res: Response, next: NextFunctio
         { email: { $regex: search, $options: "i" } }
       ];
     }
-    const options = { page: parseInt(page as string), limit: parseInt(limit as string) };
+    const options = { page: parseInt(page as string) || 1, limit: parseInt(limit as string) || 10 };
     const users = await User.find(query)
       .select("-password -otpCode -resetPasswordToken")
       .populate("roles")
@@ -349,7 +349,21 @@ export const getAllUsers = async (req: Request, res: Response, next: NextFunctio
       .limit(options.limit)
       .skip((options.page - 1) * options.limit);
     const total = await User.countDocuments(query);
-    res.status(200).json({ success: true, data: { users, pagination: { currentPage: options.page, totalPages: Math.ceil(total / options.limit), totalUsers: total } } });
+    const totalPages = Math.ceil(total / options.limit);
+
+    res.status(200).json({ 
+      success: true, 
+      data: { 
+        users, 
+        pagination: { 
+          currentPage: options.page, 
+          totalPages: totalPages, 
+          totalUsers: total,
+          hasNextPage: options.page < totalPages,
+          hasPrevPage: options.page > 1
+        } 
+      } 
+    });
   } catch (error: any) {
     next(error);
   }
@@ -1114,7 +1128,9 @@ curl -X GET "http://localhost:3500/api/users?page=1&limit=10" \
     "pagination": {
       "currentPage": 1,
       "totalPages": 1,
-      "totalUsers": 1
+      "totalUsers": 1,
+      "hasNextPage": false,
+      "hasPrevPage": false
     }
   }
 }

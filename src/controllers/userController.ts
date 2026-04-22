@@ -168,7 +168,7 @@ export const getAllUsers = async (req: Request, res: Response, next: NextFunctio
       ];
     }
 
-    const options = { page: parseInt(page as string), limit: parseInt(limit as string) };
+    const options = { page: parseInt(page as string) || 1, limit: parseInt(limit as string) || 10 };
     const users = await User.find(query)
       .select("-password -otpCode -resetPasswordToken")
       .populate("roles")
@@ -177,6 +177,7 @@ export const getAllUsers = async (req: Request, res: Response, next: NextFunctio
       .skip((options.page - 1) * options.limit);
       
     const total = await User.countDocuments(query);
+    const totalPages = Math.ceil(total / options.limit);
 
     res.status(200).json({
       success: true,
@@ -184,8 +185,10 @@ export const getAllUsers = async (req: Request, res: Response, next: NextFunctio
         users,
         pagination: {
           currentPage: options.page,
-          totalPages: Math.ceil(total / options.limit),
-          totalUsers: total
+          totalPages: totalPages,
+          totalUsers: total,
+          hasNextPage: options.page < totalPages,
+          hasPrevPage: options.page > 1
         }
       }
     });

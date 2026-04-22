@@ -20,13 +20,13 @@ export const generateTokens = (user: IUser) => {
   const accessToken = jwt.sign(
     payload,
     process.env.JWT_SECRET!,
-    { expiresIn: (process.env.JWT_ACCESS_EXPIRY || '15m') as any }
+    { expiresIn: (process.env.JWT_EXPIRES_IN || '15m') as any }
   );
 
   const refreshToken = jwt.sign(
     { userId: user._id },
     (process.env.JWT_REFRESH_SECRET || process.env.JWT_SECRET!) as string,
-    { expiresIn: (process.env.JWT_REFRESH_EXPIRY || '7d') as any }
+    { expiresIn: (process.env.JWT_EXPIRES_IN || '7d') as any }
   );
 
   return { accessToken, refreshToken };

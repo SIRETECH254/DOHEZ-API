@@ -1,4 +1,5 @@
 import express from 'express';
+import upload from '../middleware/upload';
 import {
   getUserProfile,
   updateUserProfile,
@@ -23,7 +24,7 @@ import { authenticateToken, authorizeRoles, requireAdmin } from '../middleware/a
 const router = express.Router();
 
 router.get('/profile', authenticateToken, getUserProfile);
-router.put('/profile', authenticateToken, updateUserProfile);
+router.put('/profile', authenticateToken, upload.single('avatar'), updateUserProfile);
 router.put('/change-password', authenticateToken, changePassword);
 router.get('/notifications', authenticateToken, getNotificationPreferences);
 router.put('/notifications', authenticateToken, updateNotificationPreferences);
@@ -32,7 +33,7 @@ router.get('/customers', authenticateToken, authorizeRoles(['admin', 'super_admi
 router.get('/staff', authenticateToken, getStaff);
 router.get('/', authenticateToken, authorizeRoles(['admin', 'super_admin']), getAllUsers);
 router.get('/:userId', authenticateToken, authorizeRoles(['admin', 'super_admin']), getUserById);
-router.put('/:userId', authenticateToken, authorizeRoles(['admin', 'super_admin']), updateUser);
+router.put('/:userId', authenticateToken, authorizeRoles(['admin', 'super_admin']), upload.single('avatar'), updateUser);
 router.put('/:userId/status', authenticateToken, authorizeRoles(['admin', 'super_admin']), updateUserStatus);
 router.put('/:userId/admin', authenticateToken, requireAdmin, setUserAdmin);
 router.get('/:userId/roles', authenticateToken, authorizeRoles(['admin', 'super_admin']), getUserRoles);
