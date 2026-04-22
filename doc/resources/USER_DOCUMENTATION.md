@@ -201,17 +201,17 @@ export const getUserProfile = async (req: Request, res: Response, next: NextFunc
 ```
 
 #### `updateUserProfile()`
-**Purpose:** Update current user profile  
+**Purpose:** Update current user profile, including avatar image.  
 **Access:** Authenticated users  
-**Validation:** User must exist, valid phone number  
-**Process:** Update profile fields and save  
+**Validation:** User must exist, valid phone number, image size limit  
+**Process:** Update profile fields and save. If file provided, upload to Cloudinary and delete old avatar.  
 **Response:** Success message and updated profile
 
 **Controller Implementation:**
 ```typescript
 export const updateUserProfile = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
-    const { firstName, lastName, phone } = req.body;
+    const { firstName, lastName, phone, avatar } = req.body;
     const user = await User.findById(req.user?._id);
 
     if (!user) return next(errorHandler(404, "User not found"));
@@ -221,6 +221,17 @@ export const updateUserProfile = async (req: Request, res: Response, next: NextF
     if (phone) {
       if (!validator.isMobilePhone(phone)) return next(errorHandler(400, "Please provide a valid phone number"));
       user.phone = phone;
+    }
+
+    if (req.file) {
+      const uploadResult = await uploadToCloudinary(req.file, "dohez/avatars");
+      if (user.avatarPublicId) await deleteFromCloudinary(user.avatarPublicId);
+      user.avatar = uploadResult.url;
+      user.avatarPublicId = uploadResult.public_id;
+    } else if (avatar === null || avatar === "") {
+        if (user.avatarPublicId) await deleteFromCloudinary(user.avatarPublicId);
+        user.avatar = null;
+        user.avatarPublicId = null;
     }
 
     await user.save();
@@ -366,24 +377,37 @@ export const getUserById = async (req: Request, res: Response, next: NextFunctio
 ```
 
 #### `updateUser()`
-**Purpose:** Update user record  
+**Purpose:** Update user record by ID, including avatar.  
 **Access:** Admin  
 **Validation:** User must exist  
-**Process:** Update fields and save  
+**Process:** Update fields, handle avatar upload via Cloudinary, and save.  
 **Response:** Updated user
 
 **Controller Implementation:**
 ```typescript
 export const updateUser = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
-    const { firstName, lastName, phone, email, isActive } = req.body;
+    const { firstName, lastName, phone, email, isActive, avatar } = req.body;
     const user = await User.findById(req.params.userId);
     if (!user) return next(errorHandler(404, "User not found"));
+
     if (firstName) user.firstName = firstName;
     if (lastName) user.lastName = lastName;
     if (phone) user.phone = phone;
     if (email) user.email = email;
     if (isActive !== undefined) user.isActive = isActive;
+
+    if (req.file) {
+      const uploadResult = await uploadToCloudinary(req.file, "dohez/avatars");
+      if (user.avatarPublicId) await deleteFromCloudinary(user.avatarPublicId);
+      user.avatar = uploadResult.url;
+      user.avatarPublicId = uploadResult.public_id;
+    } else if (avatar === null || avatar === "") {
+        if (user.avatarPublicId) await deleteFromCloudinary(user.avatarPublicId);
+        user.avatar = null;
+        user.avatarPublicId = null;
+    }
+
     await user.save();
     res.status(200).json({ success: true, message: "User updated successfully", data: { user } });
   } catch (error: any) {
@@ -682,15 +706,8 @@ export default router;
 ```
 
 #### `PUT /api/users/profile`
-**Headers:** `Authorization: Bearer <token>`
-**Body:**
-```json
-{
-  "firstName": "John",
-  "lastName": "Doe",
-  "phone": "+1234567890"
-}
-```
+**Headers:** `Authorization: Bearer <token>`, `Content-Type: multipart/form-data`
+**Body:** `multipart/form-data` (firstName, lastName, phone, avatar)
 **Response:**
 ```json
 {
@@ -701,7 +718,8 @@ export default router;
       "id": "650af1234567890abcdef123",
       "firstName": "John",
       "lastName": "Doe",
-      "phone": "+1234567890"
+      "phone": "+1234567890",
+      "avatar": "https://cloudinary.com/..."
     }
   }
 }
@@ -830,17 +848,8 @@ export default router;
 ```
 
 #### `PUT /api/users/:userId`
-**Headers:** `Authorization: Bearer <admin_token>`
-**Body:**
-```json
-{
-  "firstName": "John",
-  "lastName": "Doe",
-  "email": "john.doe@example.com",
-  "phone": "+1234567890",
-  "isActive": true
-}
-```
+**Headers:** `Authorization: Bearer <admin_token>`, `Content-Type: multipart/form-data`
+**Body:** `multipart/form-data` (firstName, lastName, email, phone, isActive, avatar)
 **Response:**
 ```json
 {
@@ -849,7 +858,8 @@ export default router;
   "data": {
     "user": {
       "id": "650af1234567890abcdef123",
-      "firstName": "John"
+      "firstName": "John",
+      "avatar": "https://cloudinary.com/..."
     }
   }
 }
@@ -971,12 +981,11 @@ curl -X GET http://localhost:3500/api/users/profile \
 ```bash
 curl -X PUT http://localhost:3500/api/users/profile \
   -H "Authorization: Bearer <access_token>" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "firstName": "John",
-    "lastName": "Doe",
-    "phone": "+1234567890"
-  }'
+  -H "Content-Type: multipart/form-data" \
+  -F "firstName=John" \
+  -F "lastName=Doe" \
+  -F "phone=+1234567890" \
+  -F "avatar=@/path/to/image.jpg"
 ```
 **Response:**
 ```json
@@ -988,7 +997,8 @@ curl -X PUT http://localhost:3500/api/users/profile \
       "id": "650af1234567890abcdef123",
       "firstName": "John",
       "lastName": "Doe",
-      "phone": "+1234567890"
+      "phone": "+1234567890",
+      "avatar": "https://cloudinary.com/..."
     }
   }
 }
@@ -1113,13 +1123,12 @@ curl -X GET "http://localhost:3500/api/users?page=1&limit=10" \
 ### Update User (Admin)
 ```bash
 curl -X PUT http://localhost:3500/api/users/650af1234567890abcdef123 \
-  -H "Content-Type: application/json" \
   -H "Authorization: Bearer <admin_token>" \
-  -d '{
-    "firstName": "John",
-    "lastName": "Doe",
-    "isActive": true
-  }'
+  -H "Content-Type: multipart/form-data" \
+  -F "firstName=John" \
+  -F "lastName=Doe" \
+  -F "isActive=true" \
+  -F "avatar=@/path/to/image.jpg"
 ```
 **Response:**
 ```json
@@ -1129,7 +1138,8 @@ curl -X PUT http://localhost:3500/api/users/650af1234567890abcdef123 \
   "data": {
     "user": {
       "id": "650af1234567890abcdef123",
-      "firstName": "John"
+      "firstName": "John",
+      "avatar": "https://cloudinary.com/..."
     }
   }
 }
