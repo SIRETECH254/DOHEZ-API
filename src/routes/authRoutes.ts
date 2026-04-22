@@ -1,4 +1,5 @@
 import express from 'express';
+import passport from 'passport';
 import {
   register,
   verifyOTP,
@@ -8,11 +9,31 @@ import {
   forgotPassword,
   resetPassword,
   refreshToken,
-  getMe
+  getMe,
+  googleAuthCallback
 } from '../controllers/authController';
 import { authenticateToken } from '../middleware/auth';
 
 const router = express.Router();
+
+// Route to start the Google login flow
+router.get(
+  '/google',
+  passport.authenticate('google', { 
+    scope: ['profile', 'email'], 
+    session: false // Explicitly tell passport NOT to use sessions
+  })
+);
+
+// Route where Google redirects the user after login
+router.get(
+  '/google/callback',
+  passport.authenticate('google', { 
+    failureRedirect: '/login', 
+    session: false 
+  }),
+  googleAuthCallback // Call the controller to issue the JWT
+);
 
 /**
  * @swagger

@@ -3,6 +3,8 @@ import express from "express";
 import mongoose from "mongoose";
 import "dotenv/config"; // Loads environment variables
 import path from "path";
+import passport from "passport";
+import "./config/passport";
 import { createServer } from "http";
 import { Server } from "socket.io";
 import swaggerConfig from "./config/swagger";
@@ -13,6 +15,8 @@ import userRoutes from "./routes/userRoutes";
 // Initialize application
 const app = express();
 const PORT = process.env.PORT || 3500;
+
+app.use(passport.initialize());
 
 // CORS Configuration with explicit origins
 const allowedOrigins: string[] = [

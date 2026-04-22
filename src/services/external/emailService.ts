@@ -17,7 +17,7 @@ const initializeSendGrid = () => {
 initializeSendGrid();
 
 // SendGrid requires a verified sender. We'll use SMTP_USER or FROM_EMAIL if available.
-const fromEmail = process.env.SMTP_USER || process.env.FROM_EMAIL || "noreply@dohez.com";
+const fromEmail = process.env.SMTP_FROM || "noreply@dohez.com";
 
 /**
  * Sends an email containing a One-Time Password to a user.
@@ -40,7 +40,7 @@ export const sendOTPEmail = async (email: string, otp: string, name: string = "U
 
     const msg = {
       to: email,
-      from: `"DOHEZ" <${fromEmail}>`,
+      from: `DOHEZ <${fromEmail}>`,
       subject: "Your OTP Code",
       text: message,
       html: `<strong>${message}</strong>`,
@@ -86,7 +86,7 @@ export const sendPasswordResetEmail = async (
 
     const msg = {
       to: email,
-      from: `"DOHEZ" <${fromEmail}>`,
+      from: `DOHEZ <${fromEmail}>`,
       subject: "Password Reset",
       text: message,
       html: `<p>Hello ${name},</p><p>Reset your password using: <a href="${resetUrl}">${resetUrl}</a></p><p>This link expires soon.</p>`,
@@ -122,7 +122,7 @@ export const sendWelcomeEmail = async (email: string, name: string): Promise<Not
 
     const msg = {
       to: email,
-      from: `"DOHEZ" <${fromEmail}>`,
+      from: `DOHEZ <${fromEmail}>`,
       subject: "Welcome to Dohez API",
       text: message,
       html: `<strong>${message}</strong>`,
@@ -157,7 +157,7 @@ export const sendGenericEmail = async (email: string, subject: string, message: 
   try {
     const msg = {
       to: email,
-      from: `"DOHEZ" <${fromEmail}>`,
+      from: `DOHEZ <${fromEmail}>`,
       subject,
       text: message,
       html: `<p>${message}</p>`,

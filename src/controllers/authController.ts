@@ -13,6 +13,7 @@ import {
   sendWelcomeNotification
 } from "../services/internal/notificationService";
 
+
 /**
  * Register a new user with OTP verification
  */
@@ -249,12 +250,12 @@ export const login = async (req: Request, res: Response, next: NextFunction): Pr
     const user = await User.findOne(query).select("+password");
 
     if (!user) {
-      return next(errorHandler(401, "Invalid credentials"));
+      return next(errorHandler(401, email ? "Email does not exist" : "Phone does not exist"));
     }
 
     const isPasswordValid = bcrypt.compareSync(password, user.password);
     if (!isPasswordValid) {
-      return next(errorHandler(401, "Invalid credentials"));
+      return next(errorHandler(401, "Invalid password"));
     }
 
     if (!user.isVerified) {
@@ -362,13 +363,16 @@ export const resetPassword = async (req: Request, res: Response, next: NextFunct
       return next(errorHandler(400, "Token and new password are required"));
     }
 
-    const user = await User.findOne({
-      resetPasswordToken: token,
-      resetPasswordExpiry: { $gt: new Date() }
-    }).select("+password");
+    // Check if token exists
+    const user = await User.findOne({ resetPasswordToken: token }).select("+password");
 
     if (!user) {
-      return next(errorHandler(400, "Invalid or expired reset token"));
+      return next(errorHandler(400, "Invalid reset token"));
+    }
+
+    // Check if token is expired
+    if (user.resetPasswordExpiry && user.resetPasswordExpiry < new Date()) {
+      return next(errorHandler(400, "Reset token has expired"));
     }
 
     user.password = bcrypt.hashSync(newPassword, 12);
@@ -455,3 +459,30 @@ export const getMe = async (req: Request, res: Response, next: NextFunction): Pr
     next(errorHandler(500, "Server error while fetching user profile"));
   }
 };
+
+/**
+ * googlecallback
+ */
+export const googleAuthCallback = (req: Request, res: Response) => {
+  const user = req.user as any;
+
+  if (!user) {
+    return res.status(401).json({ message: "Authentication failed" });
+  }
+
+  // Create the JWT
+  const token = jwt.sign(
+    { 
+      id: user.id, 
+      email: user.emails?.[0].value,
+      name: user.displayName 
+    },
+    process.env.JWT_SECRET!,
+    { expiresIn: '7d' } // Token valid for 7 days
+  );
+
+  // Redirect to your Frontend
+  const frontendURL = process.env.FRONTEND_URL || 'http://localhost:5173';
+  res.redirect(`${frontendURL}/auth-success?token=${token}`);
+};
+

@@ -1,8 +1,6 @@
 import mongoose from 'mongoose';
-import dotenv from 'dotenv';
+import "dotenv/config";
 import Role from '../models/Role';
-
-dotenv.config();
 
 const roles = [
   {

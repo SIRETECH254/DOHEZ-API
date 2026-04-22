@@ -328,7 +328,8 @@ export const resendOTP = async (req: Request, res: Response, next: NextFunction)
 **Validation:**
 - Password required
 - Email or phone required
-- User exists, password matches
+- User exists (Specific: "Email does not exist" or "Phone does not exist")
+- Password matches (Specific: "Invalid password")
 - User is verified and active
 **Process:**
 - Update last login timestamp
@@ -354,12 +355,12 @@ export const login = async (req: Request, res: Response, next: NextFunction): Pr
     const user = await User.findOne(query).select("+password");
 
     if (!user) {
-      return next(errorHandler(401, "Invalid credentials"));
+      return next(errorHandler(401, email ? "Email does not exist" : "Phone does not exist"));
     }
 
     const isPasswordValid = bcrypt.compareSync(password, user.password);
     if (!isPasswordValid) {
-      return next(errorHandler(401, "Invalid credentials"));
+      return next(errorHandler(401, "Invalid password"));
     }
 
     if (!user.isVerified) {
@@ -480,7 +481,8 @@ export const forgotPassword = async (req: Request, res: Response, next: NextFunc
 **Access:** Public  
 **Validation:**
 - Token and new password required
-- Reset token must be valid and not expired
+- Reset token must be valid ("Invalid reset token")
+- Reset token must not be expired ("Reset token has expired") - Tokens are valid for 15 minutes
 **Process:**
 - Hash new password
 - Clear reset fields
@@ -497,13 +499,16 @@ export const resetPassword = async (req: Request, res: Response, next: NextFunct
       return next(errorHandler(400, "Token and new password are required"));
     }
 
-    const user = await User.findOne({
-      resetPasswordToken: token,
-      resetPasswordExpiry: { $gt: new Date() }
-    }).select("+password");
+    // Check if token exists
+    const user = await User.findOne({ resetPasswordToken: token }).select("+password");
 
     if (!user) {
-      return next(errorHandler(400, "Invalid or expired reset token"));
+      return next(errorHandler(400, "Invalid reset token"));
+    }
+
+    // Check if token is expired
+    if (user.resetPasswordExpiry && user.resetPasswordExpiry < new Date()) {
+      return next(errorHandler(400, "Reset token has expired"));
     }
 
     user.password = bcrypt.hashSync(newPassword, 12);

@@ -5,9 +5,7 @@ import { IUser, IRole, UserRoleType } from '../types';
 
 declare global {
   namespace Express {
-    interface Request {
-      user?: IUser;
-    }
+    interface User extends IUser {}
   }
 }
 
