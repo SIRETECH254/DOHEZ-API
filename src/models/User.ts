@@ -80,6 +80,11 @@ const userSchema = new Schema<IUser>(
   }
 );
 
+// Indexes
+userSchema.index({ email: 1 });
+userSchema.index({ roles: 1 });
+userSchema.index({ isActive: 1 });
+
 const User = mongoose.model<IUser>('User', userSchema);
 
 export default User;

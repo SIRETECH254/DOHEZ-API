@@ -72,6 +72,10 @@ const taskSchema = new Schema<ITask>(
   }
 );
 
+// Indexes
+taskSchema.index({ name: 1 });
+taskSchema.index({ isActive: 1 });
+
 const Task = mongoose.model<ITask>('Task', taskSchema);
 
 export default Task;
