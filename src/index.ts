@@ -11,6 +11,7 @@ import swaggerConfig from "./config/swagger";
 import authRoutes from "./routes/authRoutes";
 import roleRoutes from "./routes/roleRoutes";
 import userRoutes from "./routes/userRoutes";
+import taskRoutes from "./routes/taskRoutes";
 
 // Initialize application
 const app = express();
@@ -113,6 +114,7 @@ app.use(
 app.use("/api/auth", authRoutes);
 app.use("/api/roles", roleRoutes);
 app.use("/api/users", userRoutes);
+app.use("/api/tasks", taskRoutes);
 
 // Socket.io setup for real-time features
 const server = createServer(app);

@@ -57,3 +57,13 @@ export interface IUser extends Document {
   createdAt: Date;
   updatedAt: Date;
 }
+
+export interface ITask extends Document {
+  name: string;
+  description?: string;
+  image?: string | null;
+  imagePublicId?: string | null;
+  isActive: boolean;
+  createdAt: Date;
+  updatedAt: Date;
+}

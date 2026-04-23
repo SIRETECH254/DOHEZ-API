@@ -53,6 +53,33 @@ export const authenticateToken = async (req: Request, res: Response, next: NextF
 };
 
 /**
+ * Middleware to optionally authenticate JWT token
+ * Continues even if token is missing or invalid
+ */
+export const optionalAuthenticateToken = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const authHeader = req.headers.authorization;
+    const token = authHeader && authHeader.split(' ')[1];
+
+    if (!token) {
+      return next();
+    }
+
+    const decoded = jwt.verify(token, process.env.JWT_SECRET!) as { userId: string };
+    const user = await User.findById(decoded.userId).populate('roles');
+
+    if (user && user.isActive) {
+      req.user = user;
+    }
+    
+    next();
+  } catch (error) {
+    // Continue without req.user if token is invalid
+    next();
+  }
+};
+
+/**
  * Middleware to authorize roles
  */
 export const authorizeRoles = (allowedRoles: UserRoleType[]) => {
