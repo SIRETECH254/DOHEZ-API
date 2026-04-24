@@ -1,12 +1,16 @@
 import mongoose, { Schema } from 'mongoose';
-import { ITask } from '../types';
+import { IService } from '../types';
 
-const taskSchema = new Schema<ITask>(
+const serviceSchema = new Schema<IService>(
   {
+    taskId: {
+      type: Schema.Types.ObjectId,
+      ref: 'Task',
+      required: true,
+    },
     name: {
       type: String,
       required: true,
-      unique: true,
       trim: true,
     },
     description: {
@@ -32,8 +36,10 @@ const taskSchema = new Schema<ITask>(
 );
 
 // Indexes
-taskSchema.index({ isActive: 1 });
+serviceSchema.index({ taskId: 1 });
+serviceSchema.index({ name: 1 });
+serviceSchema.index({ isActive: 1 });
 
-const Task = mongoose.model<ITask>('Task', taskSchema);
+const Service = mongoose.model<IService>('Service', serviceSchema);
 
-export default Task;
+export default Service;

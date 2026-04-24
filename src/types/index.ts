@@ -67,3 +67,14 @@ export interface ITask extends Document {
   createdAt: Date;
   updatedAt: Date;
 }
+
+export interface IService extends Document {
+  taskId: Types.ObjectId | ITask;
+  name: string;
+  description?: string;
+  image?: string | null;
+  imagePublicId?: string | null;
+  isActive: boolean;
+  createdAt: Date;
+  updatedAt: Date;
+}

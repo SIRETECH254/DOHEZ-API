@@ -12,6 +12,7 @@ import authRoutes from "./routes/authRoutes";
 import roleRoutes from "./routes/roleRoutes";
 import userRoutes from "./routes/userRoutes";
 import taskRoutes from "./routes/taskRoutes";
+import serviceRoutes from "./routes/serviceRoutes";
 
 // Initialize application
 const app = express();
@@ -115,6 +116,7 @@ app.use("/api/auth", authRoutes);
 app.use("/api/roles", roleRoutes);
 app.use("/api/users", userRoutes);
 app.use("/api/tasks", taskRoutes);
+app.use("/api/services", serviceRoutes);
 
 // Socket.io setup for real-time features
 const server = createServer(app);
