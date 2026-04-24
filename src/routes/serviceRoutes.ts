@@ -18,12 +18,12 @@ const router = express.Router();
  *     Service:
  *       type: object
  *       required:
- *         - taskId
+ *         - task
  *         - name
  *       properties:
  *         id:
  *           type: string
- *         taskId:
+ *         task:
  *           oneOf:
  *             - type: string
  *             - $ref: '#/components/schemas/Task'
@@ -43,7 +43,7 @@ const router = express.Router();
  *           format: date-time
  *       example:
  *         id: 650af1234567890abcdef123
- *         taskId: 650af1234567890abcdef000
+ *         task: 650af1234567890abcdef000
  *         name: Shirt Wash
  *         description: Standard machine wash and dry for shirts
  *         image: https://res.cloudinary.com/demo/image/upload/v123/service.jpg
@@ -72,7 +72,7 @@ const router = express.Router();
  *           schema:
  *             type: object
  *             properties:
- *               taskId:
+ *               task:
  *                 type: string
  *               name:
  *                 type: string
@@ -101,7 +101,7 @@ router.post('/', authenticateToken, authorizeRoles(['super_admin']), upload.sing
  *     tags: [Services]
  *     parameters:
  *       - in: query
- *         name: taskId
+ *         name: task
  *         schema:
  *           type: string
  *         description: Filter by parent task ID
@@ -169,7 +169,7 @@ router.get('/:serviceId', getServiceById);
  *           schema:
  *             type: object
  *             properties:
- *               taskId:
+ *               task:
  *                 type: string
  *               name:
  *                 type: string

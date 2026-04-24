@@ -231,7 +231,7 @@ interface ITask {
 ```typescript
 interface IService {
   _id: ObjectId;
-  taskId: ObjectId; // Parent Task relationship
+  task: ObjectId; // Parent Task relationship
   vendorId: ObjectId;
   branchId?: ObjectId;
   name: string; // e.g., "Shirt Wash", "VIP Ticket", "Consultation"

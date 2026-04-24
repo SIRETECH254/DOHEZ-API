@@ -3,7 +3,7 @@ import { IService } from '../types';
 
 const serviceSchema = new Schema<IService>(
   {
-    taskId: {
+    task: {
       type: Schema.Types.ObjectId,
       ref: 'Task',
       required: true,
@@ -36,7 +36,7 @@ const serviceSchema = new Schema<IService>(
 );
 
 // Indexes
-serviceSchema.index({ taskId: 1 });
+serviceSchema.index({ task: 1 });
 serviceSchema.index({ name: 1 });
 serviceSchema.index({ isActive: 1 });
 

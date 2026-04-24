@@ -24,7 +24,7 @@ Service Management covers the specific services offered under each Task category
 ### Schema Definition
 ```typescript
 export interface IService extends Document {
-  taskId: Types.ObjectId | ITask;
+  task: Types.ObjectId | ITask;
   name: string;
   description?: string;
   image?: string | null;
@@ -45,7 +45,7 @@ import { IService } from '../types';
 
 const serviceSchema = new Schema<IService>(
   {
-    taskId: {
+    task: {
       type: Schema.Types.ObjectId,
       ref: 'Task',
       required: true,
@@ -78,7 +78,7 @@ const serviceSchema = new Schema<IService>(
 );
 
 // Indexes
-serviceSchema.index({ taskId: 1 });
+serviceSchema.index({ task: 1 });
 serviceSchema.index({ name: 1 });
 serviceSchema.index({ isActive: 1 });
 
@@ -89,7 +89,7 @@ export default Service;
 
 ### Validation Rules
 ```typescript
-taskId:      { required: true, ref: 'Task' }
+task:        { required: true, ref: 'Task' }
 name:        { required: true, trim: true }
 description: { optional, trim: true }
 image:       { optional, url }
@@ -117,7 +117,7 @@ import { IRole } from "../types";
 #### `createService()`
 **Purpose:** Create a new service under a task category  
 **Access:** Super Admin  
-**Validation:** `taskId` and `name` are required  
+**Validation:** `task` and `name` are required  
 **Process:** Validate parent Task exists, handle optional image upload to Cloudinary  
 **Response:** Success message and created service
 
@@ -125,19 +125,19 @@ import { IRole } from "../types";
 ```typescript
 export const createService = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
-    const { taskId, name, description, isActive } = req.body;
+    const { task, name, description, isActive } = req.body;
 
-    if (!taskId || !name) {
-      return next(errorHandler(400, "Task ID and Service name are required"));
+    if (!task || !name) {
+      return next(errorHandler(400, "Task and Service name are required"));
     }
 
-    const task = await Task.findById(taskId);
-    if (!task) {
+    const taskExists = await Task.findById(task);
+    if (!taskExists) {
       return next(errorHandler(404, "Parent Task not found"));
     }
 
     const serviceData: any = {
-      taskId,
+      task,
       name,
       description,
       isActive: isActive !== undefined ? isActive : true,
@@ -166,14 +166,14 @@ export const createService = async (req: Request, res: Response, next: NextFunct
 **Purpose:** List all services  
 **Access:** Public  
 **Validation:** None  
-**Process:** Fetch services with pagination. Supports filtering by `taskId` and `search`. Public view only sees `isActive: true`.  
+**Process:** Fetch services with pagination. Supports filtering by `task` and `search`. Public view only sees `isActive: true`.  
 **Response:** List of services and pagination metadata
 
 **Controller Implementation:**
 ```typescript
 export const getServices = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
-    const { taskId, search, all, page = 1, limit = 10 } = req.query;
+    const { task, search, all, page = 1, limit = 10 } = req.query;
     const query: any = {};
 
     const isAdmin = req.user && (req.user.roles as IRole[]).some(role => 
@@ -184,8 +184,8 @@ export const getServices = async (req: Request, res: Response, next: NextFunctio
       query.isActive = true;
     }
 
-    if (taskId) {
-      query.taskId = taskId;
+    if (task) {
+      query.task = task;
     }
 
     if (search) {
@@ -198,7 +198,7 @@ export const getServices = async (req: Request, res: Response, next: NextFunctio
     };
 
     const services = await Service.find(query)
-      .populate("taskId", "name")
+      .populate("task", "name")
       .sort({ name: 1 })
       .limit(options.limit)
       .skip((options.page - 1) * options.limit);
@@ -236,7 +236,7 @@ export const getServices = async (req: Request, res: Response, next: NextFunctio
 ```typescript
 export const getServiceById = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
-    const service = await Service.findById(req.params.serviceId).populate("taskId", "name description image");
+    const service = await Service.findById(req.params.serviceId).populate("task", "name description image");
 
     if (!service) {
       return next(errorHandler(404, "Service not found"));
@@ -263,17 +263,17 @@ export const getServiceById = async (req: Request, res: Response, next: NextFunc
 ```typescript
 export const updateService = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
-    const { taskId, name, description, isActive, image } = req.body;
+    const { task, name, description, isActive, image } = req.body;
     const service = await Service.findById(req.params.serviceId);
 
     if (!service) {
       return next(errorHandler(404, "Service not found"));
     }
 
-    if (taskId) {
-      const task = await Task.findById(taskId);
-      if (!task) return next(errorHandler(404, "Parent Task not found"));
-      service.taskId = taskId;
+    if (task) {
+      const taskExists = await Task.findById(task);
+      if (!taskExists) return next(errorHandler(404, "Parent Task not found"));
+      service.task = task;
     }
     
     if (name) service.name = name;
@@ -392,7 +392,7 @@ export default router;
 **Headers:**
 - **Authorization:** Bearer <token> (Optional)
 **Query:**
-- **taskId:** 650af1234567890abcdef000
+- **task:** 650af1234567890abcdef000
 - **search:** Shirt
 - **page:** 1
 - **limit:** 10
@@ -404,7 +404,7 @@ export default router;
     "services": [
       {
         "_id": "650af1234567890abcdef123",
-        "taskId": {
+        "task": {
           "_id": "650af1234567890abcdef000",
           "name": "Laundry"
         },
@@ -435,7 +435,7 @@ export default router;
   "data": {
     "service": {
       "_id": "650af1234567890abcdef123",
-      "taskId": {
+      "task": {
         "name": "Laundry",
         "description": "...",
         "image": "..."
@@ -453,7 +453,7 @@ export default router;
 **Headers:**
 - **Authorization:** Bearer <super_admin_token>
 **Body (Multipart/Form-Data):**
-- **taskId:** 650af1234567890abcdef000
+- **task:** 650af1234567890abcdef000
 - **name:** VIP Ticket
 - **description:** Access to VIP lounge
 - **isActive:** true
@@ -466,7 +466,7 @@ export default router;
   "data": {
     "service": {
       "_id": "650af1234567890abcdef124",
-      "taskId": "650af1234567890abcdef000",
+      "task": "650af1234567890abcdef000",
       "name": "VIP Ticket",
       "description": "Access to VIP lounge",
       "isActive": true,
@@ -493,7 +493,7 @@ export default router;
   "data": {
     "service": {
       "_id": "650af1234567890abcdef123",
-      "taskId": "650af1234567890abcdef000",
+      "task": "650af1234567890abcdef000",
       "name": "Deluxe Wash",
       "description": "Extra care washing",
       "isActive": true,
@@ -547,20 +547,159 @@ router.put('/:serviceId', authenticateToken, authorizeRoles(['super_admin']), up
 
 ## 📝 API Examples
 
-### Get Services by Task
-```bash
-curl -X GET "http://localhost:3500/api/services?taskId=650af1234567890abcdef000"
-```
+### 1. Create Service
+**Endpoint:** `POST /api/services`  
+**Access:** Private (Super Admin)  
+**Content-Type:** `multipart/form-data`
 
-### Create Service (Super Admin)
+**Request Example:**
 ```bash
 curl -X POST http://localhost:3500/api/services \
   -H "Authorization: Bearer <super_admin_token>" \
-  -H "Content-Type: multipart/form-data" \
-  -F "taskId=650af1234567890abcdef000" \
+  -F "task=650af1234567890abcdef000" \
   -F "name=Suit Wash" \
-  -F "description=Dry cleaning for suits" \
+  -F "description=Dry cleaning and steam press for premium suits" \
+  -F "isActive=true" \
   -F "image=@/path/to/suit.jpg"
+```
+
+**Response (201 Created):**
+```json
+{
+  "success": true,
+  "message": "Service created successfully",
+  "data": {
+    "service": {
+      "_id": "650af1234567890abcdef123",
+      "task": "650af1234567890abcdef000",
+      "name": "Suit Wash",
+      "description": "Dry cleaning and steam press for premium suits",
+      "isActive": true,
+      "image": "https://res.cloudinary.com/.../suit.jpg",
+      "imagePublicId": "dohez/services/...",
+      "createdAt": "2026-04-24T12:00:00.000Z",
+      "updatedAt": "2026-04-24T12:00:00.000Z"
+    }
+  }
+}
+```
+
+### 2. Get All Services (with Filtering)
+**Endpoint:** `GET /api/services`  
+**Access:** Public
+
+**Request Example (Filter by Task):**
+```bash
+curl -X GET "http://localhost:3500/api/services?task=650af1234567890abcdef000&page=1&limit=10"
+```
+
+**Response (200 OK):**
+```json
+{
+  "success": true,
+  "data": {
+    "services": [
+      {
+        "_id": "650af1234567890abcdef123",
+        "task": {
+          "_id": "650af1234567890abcdef000",
+          "name": "Laundry"
+        },
+        "name": "Suit Wash",
+        "description": "Dry cleaning...",
+        "isActive": true,
+        "image": "https://res.cloudinary.com/..."
+      }
+    ],
+    "pagination": {
+      "currentPage": 1,
+      "totalPages": 5,
+      "totalServices": 48,
+      "hasNextPage": true,
+      "hasPrevPage": false
+    }
+  }
+}
+```
+
+### 3. Get Single Service
+**Endpoint:** `GET /api/services/:serviceId`  
+**Access:** Public
+
+**Request Example:**
+```bash
+curl -X GET http://localhost:3500/api/services/650af1234567890abcdef123
+```
+
+**Response (200 OK):**
+```json
+{
+  "success": true,
+  "data": {
+    "service": {
+      "_id": "650af1234567890abcdef123",
+      "task": {
+        "_id": "650af1234567890abcdef000",
+        "name": "Laundry",
+        "description": "Professional cleaning services",
+        "image": "https://res.cloudinary.com/..."
+      },
+      "name": "Suit Wash",
+      "description": "Dry cleaning...",
+      "isActive": true,
+      "image": "https://res.cloudinary.com/..."
+    }
+  }
+}
+```
+
+### 4. Update Service
+**Endpoint:** `PUT /api/services/:serviceId`  
+**Access:** Private (Super Admin)  
+**Content-Type:** `multipart/form-data`
+
+**Request Example:**
+```bash
+curl -X PUT http://localhost:3500/api/services/650af1234567890abcdef123 \
+  -H "Authorization: Bearer <super_admin_token>" \
+  -F "name=Premium Suit Wash" \
+  -F "isActive=false"
+```
+
+**Response (200 OK):**
+```json
+{
+  "success": true,
+  "message": "Service updated successfully",
+  "data": {
+    "service": {
+      "_id": "650af1234567890abcdef123",
+      "task": "650af1234567890abcdef000",
+      "name": "Premium Suit Wash",
+      "description": "Dry cleaning...",
+      "isActive": false,
+      "image": "https://res.cloudinary.com/..."
+    }
+  }
+}
+```
+
+### 5. Delete Service
+**Endpoint:** `DELETE /api/services/:serviceId`  
+**Access:** Private (Super Admin)
+
+**Request Example:**
+```bash
+curl -X DELETE http://localhost:3500/api/services/650af1234567890abcdef123 \
+  -H "Authorization: Bearer <super_admin_token>"
+```
+
+**Response (200 OK):**
+```json
+{
+  "success": true,
+  "message": "Service deleted successfully"
+}
 ```
 
 ---
@@ -585,7 +724,7 @@ Standard error responses:
 ## 📊 Database Indexes
 
 ```typescript
-serviceSchema.index({ taskId: 1 });
+serviceSchema.index({ task: 1 });
 serviceSchema.index({ name: 1 });
 serviceSchema.index({ isActive: 1 });
 ```

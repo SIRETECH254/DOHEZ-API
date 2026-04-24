@@ -12,19 +12,19 @@ import { IRole } from "../types";
  */
 export const createService = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
-    const { taskId, name, description, isActive } = req.body;
+    const { task, name, description, isActive } = req.body;
 
-    if (!taskId || !name) {
-      return next(errorHandler(400, "Task ID and Service name are required"));
+    if (!task || !name) {
+      return next(errorHandler(400, "Task and Service name are required"));
     }
 
-    const task = await Task.findById(taskId);
-    if (!task) {
+    const taskExists = await Task.findById(task);
+    if (!taskExists) {
       return next(errorHandler(404, "Parent Task not found"));
     }
 
     const serviceData: any = {
-      taskId,
+      task,
       name,
       description,
       isActive: isActive !== undefined ? isActive : true,
@@ -55,7 +55,7 @@ export const createService = async (req: Request, res: Response, next: NextFunct
  */
 export const getServices = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
-    const { taskId, search, all, page = 1, limit = 10 } = req.query;
+    const { task, search, all, page = 1, limit = 10 } = req.query;
     const query: any = {};
 
     const isAdmin = req.user && (req.user.roles as IRole[]).some(role => 
@@ -66,8 +66,8 @@ export const getServices = async (req: Request, res: Response, next: NextFunctio
       query.isActive = true;
     }
 
-    if (taskId) {
-      query.taskId = taskId;
+    if (task) {
+      query.task = task;
     }
 
     if (search) {
@@ -80,7 +80,7 @@ export const getServices = async (req: Request, res: Response, next: NextFunctio
     };
 
     const services = await Service.find(query)
-      .populate("taskId", "name")
+      .populate("task", "name")
       .sort({ name: 1 })
       .limit(options.limit)
       .skip((options.page - 1) * options.limit);
@@ -113,7 +113,7 @@ export const getServices = async (req: Request, res: Response, next: NextFunctio
  */
 export const getServiceById = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
-    const service = await Service.findById(req.params.serviceId).populate("taskId", "name description image");
+    const service = await Service.findById(req.params.serviceId).populate("task", "name description image");
 
     if (!service) {
       return next(errorHandler(404, "Service not found"));
@@ -135,17 +135,17 @@ export const getServiceById = async (req: Request, res: Response, next: NextFunc
  */
 export const updateService = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
-    const { taskId, name, description, isActive, image } = req.body;
+    const { task, name, description, isActive, image } = req.body;
     const service = await Service.findById(req.params.serviceId);
 
     if (!service) {
       return next(errorHandler(404, "Service not found"));
     }
 
-    if (taskId) {
-      const task = await Task.findById(taskId);
-      if (!task) return next(errorHandler(404, "Parent Task not found"));
-      service.taskId = taskId;
+    if (task) {
+      const taskExists = await Task.findById(task);
+      if (!taskExists) return next(errorHandler(404, "Parent Task not found"));
+      service.task = task;
     }
     
     if (name) service.name = name;

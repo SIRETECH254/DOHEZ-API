@@ -69,7 +69,7 @@ export interface ITask extends Document {
 }
 
 export interface IService extends Document {
-  taskId: Types.ObjectId | ITask;
+  task: Types.ObjectId | ITask;
   name: string;
   description?: string;
   image?: string | null;
