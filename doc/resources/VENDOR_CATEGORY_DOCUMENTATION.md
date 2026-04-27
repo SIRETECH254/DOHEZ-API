@@ -79,7 +79,6 @@ const vendorCategorySchema = new Schema<IVendorCategory>(
 );
 
 // Indexes
-vendorCategorySchema.index({ slug: 1 });
 vendorCategorySchema.index({ isActive: 1 });
 
 const VendorCategory = mongoose.model<IVendorCategory>('VendorCategory', vendorCategorySchema);
@@ -670,7 +669,6 @@ Standard error responses:
 ## 📊 Database Indexes
 
 ```typescript
-vendorCategorySchema.index({ slug: 1 });
 vendorCategorySchema.index({ isActive: 1 });
 ```
 
