@@ -89,3 +89,14 @@ export interface IVendorCategory extends Document {
   createdAt: Date;
   updatedAt: Date;
 }
+
+export interface IVendorType extends Document {
+  name: string;
+  description?: string;
+  slug: string;
+  image?: string | null;
+  imagePublicId?: string | null;
+  isActive: boolean;
+  createdAt: Date;
+  updatedAt: Date;
+}
