@@ -23,6 +23,7 @@ Vendor Category Management allows administrators to define categories for vendor
 ### Schema Definition
 ```typescript
 interface IVendorCategory extends Document {
+  vendorType?: Types.ObjectId | IVendorType;
   name: string;
   description?: string;
   slug: string;
@@ -44,6 +45,11 @@ import { IVendorCategory } from '../types';
 
 const vendorCategorySchema = new Schema<IVendorCategory>(
   {
+    vendorType: {
+      type: Schema.Types.ObjectId,
+      ref: 'VendorType',
+      default: null,
+    },
     name: {
       type: String,
       required: true,
@@ -121,7 +127,7 @@ import { IRole } from "../types";
 ```typescript
 export const createVendorCategory = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
-    const { name, description, isActive } = req.body;
+    const { name, description, isActive, vendorType } = req.body;
 
     if (!name) {
       return next(errorHandler(400, "Category name is required"));
@@ -139,6 +145,7 @@ export const createVendorCategory = async (req: Request, res: Response, next: Ne
       name,
       description,
       slug,
+      vendorType: vendorType || null,
       isActive: isActive !== undefined ? isActive : true,
     };
 
@@ -194,6 +201,7 @@ export const getVendorCategories = async (req: Request, res: Response, next: Nex
     };
 
     const categories = await VendorCategory.find(query)
+      .populate('vendorType')
       .sort({ [options.sort]: options.order as any })
       .limit(options.limit)
       .skip((options.page - 1) * options.limit);
@@ -233,9 +241,9 @@ export const getVendorCategoryById = async (req: Request, res: Response, next: N
     let category;
 
     if (idOrSlug.match(/^[0-9a-fA-F]{24}$/)) {
-      category = await VendorCategory.findById(idOrSlug);
+      category = await VendorCategory.findById(idOrSlug).populate('vendorType');
     } else {
-      category = await VendorCategory.findOne({ slug: idOrSlug });
+      category = await VendorCategory.findOne({ slug: idOrSlug }).populate('vendorType');
     }
 
     if (!category) {
@@ -262,7 +270,7 @@ export const getVendorCategoryById = async (req: Request, res: Response, next: N
 ```typescript
 export const updateVendorCategory = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
-    const { name, description, isActive, image } = req.body;
+    const { name, description, isActive, image, vendorType } = req.body;
     const category = await VendorCategory.findById(req.params.categoryId);
 
     if (!category) {
@@ -282,6 +290,7 @@ export const updateVendorCategory = async (req: Request, res: Response, next: Ne
     
     if (description !== undefined) category.description = description;
     if (isActive !== undefined) category.isActive = isActive;
+    if (vendorType !== undefined) category.vendorType = vendorType;
 
     if (req.file) {
       const uploadResult = await uploadToCloudinary(req.file, "dohez/vendor-categories");
@@ -545,6 +554,7 @@ curl -X POST http://localhost:3500/api/vendor-categories \
   -H "Authorization: Bearer <super_admin_token>" \
   -F "name=Logistics" \
   -F "description=Delivery and transport services" \
+  -F "vendorType=650af1234567890abcdef789" \
   -F "image=@/path/to/logistics.jpg"
 ```
 **Response:**
@@ -557,6 +567,7 @@ curl -X POST http://localhost:3500/api/vendor-categories \
       "_id": "650af9876543210fedcba321",
       "name": "Logistics",
       "slug": "logistics",
+      "vendorType": "650af1234567890abcdef789",
       "image": "https://cloudinary.com/logistics.jpg"
     }
   }
@@ -577,12 +588,22 @@ curl -X GET "http://localhost:3500/api/vendor-categories?page=1&limit=5"
       {
         "_id": "650af1234567890abcdef123",
         "name": "Food & Drinks",
-        "slug": "food-drinks"
+        "slug": "food-drinks",
+        "vendorType": {
+          "_id": "650af1234567890abcdef789",
+          "name": "Product Vendor",
+          "slug": "product-vendor"
+        }
       },
       {
         "_id": "650af1234567890abcdef456",
         "name": "Laundry",
-        "slug": "laundry"
+        "slug": "laundry",
+        "vendorType": {
+          "_id": "650af1234567890abcdef999",
+          "name": "Service Vendor",
+          "slug": "service-vendor"
+        }
       }
     ],
     "pagination": {
@@ -607,7 +628,12 @@ curl -X GET http://localhost:3500/api/vendor-categories/food-drinks
     "category": {
       "_id": "650af1234567890abcdef123",
       "name": "Food & Drinks",
-      "slug": "food-drinks"
+      "slug": "food-drinks",
+      "vendorType": {
+        "_id": "650af1234567890abcdef789",
+        "name": "Product Vendor",
+        "slug": "product-vendor"
+      }
     }
   }
 }
@@ -618,7 +644,8 @@ curl -X GET http://localhost:3500/api/vendor-categories/food-drinks
 ```bash
 curl -X PUT http://localhost:3500/api/vendor-categories/650af1234567890abcdef123 \
   -H "Authorization: Bearer <super_admin_token>" \
-  -F "name=Gourmet Food"
+  -F "name=Gourmet Food" \
+  -F "vendorType=650af1234567890abcdef789"
 ```
 **Response:**
 ```json
@@ -629,7 +656,8 @@ curl -X PUT http://localhost:3500/api/vendor-categories/650af1234567890abcdef123
     "category": {
       "_id": "650af1234567890abcdef123",
       "name": "Gourmet Food",
-      "slug": "gourmet-food"
+      "slug": "gourmet-food",
+      "vendorType": "650af1234567890abcdef789"
     }
   }
 }

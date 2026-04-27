@@ -23,7 +23,7 @@ const generateSlug = (name: string): string => {
  */
 export const createVendorCategory = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
-    const { name, description, isActive } = req.body;
+    const { name, description, isActive, vendorType } = req.body;
 
     if (!name) {
       return next(errorHandler(400, "Category name is required"));
@@ -41,6 +41,7 @@ export const createVendorCategory = async (req: Request, res: Response, next: Ne
       name,
       description,
       slug,
+      vendorType: vendorType || null,
       isActive: isActive !== undefined ? isActive : true,
     };
 
@@ -92,6 +93,7 @@ export const getVendorCategories = async (req: Request, res: Response, next: Nex
     };
 
     const categories = await VendorCategory.find(query)
+      .populate('vendorType')
       .sort({ [options.sort]: options.order as any })
       .limit(options.limit)
       .skip((options.page - 1) * options.limit);
@@ -128,9 +130,9 @@ export const getVendorCategoryById = async (req: Request, res: Response, next: N
     let category;
 
     if (idOrSlug.match(/^[0-9a-fA-F]{24}$/)) {
-      category = await VendorCategory.findById(idOrSlug);
+      category = await VendorCategory.findById(idOrSlug).populate('vendorType');
     } else {
-      category = await VendorCategory.findOne({ slug: idOrSlug });
+      category = await VendorCategory.findOne({ slug: idOrSlug }).populate('vendorType');
     }
 
     if (!category) {
@@ -153,7 +155,7 @@ export const getVendorCategoryById = async (req: Request, res: Response, next: N
  */
 export const updateVendorCategory = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
-    const { name, description, isActive, image } = req.body;
+    const { name, description, isActive, image, vendorType } = req.body;
     const category = await VendorCategory.findById(req.params.categoryId);
 
     if (!category) {
@@ -173,6 +175,7 @@ export const updateVendorCategory = async (req: Request, res: Response, next: Ne
     
     if (description !== undefined) category.description = description;
     if (isActive !== undefined) category.isActive = isActive;
+    if (vendorType !== undefined) category.vendorType = vendorType;
 
     if (req.file) {
       const uploadResult = await uploadToCloudinary(req.file, "dohez/vendor-categories");

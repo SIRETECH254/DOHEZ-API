@@ -3,6 +3,11 @@ import { IVendorCategory } from '../types';
 
 const vendorCategorySchema = new Schema<IVendorCategory>(
   {
+    vendorType: {
+      type: Schema.Types.ObjectId,
+      ref: 'VendorType',
+      default: null,
+    },
     name: {
       type: String,
       required: true,

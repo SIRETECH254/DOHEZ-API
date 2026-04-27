@@ -80,6 +80,7 @@ export interface IService extends Document {
 }
 
 export interface IVendorCategory extends Document {
+  vendorType?: Types.ObjectId | IVendorType;
   name: string;
   description?: string;
   slug: string;
