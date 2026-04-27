@@ -13,6 +13,7 @@ import roleRoutes from "./routes/roleRoutes";
 import userRoutes from "./routes/userRoutes";
 import taskRoutes from "./routes/taskRoutes";
 import serviceRoutes from "./routes/serviceRoutes";
+import vendorCategoryRoutes from "./routes/vendorCategoryRoutes";
 
 // Initialize application
 const app = express();
@@ -117,6 +118,7 @@ app.use("/api/roles", roleRoutes);
 app.use("/api/users", userRoutes);
 app.use("/api/tasks", taskRoutes);
 app.use("/api/services", serviceRoutes);
+app.use("/api/vendor-categories", vendorCategoryRoutes);
 
 // Socket.io setup for real-time features
 const server = createServer(app);
