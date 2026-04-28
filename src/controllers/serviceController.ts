@@ -81,7 +81,7 @@ export const getServices = async (req: Request, res: Response, next: NextFunctio
 
     const services = await Service.find(query)
       .populate("task", "name")
-      .sort({ name: 1 })
+      .sort({ createdAt: -1 })
       .limit(options.limit)
       .skip((options.page - 1) * options.limit);
 

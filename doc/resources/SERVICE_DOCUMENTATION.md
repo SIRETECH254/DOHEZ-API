@@ -199,7 +199,7 @@ export const getServices = async (req: Request, res: Response, next: NextFunctio
 
     const services = await Service.find(query)
       .populate("task", "name")
-      .sort({ name: 1 })
+      .sort({ createdAt: -1 })
       .limit(options.limit)
       .skip((options.page - 1) * options.limit);
 
@@ -452,12 +452,15 @@ export default router;
 #### `POST /api/services`
 **Headers:**
 - **Authorization:** Bearer <super_admin_token>
-**Body (Multipart/Form-Data):**
-- **task:** 650af1234567890abcdef000
-- **name:** VIP Ticket
-- **description:** Access to VIP lounge
-- **isActive:** true
-- **image:** service_image_file
+**Body:**
+```json
+{
+  "task": "650af1234567890abcdef000",
+  "name": "VIP Ticket",
+  "description": "Access to VIP lounge",
+  "isActive": true
+}
+```
 **Response:**
 ```json
 {
@@ -481,10 +484,14 @@ export default router;
 - **Authorization:** Bearer <super_admin_token>
 **Params:**
 - **serviceId:** 650af1234567890abcdef123
-**Body (Multipart/Form-Data):**
-- **name:** Deluxe Wash
-- **description:** Extra care washing
-- **image:** new_image_file
+**Body:**
+```json
+{
+  "name": "Deluxe Wash",
+  "description": "Extra care washing",
+  "isActive": true
+}
+```
 **Response:**
 ```json
 {
