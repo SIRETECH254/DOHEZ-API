@@ -75,7 +75,7 @@ export const getTasks = async (req: Request, res: Response, next: NextFunction):
     };
 
     const tasks = await Task.find(query)
-      .sort({ name: 1 })
+      .sort({ createdAt: -1 })
       .limit(options.limit)
       .skip((options.page - 1) * options.limit);
 

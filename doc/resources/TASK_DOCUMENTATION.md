@@ -153,7 +153,7 @@ export const createTask = async (req: Request, res: Response, next: NextFunction
 **Purpose:** List all task categories  
 **Access:** Public  
 **Validation:** None  
-**Process:** Fetch tasks with pagination. Public view only sees `isActive: true`. Admins can see all via `all=true`.  
+**Process:** Fetch tasks with pagination. Sorted by `createdAt` descending. Public view only sees `isActive: true`. Admins can see all via `all=true`.  
 **Response:** List of tasks and pagination metadata
 
 **Controller Implementation:**
@@ -423,11 +423,14 @@ export default router;
 #### `POST /api/tasks`
 **Headers:**
 - **Authorization:** Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9
-**Body (Multipart/Form-Data):**
-- **name:** Cleaning
-- **description:** Full house cleaning
-- **isActive:** true
-- **image:** cleaning_image_file
+**Body:**
+```json
+{
+  "name": "Cleaning",
+  "description": "Full house cleaning",
+  "isActive": true
+}
+```
 **Response:**
 ```json
 {
@@ -450,11 +453,14 @@ export default router;
 - **Authorization:** Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9
 **Params:**
 - **taskId:** 650af1234567890abcdef123
-**Body (Multipart/Form-Data):**
-- **name:** Laundry Premium
-- **description:** Express washing services
-- **isActive:** true
-- **image:** new_laundry_image_file
+**Body:**
+```json
+{
+  "name": "Laundry Premium",
+  "description": "Express washing services",
+  "isActive": true
+}
+```
 **Response:**
 ```json
 {
