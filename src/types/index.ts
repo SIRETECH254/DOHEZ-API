@@ -91,6 +91,72 @@ export interface IVendorCategory extends Document {
   updatedAt: Date;
 }
 
+export interface IVendor extends Document {
+  userId: Types.ObjectId | IUser;
+  service?: Types.ObjectId | IService | null;
+  name: string;
+  phone: string;
+  email: string;
+  isActive: boolean;
+  isFeatured: boolean;
+  logo?: string | null;
+  logoPublicId?: string | null;
+  cover?: string | null;
+  coverPublicId?: string | null;
+  location: {
+    name?: string;
+    address: string;
+    regions: {
+      administrative_area_level_3?: string | null;
+      administrative_area_level_1?: string | null;
+      country: string;
+    };
+    coordinates: {
+      lat: number;
+      lng: number;
+    };
+    place_id: string;
+  };
+  branches: Types.ObjectId[] | IBranch[];
+  slug: string;
+  details?: string;
+  kraPin?: string | null;
+  regNo?: string | null;
+  vendorCategory: Types.ObjectId | IVendorCategory;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export interface IBranch extends Document {
+  vendorId: Types.ObjectId | IVendor;
+  name: string;
+  email: string;
+  phone: string;
+  location: {
+    address: string;
+    coordinates: {
+      lat: number;
+      lng: number;
+    };
+    place_id?: string;
+  };
+  cover?: string | null;
+  coverPublicId?: string | null;
+  fulfillmentConfig: Record<string, any>;
+  workingHours: {
+    monday?: { start: string; end: string };
+    tuesday?: { start: string; end: string };
+    wednesday?: { start: string; end: string };
+    thursday?: { start: string; end: string };
+    friday?: { start: string; end: string };
+    saturday?: { start: string; end: string };
+    sunday?: { start: string; end: string };
+  };
+  gallery: Array<{ url: string; publicId: string }>;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
 export interface IVendorType extends Document {
   name: string;
   description?: string;

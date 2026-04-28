@@ -15,6 +15,7 @@ import taskRoutes from "./routes/taskRoutes";
 import serviceRoutes from "./routes/serviceRoutes";
 import vendorCategoryRoutes from "./routes/vendorCategoryRoutes";
 import vendorTypeRoutes from "./routes/vendorTypeRoutes";
+import vendorRoutes from "./routes/vendorRoutes";
 
 // Initialize application
 const app = express();
@@ -121,6 +122,7 @@ app.use("/api/tasks", taskRoutes);
 app.use("/api/services", serviceRoutes);
 app.use("/api/vendor-categories", vendorCategoryRoutes);
 app.use("/api/vendor-types", vendorTypeRoutes);
+app.use("/api/vendors", vendorRoutes);
 
 // Socket.io setup for real-time features
 const server = createServer(app);
