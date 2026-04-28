@@ -81,6 +81,7 @@ const serviceSchema = new Schema<IService>(
 serviceSchema.index({ task: 1 });
 serviceSchema.index({ name: 1 });
 serviceSchema.index({ isActive: 1 });
+serviceSchema.index({ createdAt: -1 });
 
 const Service = mongoose.model<IService>('Service', serviceSchema);
 
@@ -166,7 +167,7 @@ export const createService = async (req: Request, res: Response, next: NextFunct
 **Purpose:** List all services  
 **Access:** Public  
 **Validation:** None  
-**Process:** Fetch services with pagination. Supports filtering by `task` and `search`. Public view only sees `isActive: true`.  
+**Process:** Fetch services with pagination. Sorted by `createdAt` descending (last added first). Supports filtering by `task` and `search`. Public view only sees `isActive: true`.  
 **Response:** List of services and pagination metadata
 
 **Controller Implementation:**
@@ -734,6 +735,7 @@ Standard error responses:
 serviceSchema.index({ task: 1 });
 serviceSchema.index({ name: 1 });
 serviceSchema.index({ isActive: 1 });
+serviceSchema.index({ createdAt: -1 });
 ```
 
 ---

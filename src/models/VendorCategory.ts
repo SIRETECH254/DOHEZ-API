@@ -44,6 +44,7 @@ const vendorCategorySchema = new Schema<IVendorCategory>(
 
 // Indexes
 vendorCategorySchema.index({ isActive: 1 });
+vendorCategorySchema.index({ createdAt: -1 });
 
 const VendorCategory = mongoose.model<IVendorCategory>('VendorCategory', vendorCategorySchema);
 

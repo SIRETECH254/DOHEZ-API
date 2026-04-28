@@ -39,6 +39,7 @@ const serviceSchema = new Schema<IService>(
 serviceSchema.index({ task: 1 });
 serviceSchema.index({ name: 1 });
 serviceSchema.index({ isActive: 1 });
+serviceSchema.index({ createdAt: -1 });
 
 const Service = mongoose.model<IService>('Service', serviceSchema);
 

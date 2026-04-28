@@ -91,7 +91,7 @@ export const getVendorTypes = async (req: Request, res: Response, next: NextFunc
     };
 
     const vendorTypes = await VendorType.find(query)
-      .sort({ name: 1 })
+      .sort({ createdAt: -1 })
       .limit(options.limit)
       .skip((options.page - 1) * options.limit);
 

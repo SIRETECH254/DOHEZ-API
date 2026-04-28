@@ -82,6 +82,7 @@ const vendorTypeSchema = new Schema<IVendorType>(
 
 // Indexes
 vendorTypeSchema.index({ isActive: 1 });
+vendorTypeSchema.index({ createdAt: -1 });
 
 const VendorType = mongoose.model<IVendorType>('VendorType', vendorTypeSchema);
 
@@ -166,7 +167,7 @@ export const createVendorType = async (req: Request, res: Response, next: NextFu
 ```
 
 #### `getVendorTypes()`
-**Purpose:** List all vendor types with pagination  
+**Purpose:** List all vendor types with pagination. Sorted by `createdAt` descending (last added first).  
 **Access:** Public  
 **Validation:** None  
 **Process:** Fetch types. Public sees only active ones. Admins can see all via `all=true`.  
@@ -198,7 +199,7 @@ export const getVendorTypes = async (req: Request, res: Response, next: NextFunc
     };
 
     const vendorTypes = await VendorType.find(query)
-      .sort({ name: 1 })
+      .sort({ createdAt: -1 })
       .limit(options.limit)
       .skip((options.page - 1) * options.limit);
 
@@ -695,6 +696,7 @@ Standard error responses:
 
 ```typescript
 vendorTypeSchema.index({ isActive: 1 });
+vendorTypeSchema.index({ createdAt: -1 });
 ```
 
 ---

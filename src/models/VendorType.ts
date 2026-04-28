@@ -40,6 +40,7 @@ const vendorTypeSchema = new Schema<IVendorType>(
 
 // Indexes
 vendorTypeSchema.index({ isActive: 1 });
+vendorTypeSchema.index({ createdAt: -1 });
 
 const VendorType = mongoose.model<IVendorType>('VendorType', vendorTypeSchema);
 

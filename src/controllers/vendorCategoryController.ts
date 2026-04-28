@@ -70,7 +70,7 @@ export const createVendorCategory = async (req: Request, res: Response, next: Ne
  */
 export const getVendorCategories = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
-    const { search, all, page = 1, limit = 10, sort = "createdAt", order = "desc" } = req.query;
+    const { search, all, page = 1, limit = 10 } = req.query;
     const query: any = {};
 
     const isAdmin = req.user && (req.user.roles as IRole[]).some(role => 
@@ -87,14 +87,12 @@ export const getVendorCategories = async (req: Request, res: Response, next: Nex
 
     const options = {
       page: parseInt(page as string, 10) || 1,
-      limit: parseInt(limit as string, 10) || 10,
-      sort: sort as string,
-      order: order === "asc" ? 1 : -1
+      limit: parseInt(limit as string, 10) || 10
     };
 
     const categories = await VendorCategory.find(query)
       .populate('vendorType')
-      .sort({ [options.sort]: options.order as any })
+      .sort({ createdAt: -1 })
       .limit(options.limit)
       .skip((options.page - 1) * options.limit);
 

@@ -86,6 +86,7 @@ const vendorCategorySchema = new Schema<IVendorCategory>(
 
 // Indexes
 vendorCategorySchema.index({ isActive: 1 });
+vendorCategorySchema.index({ createdAt: -1 });
 
 const VendorCategory = mongoose.model<IVendorCategory>('VendorCategory', vendorCategorySchema);
 
@@ -169,16 +170,16 @@ export const createVendorCategory = async (req: Request, res: Response, next: Ne
 ```
 
 #### `getVendorCategories()`
-**Purpose:** List categories with pagination, search, and sorting  
+**Purpose:** List all vendor categories with pagination. Sorted by `createdAt` descending (last added first).  
 **Access:** Public  
-**Query Params:** `page`, `limit`, `search`, `sort` (name, createdAt), `order` (asc, desc)  
+**Query Params:** `page`, `limit`, `search`  
 **Response:** List of categories and pagination metadata
 
 **Controller Implementation:**
 ```typescript
 export const getVendorCategories = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
-    const { search, all, page = 1, limit = 10, sort = "createdAt", order = "desc" } = req.query;
+    const { search, all, page = 1, limit = 10 } = req.query;
     const query: any = {};
 
     const isAdmin = req.user && (req.user.roles as IRole[]).some(role => 
@@ -195,14 +196,12 @@ export const getVendorCategories = async (req: Request, res: Response, next: Nex
 
     const options = {
       page: parseInt(page as string, 10) || 1,
-      limit: parseInt(limit as string, 10) || 10,
-      sort: sort as string,
-      order: order === "asc" ? 1 : -1
+      limit: parseInt(limit as string, 10) || 10
     };
 
     const categories = await VendorCategory.find(query)
       .populate('vendorType')
-      .sort({ [options.sort]: options.order as any })
+      .sort({ createdAt: -1 })
       .limit(options.limit)
       .skip((options.page - 1) * options.limit);
 
@@ -427,7 +426,7 @@ export default router;
 ```
 
 #### `GET /api/vendor-categories`
-**Query Params:** `page=1`, `limit=10`, `search=food`, `sort=name`, `order=asc`
+**Query Params:** `page=1`, `limit=10`, `search=food`
 **Response:**
 ```json
 {
@@ -698,6 +697,7 @@ Standard error responses:
 
 ```typescript
 vendorCategorySchema.index({ isActive: 1 });
+vendorCategorySchema.index({ createdAt: -1 });
 ```
 
 ---
