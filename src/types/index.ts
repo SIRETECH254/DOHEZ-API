@@ -178,3 +178,15 @@ export interface IProductType extends Document {
   createdAt: Date;
   updatedAt: Date;
 }
+
+export interface IProductCategory extends Document {
+  name: string;
+  details?: string;
+  icon?: string | null;
+  iconPublicId?: string | null;
+  sort: number;
+  slug: string;
+  productType: Types.ObjectId | IProductType;
+  createdAt: Date;
+  updatedAt: Date;
+}
