@@ -167,3 +167,14 @@ export interface IVendorType extends Document {
   createdAt: Date;
   updatedAt: Date;
 }
+
+export interface IProductType extends Document {
+  name: string;
+  details?: string;
+  order: number;
+  slug: string;
+  icon?: string | null;
+  iconPublicId?: string | null;
+  createdAt: Date;
+  updatedAt: Date;
+}

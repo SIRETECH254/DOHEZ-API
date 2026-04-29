@@ -17,6 +17,7 @@ import vendorCategoryRoutes from "./routes/vendorCategoryRoutes";
 import vendorTypeRoutes from "./routes/vendorTypeRoutes";
 import vendorRoutes from "./routes/vendorRoutes";
 import branchRoutes from "./routes/branchRoutes";
+import productTypeRoutes from "./routes/productTypeRoutes";
 
 // Initialize application
 const app = express();
@@ -125,6 +126,7 @@ app.use("/api/vendor-categories", vendorCategoryRoutes);
 app.use("/api/vendor-types", vendorTypeRoutes);
 app.use("/api/vendors", vendorRoutes);
 app.use("/api/branches", branchRoutes);
+app.use("/api/product-types", productTypeRoutes);
 
 // Socket.io setup for real-time features
 const server = createServer(app);
