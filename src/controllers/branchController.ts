@@ -44,19 +44,28 @@ export const getBranches = async (req: Request, res: Response, next: NextFunctio
     const { vendorId, page = 1, limit = 10 } = req.query;
     const query: any = vendorId ? { vendorId } : {};
 
+    const options = {
+      page: parseInt(page as string, 10) || 1,
+      limit: parseInt(limit as string, 10) || 10
+    };
+
     const branches = await Branch.find(query)
-      .limit(parseInt(limit as string))
-      .skip((parseInt(page as string) - 1) * parseInt(limit as string));
+      .limit(options.limit)
+      .skip((options.page - 1) * options.limit);
 
     const total = await Branch.countDocuments(query);
+    const totalPages = Math.ceil(total / options.limit);
 
     res.status(200).json({ 
         success: true, 
         data: { 
             branches, 
             pagination: { 
-                currentPage: parseInt(page as string), 
-                totalBranches: total 
+                currentPage: options.page,
+                totalPages: totalPages,
+                totalBranches: total,
+                hasNextPage: options.page < totalPages,
+                hasPrevPage: options.page > 1
             } 
         } 
     });
