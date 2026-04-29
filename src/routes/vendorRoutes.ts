@@ -111,12 +111,18 @@ router.get('/:vendorId', getVendorById);
 
 /**
  * @swagger
- * /api/vendors/profile:
+ * /api/vendors/{vendorId}:
  *   put:
  *     summary: Update vendor profile
  *     tags: [Vendors]
  *     security:
  *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: vendorId
+ *         required: true
+ *         schema:
+ *           type: string
  *     requestBody:
  *       content:
  *         multipart/form-data:
@@ -139,7 +145,7 @@ router.get('/:vendorId', getVendorById);
  *       200:
  *         description: Updated successfully
  */
-router.put('/profile', authenticateToken, upload.fields([{ name: 'logo', maxCount: 1 }, { name: 'banner', maxCount: 1 }]), updateVendorProfile);
+router.put('/:vendorId', authenticateToken, authorizeRoles(['super_admin', 'admin']), upload.fields([{ name: 'logo', maxCount: 1 }, { name: 'banner', maxCount: 1 }]), updateVendorProfile);
 
 /**
  * @swagger

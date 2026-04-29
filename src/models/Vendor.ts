@@ -7,7 +7,6 @@ const vendorSchema = new Schema<IVendor>(
       type: Schema.Types.ObjectId,
       ref: 'User',
       required: true,
-      unique: true,
     },
     service: {
       type: Schema.Types.ObjectId,
@@ -54,17 +53,17 @@ const vendorSchema = new Schema<IVendor>(
     },
     location: {
       name: String,
-      address: { type: String, required: true },
+      address: { type: String },
       regions: {
         administrative_area_level_3: String,
         administrative_area_level_1: String,
-        country: { type: String, required: true },
+        country: { type: String },
       },
       coordinates: {
-        lat: { type: Number, required: true },
-        lng: { type: Number, required: true },
+        lat: { type: Number },
+        lng: { type: Number },
       },
-      place_id: { type: String, required: true },
+      place_id: { type: String },
     },
     branches: [{
       type: Schema.Types.ObjectId,

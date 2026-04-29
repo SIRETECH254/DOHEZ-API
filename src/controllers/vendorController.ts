@@ -6,23 +6,17 @@ import { uploadToCloudinary, deleteFromCloudinary } from "../config/cloudinary";
 import { IRole } from "../types";
 
 /**
- * @desc    Register as a new vendor
+ * @desc    Register a new vendor
  * @route   POST /api/vendors/register
- * @access  Private (Authenticated users)
+ * @access  Private (Super Admin)
  */
 export const registerVendor = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
-    const { name, description, categoryId, phone, email, location, workingHours } = req.body;
-    const userId = (req.user as any)?._id;
+    const { name, description, categoryId, phone, email, location, workingHours, userId: bodyUserId } = req.body;
+    const userId = bodyUserId || (req.user as any)?._id;
 
     if (!userId) {
-      return next(errorHandler(401, "Not authorized to register as vendor"));
-    }
-
-    // Check if user is already a vendor
-    const existingVendor = await Vendor.findOne({ userId });
-    if (existingVendor) {
-      return next(errorHandler(400, "User already has a vendor profile"));
+      return next(errorHandler(401, "User ID is required to register as vendor"));
     }
 
     const vendorData: any = {
@@ -32,8 +26,8 @@ export const registerVendor = async (req: Request, res: Response, next: NextFunc
       vendorCategory: categoryId,
       phone,
       email,
-      location: JSON.parse(location),
-      slug: name.toLowerCase().replace(/ /g, '-'),
+      location: location ? (typeof location === 'string' ? JSON.parse(location) : location) : {},
+      slug: name ? name.toLowerCase().replace(/ /g, '-') : '',
     };
 
     // Handle logo and cover uploads
@@ -58,7 +52,7 @@ export const registerVendor = async (req: Request, res: Response, next: NextFunc
       email,
       phone,
       location: vendorData.location,
-      workingHours: JSON.parse(workingHours),
+      workingHours: workingHours ? (typeof workingHours === 'string' ? JSON.parse(workingHours) : workingHours) : [],
       isMainBranch: true,
       isActive: true,
     };
@@ -87,7 +81,7 @@ export const registerVendor = async (req: Request, res: Response, next: NextFunc
 export const getVendors = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
     const { search, page = 1, limit = 10 } = req.query;
-    const query: any = { isActive: true, isVerified: true };
+    const query: any = { isActive: true };
 
     if (search) {
       query.name = { $regex: search, $options: "i" };
@@ -132,7 +126,7 @@ export const getVendors = async (req: Request, res: Response, next: NextFunction
  */
 export const getVendorById = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
-    const vendor = await Vendor.findById(req.params.vendorId).populate('categoryId');
+    const vendor = await Vendor.findById(req.params.vendorId).populate('vendorCategory');
 
     if (!vendor) {
       return next(errorHandler(404, "Vendor not found"));
@@ -149,14 +143,20 @@ export const getVendorById = async (req: Request, res: Response, next: NextFunct
 
 /**
  * @desc    Update vendor profile
- * @route   PUT /api/vendors/profile
- * @access  Private (Vendor Owner)
+ * @route   PUT /api/vendors/:vendorId
+ * @access  Private (Super Admin / Admin)
  */
 export const updateVendorProfile = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
     const { name, description, categoryId } = req.body;
-    const ownerId = (req.user as any)?._id;
-    const vendor = await Vendor.findOne({ ownerId });
+    const { vendorId } = req.params;
+    const userRole = (req.user as any)?.role;
+
+    if (userRole !== 'super_admin' && userRole !== 'admin') {
+      return next(errorHandler(403, "Not authorized to update vendor"));
+    }
+
+    const vendor = await Vendor.findById(vendorId);
 
     if (!vendor) {
       return next(errorHandler(404, "Vendor profile not found"));
@@ -168,12 +168,10 @@ export const updateVendorProfile = async (req: Request, res: Response, next: Nex
 
     const files = req.files as { [fieldname: string]: Express.Multer.File[] };
     if (files?.logo) {
-      // Logic for updating logo... (Simplified for now)
       const uploadResult = await uploadToCloudinary(files.logo[0], "dohez/vendors/logos");
       vendor.logo = uploadResult.url;
     }
     if (files?.banner) {
-      // Logic for updating banner...
       const uploadResult = await uploadToCloudinary(files.banner[0], "dohez/vendors/banners");
       vendor.cover = uploadResult.url;
     }
@@ -203,11 +201,13 @@ export const deleteVendor = async (req: Request, res: Response, next: NextFuncti
       return next(errorHandler(404, "Vendor not found"));
     }
 
+    // Delete associated branches
+    await Branch.deleteMany({ vendorId: vendor._id });
     await vendor.deleteOne();
 
     res.status(200).json({
       success: true,
-      message: "Vendor profile deleted successfully",
+      message: "Vendor profile and associated branches deleted successfully",
     });
   } catch (error: any) {
     next(error);

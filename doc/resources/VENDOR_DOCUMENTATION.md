@@ -200,6 +200,9 @@ import { IRole } from "../types";
 ```typescript
 export const registerVendor = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
+    if (!req.body) {
+      return next(errorHandler(400, "Request body is missing"));
+    }
     const { name, description, categoryId, phone, email, location, workingHours } = req.body;
     const userId = (req.user as any)?._id;
 
@@ -220,8 +223,8 @@ export const registerVendor = async (req: Request, res: Response, next: NextFunc
       vendorCategory: categoryId,
       phone,
       email,
-      location: JSON.parse(location),
-      slug: name.toLowerCase().replace(/ /g, '-'),
+      location: location ? (typeof location === 'string' ? JSON.parse(location) : location) : {},
+      slug: name ? name.toLowerCase().replace(/ /g, '-') : '',
     };
 
     // Handle logo and cover uploads
@@ -246,7 +249,7 @@ export const registerVendor = async (req: Request, res: Response, next: NextFunc
       email,
       phone,
       location: vendorData.location,
-      workingHours: JSON.parse(workingHours),
+      workingHours: workingHours ? (typeof workingHours === 'string' ? JSON.parse(workingHours) : workingHours) : [],
       isMainBranch: true,
       isActive: true,
     };
