@@ -218,3 +218,60 @@ export interface IProductModifier extends Document {
   createdAt: Date;
   updatedAt: Date;
 }
+
+export interface ISKUAttribute {
+  variantId: Types.ObjectId;
+  optionId: Types.ObjectId;
+}
+
+export interface ISKU {
+  _id?: Types.ObjectId;
+  attributes: ISKUAttribute[];
+  price: number;
+  comparePrice?: number;
+  stock: number;
+  skuCode: string;
+  barcode?: string;
+  weight?: number;
+  dimensions?: {
+    length: number;
+    width: number;
+    height: number;
+  };
+  isActive: boolean;
+  allowPreOrder: boolean;
+  preOrderStock: number;
+  lowStockThreshold: number;
+}
+
+export interface ISelectedVariantOption {
+  variantId: Types.ObjectId;
+  optionIds: Types.ObjectId[];
+}
+
+export interface IProduct extends Document {
+  name: string;
+  slug: string;
+  details?: string;
+  price: number;
+  offerPrice?: number;
+  images: Array<{ url: string; publicId: string }>;
+  category: Types.ObjectId | IProductCategory;
+  vendor: Types.ObjectId | IVendor;
+  branch: Types.ObjectId | IBranch;
+  service: Types.ObjectId | IService;
+  variants: Types.ObjectId[] | IVariant[];
+  selectedVariantOptions: ISelectedVariantOption[];
+  skus: Types.DocumentArray<ISKU & Types.Subdocument>;
+  status: boolean;
+  trackInventory: boolean;
+  createdAt: Date;
+  updatedAt: Date;
+
+  // Methods
+  generateSKUs(): Promise<IProduct>;
+  generateCombinations(variants: any[]): any[][];
+  generateSKUCode(attributes: ISKUAttribute[]): string;
+  updateSKU(skuId: string | Types.ObjectId, updateData: Partial<ISKU>): Promise<IProduct>;
+  deleteSKU(skuId: string | Types.ObjectId): Promise<IProduct>;
+}
