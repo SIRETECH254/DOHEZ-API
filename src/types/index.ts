@@ -190,3 +190,18 @@ export interface IProductCategory extends Document {
   createdAt: Date;
   updatedAt: Date;
 }
+
+export interface IOption {
+  value: string;
+  isActive: boolean;
+  sortOrder: number;
+}
+
+export interface IVariant extends Document {
+  name: string;
+  options: IOption[];
+  branchId: Types.ObjectId | IBranch;
+  sortOrder: number;
+  createdAt: Date;
+  updatedAt: Date;
+}

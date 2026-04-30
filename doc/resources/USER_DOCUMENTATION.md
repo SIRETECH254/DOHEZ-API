@@ -963,9 +963,27 @@ export default router;
 ## 🔐 Middleware
 
 ### Authentication Middleware
-- `authenticateToken`: Verify JWT token.
-- `authorizeRoles(allowedRoles)`: Check user permissions.
-- `requireAdmin`: Admin access only (admin/super_admin).
+
+#### `authenticateToken`
+**Purpose:** Verify JWT token and load user with roles  
+**Usage:**
+```typescript
+router.get('/profile', authenticateToken, getUserProfile);
+```
+
+#### `authorizeRoles(allowedRoles)`
+**Purpose:** Check if user has any of the allowed roles  
+**Usage:**
+```typescript
+router.get('/', authenticateToken, authorizeRoles(['admin', 'super_admin']), getAllUsers);
+```
+
+#### `requireAdmin`
+**Purpose:** Admin access only (admin/super_admin)  
+**Usage:**
+```typescript
+router.delete('/:userId', authenticateToken, requireAdmin, deleteUser);
+```
 
 ---
 

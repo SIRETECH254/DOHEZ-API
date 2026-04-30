@@ -15,7 +15,6 @@ const productCategorySchema = new Schema<IProductCategory>(
 );
 
 productCategorySchema.index({ name: 1 });
-productCategorySchema.index({ slug: 1 });
 productCategorySchema.index({ productType: 1 });
 
 const ProductCategory = mongoose.model<IProductCategory>('ProductCategory', productCategorySchema);

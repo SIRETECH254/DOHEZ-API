@@ -14,7 +14,6 @@ const productTypeSchema = new Schema<IProductType>(
 );
 
 productTypeSchema.index({ name: 1 });
-productTypeSchema.index({ slug: 1 });
 
 const ProductType = mongoose.model<IProductType>('ProductType', productTypeSchema);
 export default ProductType;
