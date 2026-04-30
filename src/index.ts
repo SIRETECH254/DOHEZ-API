@@ -20,6 +20,7 @@ import branchRoutes from "./routes/branchRoutes";
 import productTypeRoutes from "./routes/productTypeRoutes";
 import productCategoryRoutes from "./routes/productCategoryRoutes";
 import variantRoutes from "./routes/variantRoutes";
+import productModifierRoutes from "./routes/productModifierRoutes";
 
 // Initialize application
 const app = express();
@@ -131,6 +132,7 @@ app.use("/api/branches", branchRoutes);
 app.use("/api/product-types", productTypeRoutes);
 app.use("/api/product-categories", productCategoryRoutes);
 app.use("/api/variants", variantRoutes);
+app.use("/api/product-modifiers", productModifierRoutes);
 
 // Socket.io setup for real-time features
 const server = createServer(app);

@@ -205,3 +205,16 @@ export interface IVariant extends Document {
   createdAt: Date;
   updatedAt: Date;
 }
+
+export interface IProductModifier extends Document {
+  name: string;
+  description?: string;
+  price: number;
+  min_selection: number;
+  max_selection: number;
+  is_required: boolean;
+  branchId: Types.ObjectId | IBranch;
+  sortOrder: number;
+  createdAt: Date;
+  updatedAt: Date;
+}
