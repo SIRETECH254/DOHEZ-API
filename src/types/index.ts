@@ -273,5 +273,27 @@ export interface IProduct extends Document {
   generateCombinations(variants: any[]): any[][];
   generateSKUCode(attributes: ISKUAttribute[]): string;
   updateSKU(skuId: string | Types.ObjectId, updateData: Partial<ISKU>): Promise<IProduct>;
-  deleteSKU(skuId: string | Types.ObjectId): Promise<IProduct>;
+
+export interface ICartItem {
+  productId: Types.ObjectId | IProduct;
+  skuId: Types.ObjectId;
+  quantity: number;
+  priceAtAddition: number;
+  variants?: Array<{ variantId: Types.ObjectId; optionId: Types.ObjectId }>;
 }
+
+export interface ICartGroup {
+  vendorId: Types.ObjectId | IVendor;
+  branchId: Types.ObjectId | IBranch;
+  items: ICartItem[];
+  groupSubtotal: number;
+}
+
+export interface ICart extends Document {
+  userId: Types.ObjectId | IUser;
+  cartGroups: ICartGroup[];
+  totalCartValue: number;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
