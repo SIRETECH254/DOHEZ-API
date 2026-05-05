@@ -1,4 +1,4 @@
-import { Document, Types } from 'mongoose';
+import { Document, Types, Model } from 'mongoose';
 
 /**
  * Base response interface for notification services.
@@ -21,6 +21,15 @@ export interface MultiChannelNotificationResponse {
 }
 
 export type UserRoleType = 'customer' | 'super_admin' | 'admin' | 'staff' | 'rider';
+
+export interface IPackaging extends Document {
+  name: string;
+  price: number;
+  isActive: boolean;
+  isDefault: boolean;
+  createdAt: Date;
+  updatedAt: Date;
+}
 
 export interface IRole extends Document {
   name: UserRoleType | string;
@@ -273,6 +282,8 @@ export interface IProduct extends Document {
   generateCombinations(variants: any[]): any[][];
   generateSKUCode(attributes: ISKUAttribute[]): string;
   updateSKU(skuId: string | Types.ObjectId, updateData: Partial<ISKU>): Promise<IProduct>;
+  deleteSKU(skuId: string | Types.ObjectId): Promise<IProduct>;
+}
 
 export interface ICartItem {
   productId: Types.ObjectId | IProduct;
@@ -289,6 +300,7 @@ export interface ICartGroup {
   groupSubtotal: number;
 }
 
+
 export interface ICart extends Document {
   userId: Types.ObjectId | IUser;
   cartGroups: ICartGroup[];
@@ -296,4 +308,124 @@ export interface ICart extends Document {
   createdAt: Date;
   updatedAt: Date;
 }
+
+export interface IOrderItem {
+  sku: Types.ObjectId;
+  product: Types.ObjectId | IProduct;
+  title: string;
+  variantOptions?: Map<string, string>;
+  quantity: number;
+  unitPrice: number;
+  packagingChoice?: {
+    id: string;
+    name: string;
+    fee: number;
+  };
+}
+
+export interface IPricing {
+  subtotal: number;
+  discounts: number;
+  packagingFee: number;
+  schedulingFee: number;
+  deliveryFee: number;
+  tax: number;
+  total: number;
+}
+
+export interface ITiming {
+  isScheduled: boolean;
+  scheduledAt?: Date | null;
+}
+
+export interface IInvoiceLineItem {
+  label: string;
+  amount: number;
+}
+
+export interface IInvoice extends Document {
+  order: Types.ObjectId | IOrder;
+  number: string;
+  lineItems: IInvoiceLineItem[];
+  subtotal: number;
+  discounts: number;
+  fees: number;
+  tax: number;
+  total: number;
+  balanceDue: number;
+  paymentStatus: "PENDING" | "PAID" | "CANCELLED";
+  metadata: any;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export interface ICouponUsage {
+  user: Types.ObjectId | IUser;
+  usedAt: Date;
+}
+
+export interface ICoupon extends Document {
+  code: string;
+  name: string;
+  description?: string;
+  discountType: 'percentage' | 'fixed';
+  discountValue: number;
+  minimumOrderAmount: number;
+  maximumDiscountAmount?: number;
+  isActive: boolean;
+  hasExpiry: boolean;
+  expiryDate?: Date;
+  hasUsageLimit: boolean;
+  usageLimit?: number;
+  usedCount: number;
+  isFirstTimeOnly: boolean;
+  applicableProducts: Types.ObjectId[] | IProduct[];
+  applicableCategories: Types.ObjectId[] | IProductCategory[];
+  excludedProducts: Types.ObjectId[] | IProduct[];
+  excludedCategories: Types.ObjectId[] | IProductCategory[];
+  createdBy: Types.ObjectId | IUser;
+  lastUsedBy: ICouponUsage[];
+  createdAt: Date;
+  updatedAt: Date;
+
+  // Virtuals
+  isExpired: boolean;
+  isUsageLimitReached: boolean;
+  isValid: boolean;
+  remainingUsage: number | null;
+
+  // Methods
+  validateCoupon(userId: string, orderAmount?: number): { isValid: boolean; message: string };
+  calculateDiscount(orderAmount: number): number;
+  incrementUsage(userId: string): Promise<ICoupon>;
+}
+
+export interface ICouponModel extends Model<ICoupon> {
+  generateUniqueCode(length?: number): Promise<string>;
+}
+
+export interface IOrder extends Document {
+  customer: Types.ObjectId | IUser;
+  vendor: Types.ObjectId | IVendor;
+  branch: Types.ObjectId | IBranch;
+  createdBy: Types.ObjectId | IUser;
+  location: "in_shop" | "away";
+  type: "pickup" | "delivery";
+  items: IOrderItem[];
+  pricing: IPricing;
+  timing: ITiming;
+  address?: Types.ObjectId | null;
+  paymentPreference: {
+    mode: "post_to_bill" | "pay_now" | "cash" | "cod";
+    method?: "mpesa_stk" | "paystack_card" | null;
+  };
+  status: "PLACED" | "CONFIRMED" | "PACKED" | "SHIPPED" | "OUT_FOR_DELIVERY" | "DELIVERED" | "CANCELLED" | "REFUNDED";
+  paymentStatus: "UNPAID" | "PENDING" | "PAID" | "PARTIALLY_REFUNDED" | "REFUNDED";
+  invoice?: Types.ObjectId | null;
+  receipt?: Types.ObjectId | null;
+  metadata?: any;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
 

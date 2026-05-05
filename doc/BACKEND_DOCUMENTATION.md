@@ -241,21 +241,16 @@ interface IService {
   isActive: boolean;
   createdAt: Date;
   updatedAt: Date;
-}
-```
-
----
-
 ### 9. Order Model
 ```typescript
 interface IOrder {
   _id: ObjectId;
-  customerId: ObjectId;
-  vendorId: ObjectId;
-  branchId: ObjectId;
+  customer: ObjectId;
+  vendor: ObjectId;
+  branch: ObjectId;
   riderId?: ObjectId;
   items: Array<{
-    productId?: ObjectId;
+    product?: ObjectId;
     serviceId?: ObjectId;
     quantity: number;
     price: number;
@@ -266,6 +261,74 @@ interface IOrder {
       ticketHolderName?: string;
     };
   }>;
+```
+
+---
+
+### 10. Invoice Model
+```typescript
+interface IInvoice {
+  _id: ObjectId;
+  order: ObjectId;
+  number: string;
+  lineItems: Array<{
+    label: string;
+    amount: number;
+  }>;
+  subtotal: number;
+  discounts: number;
+  fees: number;
+  tax: number;
+  total: number;
+  balanceDue: number;
+  paymentStatus: "PENDING" | "PAID" | "CANCELLED";
+  metadata: any;
+  createdAt: Date;
+  updatedAt: Date;
+}
+```
+
+---
+
+### 11. Payment Model
+
+---
+
+### 12. Coupon Model
+```typescript
+interface ICoupon {
+  _id: ObjectId;
+  code: string;
+  name: string;
+  description?: string;
+  discountType: 'percentage' | 'fixed';
+  discountValue: number;
+  minimumOrderAmount: number;
+  maximumDiscountAmount?: number;
+  isActive: boolean;
+  hasExpiry: boolean;
+  expiryDate?: Date;
+  hasUsageLimit: boolean;
+  usageLimit?: number;
+  usedCount: number;
+  isFirstTimeOnly: boolean;
+  applicableProducts: ObjectId[];
+  applicableCategories: ObjectId[];
+  excludedProducts: ObjectId[];
+  excludedCategories: ObjectId[];
+  createdBy: ObjectId;
+  lastUsedBy: Array<{
+    user: ObjectId;
+    usedAt: Date;
+  }>;
+  createdAt: Date;
+  updatedAt: Date;
+}
+```
+
+---
+
+### 13. Audit Log Model
   orderType: "IMMEDIATE" | "SCHEDULED" | "IN_SHOP";
   scheduledTime?: Date;
   status: "PLACED" | "ACCEPTED" | "PREPARING" | "READY" | "OUT_FOR_DELIVERY" | "DELIVERED" | "CANCELLED" | "PICKED_UP";
@@ -995,6 +1058,21 @@ npm start
 
 ---
 
+### 14. Packaging Model
+```typescript
+interface IPackaging {
+  _id: ObjectId;
+  name: string;
+  price: number;
+  isActive: boolean;
+  isDefault: boolean;
+  createdAt: Date;
+  updatedAt: Date;
+}
+```
+
+---
+
 ## API Response Format
 
 ### Success Response
@@ -1009,9 +1087,9 @@ npm start
 ### ObjectId Population
 All GET endpoints automatically populate ObjectId references with their related documents. This ensures complete data is returned in API responses:
 
-- **User references** (`userId`, `customerId`, `riderId`, `vendorId`) are populated with `firstName`, `lastName`, `email`, and `phone`
-- **Order references** (`orderId`) are populated with order details including nested `customerId`, `branchId`, and `items`
-- **Product/Service references** (`productId`, `categoryId`) are populated with product and category details
+- **User references** (`userId`, `customer`, `riderId`, `vendorId`) are populated with `firstName`, `lastName`, `email`, and `phone`
+- **Order references** (`orderId`) are populated with order details including nested `customer`, `vendor`, `branch`, and `items`
+- **Product/Service references** (`product`, `categoryId`) are populated with product and category details
 - **Branch references** (`branchId`) are populated with branch location and contact info
 - **Role references** (`roles`) are populated with role information
 

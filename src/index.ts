@@ -22,6 +22,7 @@ import productCategoryRoutes from "./routes/productCategoryRoutes";
 import variantRoutes from "./routes/variantRoutes";
 import productModifierRoutes from "./routes/productModifierRoutes";
 import productRoutes from "./routes/productRoutes";
+import orderRoutes from "./routes/orderRoutes";
 
 // Initialize application
 const app = express();
@@ -122,19 +123,38 @@ app.use(
 
 // Route Registrations
 app.use("/api/auth", authRoutes);
+
 app.use("/api/roles", roleRoutes);
+
 app.use("/api/users", userRoutes);
+
 app.use("/api/tasks", taskRoutes);
+
 app.use("/api/services", serviceRoutes);
+
 app.use("/api/vendor-categories", vendorCategoryRoutes);
+
 app.use("/api/vendor-types", vendorTypeRoutes);
+
 app.use("/api/vendors", vendorRoutes);
+
 app.use("/api/branches", branchRoutes);
+
 app.use("/api/product-types", productTypeRoutes);
+
 app.use("/api/product-categories", productCategoryRoutes);
+
 app.use("/api/variants", variantRoutes);
+
 app.use("/api/product-modifiers", productModifierRoutes);
+
 app.use("/api/products", productRoutes);
+
+app.use("/api/orders", orderRoutes);
+
+
+
+
 
 // Socket.io setup for real-time features
 const server = createServer(app);

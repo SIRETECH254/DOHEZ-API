@@ -7,7 +7,7 @@ import Product from "../models/Product";
  * @description Get user's cart
  * @access Authenticated
  */
-export const getCart = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+export const getCart = async (req: Request, res: Response, next: NextFunction): Promise<Response | void> => {
   try {
     const cart = await Cart.findOne({ userId: req.user?._id })
       .populate("cartGroups.vendorId")
