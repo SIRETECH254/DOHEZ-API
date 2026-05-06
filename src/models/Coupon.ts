@@ -90,6 +90,14 @@ const couponSchema = new Schema<ICoupon, ICouponModel>(
         ref: 'ProductCategory',
       },
     ],
+    vendor: {
+      type: Schema.Types.ObjectId,
+      ref: 'Vendor',
+    },
+    branch: {
+      type: Schema.Types.ObjectId,
+      ref: 'Branch',
+    },
     createdBy: {
       type: Schema.Types.ObjectId,
       ref: 'User',
