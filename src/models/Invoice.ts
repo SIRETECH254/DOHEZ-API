@@ -16,7 +16,17 @@ const invoiceSchema = new Schema<IInvoice>(
       ref: 'Order',
       required: true,
     },
-    number: {
+    branch: {
+      type: Schema.Types.ObjectId,
+      ref: 'Branch',
+      required: true,
+    },
+    vendor: {
+      type: Schema.Types.ObjectId,
+      ref: 'Vendor',
+      required: true,
+    },
+    invoiceNumber: {
       type: String,
       required: true,
       unique: true,

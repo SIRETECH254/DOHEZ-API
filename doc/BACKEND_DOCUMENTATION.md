@@ -290,9 +290,47 @@ interface IInvoice {
 
 ---
 
-### 11. Payment Model
+### 11. Receipt Model
+```typescript
+interface IReceipt {
+  _id: string;
+  orderId: string; // Order ObjectId
+  invoiceId: string; // Invoice ObjectId
+  receiptNumber: string;
+  amountPaid: number;
+  paymentMethod: "mpesa_stk" | "paystack_card" | "cash";
+  issuedAt: Date;
+  pdfUrl?: string;
+  metadata?: any;
+  createdAt: Date;
+  updatedAt: Date;
+}
+```
 
----
+### 12. Payment Model
+```typescript
+interface IPayment {
+  _id: string;
+  invoiceId: string; // Invoice ObjectId
+  method: "mpesa_stk" | "paystack_card" | "cash" | "post_to_bill" | "cod";
+  amount: number;
+  currency: string; // Default: "KES"
+  processorRefs?: {
+    daraja?: {
+      merchantRequestId?: string;
+      checkoutRequestId?: string;
+    };
+    paystack?: {
+      reference?: string;
+    };
+  };
+  status: "INITIATED" | "PENDING" | "SUCCESS" | "FAILED" | "CANCELLED";
+  rawPayload?: any; // Raw webhook payload for debugging
+  createdAt: Date;
+  updatedAt: Date;
+}
+```
+
 
 ### 12. Coupon Model
 ```typescript
@@ -598,11 +636,12 @@ interface IStoreConfiguration {
 ### 8. Payment Controllers
 
 #### `paymentController.ts`
-- `initiatePayment()` - Start M-Pesa or Card payment
-- `mpesaWebhook()` - M-Pesa callback handler
-- `paystackWebhook()` - Paystack callback handler
-- `getPayments()` - List payments (admin)
-- `getMyPayments()` - Get authenticated user's payment history
+- `payInvoice()` - Initiate payment for an invoice
+- `mpesaWebhook()` - Handle M-Pesa callbacks
+- `queryMpesaByCheckoutId()` - Query payment status by checkout ID
+- `getPayments()` - List all payments (admin)
+- `getPaymentById()` - Get specific payment details by ID
+
 
 ---
 
@@ -615,7 +654,7 @@ interface IStoreConfiguration {
 - `getRiderDeliveries()` - Get current deliveries assigned to rider
 
 ---
-
+j
 ### 10. Notification Controllers
 
 #### `notificationController.ts`

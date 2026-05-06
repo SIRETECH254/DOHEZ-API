@@ -343,9 +343,49 @@ export interface IInvoiceLineItem {
   amount: number;
 }
 
+export interface IReceipt extends Document {
+  order: Types.ObjectId | IOrder;
+  invoice: Types.ObjectId | IInvoice;
+  branch: Types.ObjectId | IBranch;
+  vendor: Types.ObjectId | IVendor;
+  receiptNumber: string;
+  amountPaid: number;
+  paymentMethod: "mpesa" | "paystack" | "cash";
+  issuedAt: Date;
+  pdfUrl?: string;
+  metadata?: any;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export interface IPayment extends Document {
+  paymentNumber: string;
+  invoice?: Types.ObjectId | IInvoice;
+  branch: Types.ObjectId | IBranch;
+  vendor: Types.ObjectId | IVendor;
+  method: "mpesa" | "paystack" | "cash" | "post_to_bill" | "cod";
+  amount: number;
+  currency: string;
+  processorRefs?: {
+    daraja?: {
+      merchantRequestId?: string;
+      checkoutRequestId?: string;
+    };
+    paystack?: {
+      reference?: string;
+    };
+  };
+  status: "INITIATED" | "PENDING" | "SUCCESS" | "FAILED" | "CANCELLED";
+  rawPayload?: any;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
 export interface IInvoice extends Document {
   order: Types.ObjectId | IOrder;
-  number: string;
+  branch: Types.ObjectId | IBranch;
+  vendor: Types.ObjectId | IVendor;
+  invoiceNumber: string;
   lineItems: IInvoiceLineItem[];
   subtotal: number;
   discounts: number;

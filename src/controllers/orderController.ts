@@ -7,12 +7,7 @@ import Packaging from '../models/Packaging';
 import Coupon from '../models/Coupon';
 import { IOrder, IInvoice, ICart, IProduct, IPackaging, ICoupon, IOrderItem } from '../types';
 import mongoose from 'mongoose';
-
-
-/**
- * Helper: generate incremental-ish numbers
- */
-const generateInvoiceNumber = () => `INV-${new Date().getFullYear()}-${Date.now().toString().slice(-6)}`;
+import { generateInvoiceNumber } from '../services/internal/paymentService';
 
 /**
  * Create a new order from a user's active cart
@@ -22,7 +17,7 @@ export const createOrder = async (req: Request, res: Response, next: NextFunctio
     const io = req.app.get('io');
 
     const {
-      customerId, // can be same as req.user?._id when staff acts for self; else provided
+      customerId,
       vendorId,
       branchId,
       location,
@@ -44,7 +39,6 @@ export const createOrder = async (req: Request, res: Response, next: NextFunctio
       return res.status(400).json({ success: false, message: 'vendorId and branchId are required' });
     }
 
-    // Load active cart and specific group for this vendor/branch
     const cart = await Cart.findOne({ userId: ownerCustomerId });
 
     if (!cart) {
@@ -59,29 +53,25 @@ export const createOrder = async (req: Request, res: Response, next: NextFunctio
       return res.status(400).json({ success: false, message: 'No items in cart for this vendor/branch' });
     }
 
-    // Map per-item packaging selections
     const packagingMap = new Map();
     for (const sel of (packagingSelections || [])) {
       if (sel?.sku && sel?.choiceId) packagingMap.set(String(sel.sku), sel.choiceId);
     }
 
-    // Fetch product names for items in group
     const productIds = Array.from(new Set(group.items.map(ci => String(ci.productId))));
     const productDocs = await Product.find({ _id: { $in: productIds } }, 'name');
     const productIdToName = new Map(productDocs.map(p => [String(p._id), p.name]));
 
-    // Build order items from cart group
     const items: IOrderItem[] = group.items.map((ci) => ({
       sku: ci.skuId,
       product: ci.productId,
       title: productIdToName.get(String(ci.productId)) || 'Unknown product',
-      variantOptions: new Map() as any, // Adjust if variants are needed in future
+      variantOptions: new Map() as any,
       quantity: ci.quantity,
       unitPrice: ci.priceAtAddition,
       packagingChoice: packagingMap.has(String(ci.skuId)) ? { id: packagingMap.get(String(ci.skuId)), name: '', fee: 0 } : undefined
     }));
 
-    // Resolve packaging option (order-level)
     let selectedPackaging: any = null;
     if (packagingOptionId) {
       const opt = await Packaging.findOne({ _id: packagingOptionId, isActive: true });
@@ -92,13 +82,11 @@ export const createOrder = async (req: Request, res: Response, next: NextFunctio
       if (def) selectedPackaging = { id: String(def._id), name: def.name, price: def.price };
     }
 
-    // Recalculate pricing
     const subtotal = items.reduce((sum, it) => sum + (it.unitPrice * it.quantity), 0);
     const packagingFee = selectedPackaging ? Number(selectedPackaging.price || 0) : 0;
     const schedulingFee = timing?.isScheduled ? 0 : 0; 
     const deliveryFee = (type === 'delivery') ? 0 : 0; 
     
-    // Apply coupon discount if provided
     let couponSnapshot = null;
     let discounts = 0;
     if (couponCode) {
@@ -122,7 +110,6 @@ export const createOrder = async (req: Request, res: Response, next: NextFunctio
     const tax = 0;
     const total = subtotal - discounts + packagingFee + schedulingFee + deliveryFee + tax;
 
-    // Create Order
     const order = await Order.create({
       customer: ownerCustomerId,
       vendor: vendorId,
@@ -144,10 +131,11 @@ export const createOrder = async (req: Request, res: Response, next: NextFunctio
       }
     });
 
-    // Create Invoice linked to Order
     const invoice = await Invoice.create({
       order: order._id,
-      number: generateInvoiceNumber(),
+      branch: order.branch,
+      vendor: order.vendor,
+      invoiceNumber: await generateInvoiceNumber(),
       lineItems: [
         { label: 'Items subtotal', amount: subtotal },
         ...(packagingFee ? [{ label: `Packaging${selectedPackaging?.name ? ` - ${selectedPackaging.name}` : ''}`, amount: packagingFee }] : []),
@@ -170,13 +158,11 @@ export const createOrder = async (req: Request, res: Response, next: NextFunctio
     order.invoice = invoice._id as any;
     await order.save();
 
-    // Remove the group from the cart
     cart.cartGroups = cart.cartGroups.filter(
       (g) => !(g.vendorId.toString() === vendorId && g.branchId.toString() === branchId)
     );
     await cart.save();
 
-    // Emit events
     io?.emit('order.created', { orderId: order._id.toString() });
     io?.emit('invoice.created', { invoiceId: invoice._id.toString(), orderId: order._id.toString() });
 
@@ -218,7 +204,6 @@ export const adminCreateOrder = async (req: Request, res: Response, next: NextFu
 
     const actingUserId = req.user?._id;
 
-    // Resolve Item Details
     const productIds = Array.from(new Set(inputItems.map((it: any) => String(it.productId))));
     const products = await Product.find({ _id: { $in: productIds } });
     const productMap = new Map(products.map(p => [String(p._id), p]));
@@ -250,7 +235,6 @@ export const adminCreateOrder = async (req: Request, res: Response, next: NextFu
       });
     }
 
-    // Resolve packaging
     let selectedPackaging: any = null;
     if (packagingOptionId) {
       const opt = await Packaging.findOne({ _id: packagingOptionId, isActive: true });
@@ -261,13 +245,11 @@ export const adminCreateOrder = async (req: Request, res: Response, next: NextFu
       if (def) selectedPackaging = { id: String(def._id), name: def.name, price: def.price };
     }
 
-    // Pricing Calculation
     const subtotal = items.reduce((sum, it) => sum + (it.unitPrice * it.quantity), 0);
     const packagingFee = selectedPackaging ? Number(selectedPackaging.price || 0) : 0;
     const schedulingFee = timing?.isScheduled ? 0 : 0; 
     const deliveryFee = (type === 'delivery') ? 0 : 0; 
 
-    // Coupon logic
     let couponSnapshot = null;
     let discounts = 0;
     if (couponCode) {
@@ -292,7 +274,6 @@ export const adminCreateOrder = async (req: Request, res: Response, next: NextFu
     const tax = 0;
     const total = subtotal - discounts + packagingFee + schedulingFee + deliveryFee + tax;
 
-    // Create Order
     const order = await Order.create({
       customer: customerId,
       vendor: vendorId,
@@ -315,10 +296,11 @@ export const adminCreateOrder = async (req: Request, res: Response, next: NextFu
       }
     });
 
-    // Create Invoice
     const invoice = await Invoice.create({
       order: order._id,
-      number: generateInvoiceNumber(),
+      branch: order.branch,
+      vendor: order.vendor,
+      invoiceNumber: await generateInvoiceNumber(),
       lineItems: [
         { label: 'Items subtotal', amount: subtotal },
         ...(packagingFee ? [{ label: `Packaging${selectedPackaging?.name ? ` - ${selectedPackaging.name}` : ''}`, amount: packagingFee }] : []),
@@ -341,7 +323,6 @@ export const adminCreateOrder = async (req: Request, res: Response, next: NextFu
     order.invoice = invoice._id as any;
     await order.save();
 
-    // Emit events
     io?.emit('order.created', { orderId: order._id.toString() });
     io?.emit('invoice.created', { invoiceId: invoice._id.toString(), orderId: order._id.toString() });
 
@@ -438,7 +419,7 @@ export const getUserOrders = async (req: Request, res: Response, next: NextFunct
         }
       },
       { $unwind: { path: '$invoice', preserveNullAndEmptyArrays: true } },
-      ...(q ? [{ $match: { 'invoice.number': { $regex: q, $options: 'i' } } }] : []),
+      ...(q ? [{ $match: { 'invoice.invoiceNumber': { $regex: q, $options: 'i' } } }] : []),
       { $sort: { createdAt: -1 as any } },
       {
         $facet: {
@@ -452,7 +433,7 @@ export const getUserOrders = async (req: Request, res: Response, next: NextFunct
                 status: 1,
                 paymentStatus: 1,
                 pricing: 1,
-                invoice: { _id: '$invoice._id', number: '$invoice.number' }
+                invoice: { _id: '$invoice._id', invoiceNumber: '$invoice.invoiceNumber' }
               }
             }
           ],
@@ -525,7 +506,7 @@ export const getOrders = async (req: Request, res: Response, next: NextFunction)
         }
       },
       { $unwind: { path: '$customer', preserveNullAndEmptyArrays: true } },
-      ...(q ? [{ $match: { 'invoice.number': { $regex: q, $options: 'i' } } }] : []),
+      ...(q ? [{ $match: { 'invoice.invoiceNumber': { $regex: q, $options: 'i' } } }] : []),
       { $sort: { createdAt: -1 as any } },
       {
         $facet: {
@@ -539,7 +520,7 @@ export const getOrders = async (req: Request, res: Response, next: NextFunction)
                 status: 1,
                 paymentStatus: 1,
                 pricing: 1,
-                invoice: { _id: '$invoice._id', number: '$invoice.number' },
+                invoice: { _id: '$invoice._id', invoiceNumber: '$invoice.invoiceNumber' },
                 customer: { _id: '$customer._id', firstName: '$customer.firstName', lastName: '$customer.lastName', email: '$customer.email' }
               }
             }

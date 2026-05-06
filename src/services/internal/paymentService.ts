@@ -1,0 +1,182 @@
+import Payment from '../../models/paymentModel';
+import Invoice from '../../models/Invoice';
+import Order from '../../models/Order';
+import Receipt from '../../models/receiptModel';
+import Coupon from '../../models/Coupon';
+import Product from '../../models/Product';
+import { initiateStkPush } from '../external/darajaService';
+import type { IPayment } from '../../types';
+
+export const generatePaymentNumber = async (): Promise<string> => {
+  const year = new Date().getFullYear();
+  const count = await Payment.countDocuments({
+    createdAt: { $gte: new Date(year, 0, 1) }
+  });
+  return `PAY-${year}-${String(count + 1).padStart(4, "0")}`;
+};
+
+export const generateInvoiceNumber = async (): Promise<string> => {
+  const year = new Date().getFullYear();
+  const count = await Invoice.countDocuments({
+    createdAt: { $gte: new Date(year, 0, 1) }
+  });
+  return `INV-${year}-${String(count + 1).padStart(4, "0")}`;
+};
+
+export const generateReceiptNumber = async (): Promise<string> => {
+  const year = new Date().getFullYear();
+  const count = await Receipt.countDocuments({
+    createdAt: { $gte: new Date(year, 0, 1) }
+  });
+  return `RCP-${year}-${String(count + 1).padStart(4, "0")}`;
+};
+
+const updateInventoryForOrder = async (order: any): Promise<void> => {
+  if (!order.items || order.items.length === 0) {
+    console.log('No items in order to update inventory');
+    return;
+  }
+
+  console.log(`Updating inventory for order ${order._id} with ${order.items.length} items`);
+
+  for (const item of order.items) {
+    try {
+      const product = await Product.findOne({ 
+        'skus._id': item.sku 
+      });
+
+      if (!product) {
+        console.error(`Product not found for SKU ${item.sku}`);
+        continue;
+      }
+
+      const sku = (product.skus as any).id(item.sku);
+      if (!sku) {
+        console.error(`SKU ${item.sku} not found in product ${product._id}`);
+        continue;
+      }
+
+      if (sku.stock < item.quantity) {
+        console.warn(`Insufficient stock for SKU ${item.sku}. Available: ${sku.stock}, Requested: ${item.quantity}`);
+      }
+
+      sku.stock = Math.max(0, sku.stock - item.quantity);
+
+      console.log(`Updated SKU ${item.sku} stock: ${sku.stock} (reduced by ${item.quantity})`);
+
+      await product.save();
+    } catch (error) {
+      console.error(`Failed to update inventory for SKU ${item.sku}:`, error);
+    }
+  }
+
+  console.log(`Completed inventory update for order ${order._id}`);
+};
+
+export const createPaymentRecord = async (params: {
+  invoice?: any;
+  branch: any;
+  vendor: any;
+  amount: number;
+  method: "mpesa" | "paystack" | "cash" | "post_to_bill" | "cod";
+}): Promise<IPayment> => {
+  return await Payment.create({
+    ...params,
+    paymentNumber: await generatePaymentNumber(),
+    status: "PENDING"
+  } as any);
+};
+
+export const applySuccessfulPayment = async ({ invoice, payment, io, method }: any): Promise<{ receipt: any }> => {
+  payment.status = 'SUCCESS';
+  await payment.save();
+
+  invoice.paymentStatus = 'PAID';
+  invoice.balanceDue = 0;
+  await invoice.save();
+
+  const order = await Order.findById(invoice.order);
+  if (!order) {
+    throw new Error('Order not found for successful payment');
+  }
+
+  order.paymentStatus = 'PAID';
+  await order.save();
+
+  // Increment coupon usage if applied
+  const couponSnapshot = invoice.metadata?.coupon;
+  if (couponSnapshot) {
+    try {
+      const c = await Coupon.findById(couponSnapshot._id);
+      if (c) {
+        await c.incrementUsage(String(order.customer));
+      }
+    } catch (couponError) {
+      console.error('Failed to increment coupon usage after payment:', couponError);
+    }
+  }
+
+  // Update SKU inventory
+  try {
+    await updateInventoryForOrder(order);
+  } catch (inventoryError) {
+    console.error('Failed to update inventory for order:', order._id, inventoryError);
+  }
+
+  const receipt: any = await Receipt.create({
+    order: invoice.order,
+    invoice: invoice._id,
+    branch: invoice.branch,
+    vendor: invoice.vendor,
+    receiptNumber: await generateReceiptNumber(),
+    amountPaid: payment.amount,
+    paymentMethod: method === 'mpesa_stk' ? 'mpesa' : (method === 'paystack_card' ? 'paystack' : method),
+    issuedAt: new Date(),
+    metadata: {
+      coupon: invoice?.metadata?.coupon || null
+    }
+  });
+
+  order.receipt = receipt._id as any;
+  await order.save();
+
+  io?.emit('payment.updated', { paymentId: payment._id.toString(), status: payment.status });
+  io?.emit('receipt.created', { receiptId: receipt._id.toString(), orderId: String(invoice.order) });
+
+  return { receipt };
+};
+
+export const initiateMpesaProductPayment = async (params: {
+  invoiceId?: any;
+  branch: any;
+  vendor: any;
+  amount: number;
+  phone: string;
+  invoiceNumber: string;
+}): Promise<any> => {
+  const { invoiceId, amount, phone, invoiceNumber, branch, vendor } = params;
+
+  const res = await initiateStkPush({
+    amount,
+    phone,
+    accountReference: invoiceNumber
+  });
+
+  const payment = await Payment.create({
+    paymentNumber: await generatePaymentNumber(),
+    invoice: invoiceId,
+    branch,
+    vendor,
+    method: 'mpesa',
+    amount,
+    status: 'INITIATED',
+    processorRefs: {
+      daraja: {
+        merchantRequestId: res.merchantRequestId,
+        checkoutRequestId: res.checkoutRequestId
+      }
+    }
+  });
+
+  return { payment, res };
+};
