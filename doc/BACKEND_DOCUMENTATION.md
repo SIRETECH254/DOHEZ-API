@@ -354,6 +354,8 @@ interface ICoupon {
   applicableCategories: ObjectId[];
   excludedProducts: ObjectId[];
   excludedCategories: ObjectId[];
+  vendor?: ObjectId;
+  branch?: ObjectId;
   createdBy: ObjectId;
   lastUsedBy: Array<{
     user: ObjectId;
@@ -642,10 +644,24 @@ interface IStoreConfiguration {
 - `getPayments()` - List all payments (admin)
 - `getPaymentById()` - Get specific payment details by ID
 
+---
+
+### 9. Coupon Controllers
+
+#### `couponController.ts`
+- `createCoupon()` - Create a new coupon
+- `getAllCoupons()` - List all coupons with filters (admin)
+- `getCouponById()` - Get coupon details by ID
+- `updateCoupon()` - Update coupon details
+- `deleteCoupon()` - Remove a coupon
+- `validateCoupon()` - Validate a coupon code for a user/order
+- `applyCoupon()` - Apply coupon to an order
+- `getCouponStats()` - Get usage statistics for a coupon
+- `generateNewCode()` - Generate a unique coupon code
 
 ---
 
-### 9. Rider Controllers
+### 10. Rider Controllers
 
 #### `riderController.ts`
 - `updateAvailability()` - Set status (ONLINE, BUSY, OFFLINE)
@@ -834,6 +850,23 @@ POST   /webhooks/mpesa            // M-Pesa webhook
 POST   /webhooks/paystack         // Paystack webhook
 GET    /my                        // My payment history
 GET    /                          // List payments (admin)
+```
+
+---
+
+### Coupon Routes
+Base: `/api/coupons`
+
+```typescript
+POST   /                          // Create a new coupon
+GET    /                          // List all coupons (admin)
+GET    /:couponId                 // Get coupon details
+PUT    /:couponId                 // Update coupon
+DELETE /:couponId                 // Delete coupon
+POST   /validate                  // Validate coupon code
+POST   /apply                     // Apply coupon to order
+GET    /:couponId/stats           // Get coupon statistics
+POST   /generate-code             // Generate unique code
 ```
 
 ---

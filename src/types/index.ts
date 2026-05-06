@@ -20,13 +20,15 @@ export interface MultiChannelNotificationResponse {
   error?: string;
 }
 
-export type UserRoleType = 'customer' | 'super_admin' | 'admin' | 'staff' | 'rider';
+export type UserRoleType = 'customer' | 'super_admin' | 'admin' | 'staff' | 'rider' | 'vendor';
 
 export interface IPackaging extends Document {
   name: string;
   price: number;
   isActive: boolean;
   isDefault: boolean;
+  vendor: Types.ObjectId;
+  branch: Types.ObjectId;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -423,6 +425,8 @@ export interface ICoupon extends Document {
   applicableCategories: Types.ObjectId[] | IProductCategory[];
   excludedProducts: Types.ObjectId[] | IProduct[];
   excludedCategories: Types.ObjectId[] | IProductCategory[];
+  vendor?: Types.ObjectId | IVendor;
+  branch?: Types.ObjectId | IBranch;
   createdBy: Types.ObjectId | IUser;
   lastUsedBy: ICouponUsage[];
   createdAt: Date;

@@ -21,6 +21,16 @@ const packagingSchema = new Schema<IPackaging>(
       type: Boolean,
       default: false,
     },
+    vendor: {
+      type: Schema.Types.ObjectId,
+      ref: 'Vendor',
+      required: true,
+    },
+    branch: {
+      type: Schema.Types.ObjectId,
+      ref: 'Branch',
+      required: true,
+    },
   },
   {
     timestamps: true,
