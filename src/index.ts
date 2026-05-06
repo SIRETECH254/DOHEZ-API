@@ -25,6 +25,7 @@ import productRoutes from "./routes/productRoutes";
 import orderRoutes from "./routes/orderRoutes";
 import couponRoutes from "./routes/couponRoutes";
 import packagingRoutes from "./routes/packagingRoutes";
+import invoiceRoutes from "./routes/invoiceRoutes";
 
 // Initialize application
 const app = express();
@@ -157,6 +158,8 @@ app.use("/api/orders", orderRoutes);
 app.use("/api/coupons", couponRoutes);
 
 app.use("/api/packaging", packagingRoutes);
+
+app.use("/api/invoices", invoiceRoutes);
 
 // Socket.io setup for real-time features
 const server = createServer(app);
