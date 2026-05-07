@@ -39,14 +39,13 @@ const addressSchema = new Schema<IAddress>(
 addressSchema.index({ userId: 1, isDefault: 1 });
 
 // Ensure only one default address per user
-addressSchema.pre('save', async function (next) {
+addressSchema.pre('save', async function () {
   if (this.isDefault && this.isModified('isDefault')) {
     await (this.constructor as any).updateMany(
       { userId: this.userId, _id: { $ne: this._id } },
       { $set: { isDefault: false } }
     );
   }
-  next();
 });
 
 const Address = mongoose.model<IAddress>('Address', addressSchema);

@@ -61,7 +61,6 @@ const paymentSchema = new Schema<IPayment>(
 );
 
 paymentSchema.index({ invoice: 1 });
-paymentSchema.index({ paymentNumber: 1 });
 
 const Payment = mongoose.model<IPayment>('Payment', paymentSchema);
 
