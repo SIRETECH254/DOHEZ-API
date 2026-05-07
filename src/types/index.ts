@@ -33,6 +33,26 @@ export interface IPackaging extends Document {
   updatedAt: Date;
 }
 
+export interface IAddress extends Document {
+  userId: Types.ObjectId;
+  name: string;
+  coordinates: { lat: number; lng: number };
+  regions: {
+    country: string;
+    locality?: string;
+    sublocality?: string;
+    sublocality_level_1?: string;
+    administrative_area_level_1?: string;
+    plus_code?: string;
+    political?: string;
+  };
+  address: string;
+  details?: string | null;
+  isDefault: boolean;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
 export interface IRole extends Document {
   name: UserRoleType | string;
   displayName: string;
