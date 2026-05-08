@@ -52,34 +52,45 @@ import { IVendor } from '../types';
 
 const vendorSchema = new Schema<IVendor>(
   {
-    userId: {
-      type: Schema.Types.ObjectId,
-      ref: 'User',
-      required: true,
-      unique: true,
-    },
-    service: {
-      type: Schema.Types.ObjectId,
-      ref: 'Service',
-      default: null,
-    },
     name: {
       type: String,
       required: true,
       trim: true,
-    },
-    phone: {
-      type: String,
-      required: true,
+      index: true,
     },
     email: {
       type: String,
       required: true,
       lowercase: true,
     },
+    userId: {
+      type: Schema.Types.ObjectId,
+      ref: 'User',
+      required: true,
+    },
+    vendorCategory: {
+      type: Schema.Types.ObjectId,
+      ref: 'VendorCategory',
+      required: true,
+    },
+    service: {
+      type: Schema.Types.ObjectId,
+      ref: 'Service',
+      default: null,
+    },
+    phone: {
+      type: String,
+      required: true,
+    },
     isActive: {
       type: Boolean,
       default: true,
+      index: true,
+    },
+    isVerified: {
+      type: Boolean,
+      default: false,
+      index: true,
     },
     isFeatured: {
       type: Boolean,
@@ -103,22 +114,24 @@ const vendorSchema = new Schema<IVendor>(
     },
     location: {
       name: String,
-      address: { type: String, required: true },
+      address: { type: String },
       regions: {
         administrative_area_level_3: String,
         administrative_area_level_1: String,
-        country: { type: String, required: true },
+        country: { type: String },
       },
       coordinates: {
-        lat: { type: Number, required: true },
-        lng: { type: Number, required: true },
+        lat: { type: Number },
+        lng: { type: Number },
       },
-      place_id: { type: String, required: true },
+      place_id: { type: String },
     },
-    branches: [{
-      type: Schema.Types.ObjectId,
-      ref: 'Branch',
-    }],
+    branches: [
+      {
+        type: Schema.Types.ObjectId,
+        ref: 'Branch',
+      },
+    ],
     slug: {
       type: String,
       required: true,
@@ -136,21 +149,11 @@ const vendorSchema = new Schema<IVendor>(
       type: String,
       default: null,
     },
-    vendorCategory: {
-      type: Schema.Types.ObjectId,
-      ref: 'VendorCategory',
-      required: true,
-    },
   },
   {
     timestamps: true,
   }
 );
-
-// Indexes
-vendorSchema.index({ isActive: 1 });
-vendorSchema.index({ isVerified: 1 });
-vendorSchema.index({ name: 1 });
 
 const Vendor = mongoose.model<IVendor>('Vendor', vendorSchema);
 
@@ -295,7 +298,8 @@ export const getVendors = async (req: Request, res: Response, next: NextFunction
 
     const vendors = await Vendor.find(query)
       .populate('vendorCategory')
-      .sort({ name: 1 })
+      .populate('branches')
+      .sort({ createdAt: -1 })
       .limit(options.limit)
       .skip((options.page - 1) * options.limit);
 
@@ -330,7 +334,9 @@ export const getVendors = async (req: Request, res: Response, next: NextFunction
 ```typescript
 export const getVendorById = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
-    const vendor = await Vendor.findById(req.params.vendorId).populate('categoryId');
+    const vendor = await Vendor.findById(req.params.vendorId)
+      .populate('vendorCategory')
+      .populate('branches');
 
     if (!vendor) {
       return next(errorHandler(404, "Vendor not found"));
@@ -486,12 +492,64 @@ export default router;
   "message": "Vendor registered successfully",
   "data": {
     "vendor": {
-      "id": "650af1234567890abcdef999",
-      "name": "Quick Laundry"
+      "userId": "65e26b1c09b068c201383801",
+      "name": "Quick Laundry",
+      "details": "Professional laundry services",
+      "vendorCategory": "650af1234567890abcdef123",
+      "phone": "+254700000000",
+      "email": "contact@quick.com",
+      "location": {
+        "address": "Street 123",
+        "regions": {
+          "country": "Kenya"
+        },
+        "coordinates": {
+          "lat": -1.2921,
+          "lng": 36.8219
+        },
+        "place_id": "chIJsx..."
+      },
+      "branches": [
+        "650af1234567890abcdef888"
+      ],
+      "slug": "quick-laundry",
+      "isActive": true,
+      "isFeatured": false,
+      "logo": null,
+      "logoPublicId": null,
+      "cover": null,
+      "coverPublicId": null,
+      "_id": "650af1234567890abcdef999",
+      "createdAt": "2026-05-07T10:00:00.000Z",
+      "updatedAt": "2026-05-07T10:00:00.000Z",
+      "__v": 1
     },
     "branch": {
-      "id": "650af1234567890abcdef888",
-      "name": "Quick Laundry - Main Branch"
+      "vendorId": "650af1234567890abcdef999",
+      "name": "Quick Laundry - Main Branch",
+      "email": "contact@quick.com",
+      "phone": "+254700000000",
+      "location": {
+        "address": "Street 123",
+        "regions": {
+          "country": "Kenya"
+        },
+        "coordinates": {
+          "lat": -1.2921,
+          "lng": 36.8219
+        },
+        "place_id": "chIJsx..."
+      },
+      "workingHours": {
+        "monday": "08:00-18:00"
+      },
+      "isMainBranch": true,
+      "isActive": true,
+      "gallery": [],
+      "_id": "650af1234567890abcdef888",
+      "createdAt": "2026-05-07T10:00:00.000Z",
+      "updatedAt": "2026-05-07T10:00:00.000Z",
+      "__v": 0
     }
   }
 }
@@ -507,8 +565,58 @@ export default router;
     "vendors": [
       {
         "_id": "650af1234567890abcdef999",
+        "userId": "65e26b1c09b068c201383801",
         "name": "Quick Laundry",
-        "email": "contact@quick.com"
+        "phone": "+254700000000",
+        "email": "contact@quick.com",
+        "isActive": true,
+        "isFeatured": false,
+        "logo": "https://res.cloudinary.com/dohez/image/upload/v1/vendors/logos/quick.jpg",
+        "logoPublicId": "vendors/logos/quick",
+        "cover": "https://res.cloudinary.com/dohez/image/upload/v1/vendors/covers/quick_cover.jpg",
+        "coverPublicId": "vendors/covers/quick_cover",
+        "location": {
+          "address": "Street 123",
+          "regions": {
+            "country": "Kenya"
+          },
+          "coordinates": {
+            "lat": -1.2921,
+            "lng": 36.8219
+          },
+          "place_id": "chIJsx..."
+        },
+        "branches": [
+          {
+            "_id": "650af1234567890abcdef888",
+            "vendorId": "650af1234567890abcdef999",
+            "name": "Quick Laundry - Main Branch",
+            "email": "contact@quick.com",
+            "phone": "+254700000000",
+            "location": {
+              "address": "Street 123",
+              "regions": {
+                "country": "Kenya"
+              },
+              "coordinates": {
+                "lat": -1.2921,
+                "lng": 36.8219
+              }
+            },
+            "isMainBranch": true,
+            "isActive": true
+          }
+        ],
+        "slug": "quick-laundry",
+        "details": "Professional laundry services",
+        "vendorCategory": {
+          "_id": "650af1234567890abcdef123",
+          "name": "Laundry",
+          "slug": "laundry"
+        },
+        "createdAt": "2026-05-07T10:00:00.000Z",
+        "updatedAt": "2026-05-07T10:00:00.000Z",
+        "__v": 1
       }
     ],
     "pagination": {
@@ -531,9 +639,61 @@ export default router;
   "data": {
     "vendor": {
       "_id": "650af1234567890abcdef999",
+      "userId": "65e26b1c09b068c201383801",
       "name": "Quick Laundry",
       "phone": "+254700000000",
-      "email": "contact@quick.com"
+      "email": "contact@quick.com",
+      "isActive": true,
+      "isFeatured": false,
+      "logo": "https://res.cloudinary.com/dohez/image/upload/v1/vendors/logos/quick.jpg",
+      "logoPublicId": "vendors/logos/quick",
+      "cover": "https://res.cloudinary.com/dohez/image/upload/v1/vendors/covers/quick_cover.jpg",
+      "coverPublicId": "vendors/covers/quick_cover",
+      "location": {
+        "address": "Street 123",
+        "regions": {
+          "country": "Kenya"
+        },
+        "coordinates": {
+          "lat": -1.2921,
+          "lng": 36.8219
+        },
+        "place_id": "chIJsx..."
+      },
+      "branches": [
+        {
+          "_id": "650af1234567890abcdef888",
+          "vendorId": "650af1234567890abcdef999",
+          "name": "Quick Laundry - Main Branch",
+          "email": "contact@quick.com",
+          "phone": "+254700000000",
+          "location": {
+            "address": "Street 123",
+            "regions": {
+              "country": "Kenya"
+            },
+            "coordinates": {
+              "lat": -1.2921,
+              "lng": 36.8219
+            }
+          },
+          "isMainBranch": true,
+          "isActive": true,
+          "workingHours": {
+            "monday": "08:00-18:00"
+          }
+        }
+      ],
+      "slug": "quick-laundry",
+      "details": "Professional laundry services",
+      "vendorCategory": {
+        "_id": "650af1234567890abcdef123",
+        "name": "Laundry",
+        "slug": "laundry"
+      },
+      "createdAt": "2026-05-07T10:00:00.000Z",
+      "updatedAt": "2026-05-07T10:00:00.000Z",
+      "__v": 1
     }
   }
 }
@@ -557,7 +717,12 @@ export default router;
   "data": {
     "vendor": {
       "_id": "650af1234567890abcdef999",
-      "name": "Quick Laundry Pro"
+      "userId": "65e26b1c09b068c201383801",
+      "name": "Quick Laundry Pro",
+      "details": "Best laundry in town",
+      "vendorCategory": "650af1234567890abcdef123",
+      "slug": "quick-laundry-pro",
+      "updatedAt": "2026-05-07T11:00:00.000Z"
     }
   }
 }
@@ -632,12 +797,58 @@ curl -X POST http://localhost:3500/api/vendors \
   "message": "Vendor registered successfully",
   "data": {
     "vendor": {
+      "userId": "65e26b1c09b068c201383801",
+      "name": "Quick Laundry",
+      "details": "Professional laundry services",
+      "vendorCategory": "650af1234567890abcdef123",
+      "phone": "+254700000000",
+      "email": "contact@quick.com",
+      "location": {
+        "address": "Street 123",
+        "regions": {
+          "country": "Kenya"
+        },
+        "coordinates": {
+          "lat": -1.2921,
+          "lng": 36.8219
+        },
+        "place_id": "chIJsx..."
+      },
+      "branches": [
+        "650af1234567890abcdef888"
+      ],
+      "slug": "quick-laundry",
+      "isActive": true,
       "_id": "650af1234567890abcdef999",
-      "name": "Quick Laundry"
+      "createdAt": "2026-05-07T10:00:00.000Z",
+      "updatedAt": "2026-05-07T10:00:00.000Z",
+      "__v": 1
     },
     "branch": {
+      "vendorId": "650af1234567890abcdef999",
+      "name": "Quick Laundry - Main Branch",
+      "email": "contact@quick.com",
+      "phone": "+254700000000",
+      "location": {
+        "address": "Street 123",
+        "regions": {
+          "country": "Kenya"
+        },
+        "coordinates": {
+          "lat": -1.2921,
+          "lng": 36.8219
+        },
+        "place_id": "chIJsx..."
+      },
+      "workingHours": {
+        "monday": "08:00-18:00"
+      },
+      "isMainBranch": true,
+      "isActive": true,
       "_id": "650af1234567890abcdef888",
-      "name": "Quick Laundry - Main Branch"
+      "createdAt": "2026-05-07T10:00:00.000Z",
+      "updatedAt": "2026-05-07T10:00:00.000Z",
+      "__v": 0
     }
   }
 }
@@ -660,8 +871,45 @@ curl -X GET "http://localhost:3500/api/vendors?search=Quick&page=1&limit=10"
     "vendors": [
       {
         "_id": "650af1234567890abcdef999",
+        "userId": "65e26b1c09b068c201383801",
         "name": "Quick Laundry",
-        "email": "contact@quick.com"
+        "phone": "+254700000000",
+        "email": "contact@quick.com",
+        "isActive": true,
+        "isFeatured": false,
+        "logo": "https://res.cloudinary.com/dohez/image/upload/v1/vendors/logos/quick.jpg",
+        "cover": "https://res.cloudinary.com/dohez/image/upload/v1/vendors/covers/quick_cover.jpg",
+        "location": {
+          "address": "Street 123",
+          "regions": {
+            "country": "Kenya"
+          },
+          "coordinates": {
+            "lat": -1.2921,
+            "lng": 36.8219
+          }
+        },
+        "branches": [
+          {
+            "_id": "650af1234567890abcdef888",
+            "name": "Quick Laundry - Main Branch",
+            "location": {
+              "address": "Street 123",
+              "lat": -1.2921,
+              "lng": 36.8219
+            }
+          }
+        ],
+        "slug": "quick-laundry",
+        "details": "Professional laundry services",
+        "vendorCategory": {
+          "_id": "650af1234567890abcdef123",
+          "name": "Laundry",
+          "slug": "laundry"
+        },
+        "createdAt": "2026-05-07T10:00:00.000Z",
+        "updatedAt": "2026-05-07T10:00:00.000Z",
+        "__v": 1
       }
     ],
     "pagination": {
@@ -691,9 +939,45 @@ curl -X GET http://localhost:3500/api/vendors/650af1234567890abcdef999
   "data": {
     "vendor": {
       "_id": "650af1234567890abcdef999",
+      "userId": "65e26b1c09b068c201383801",
       "name": "Quick Laundry",
       "phone": "+254700000000",
-      "email": "contact@quick.com"
+      "email": "contact@quick.com",
+      "isActive": true,
+      "location": {
+        "address": "Street 123",
+        "regions": {
+          "country": "Kenya"
+        },
+        "coordinates": {
+          "lat": -1.2921,
+          "lng": 36.8219
+        }
+      },
+      "branches": [
+        {
+          "_id": "650af1234567890abcdef888",
+          "name": "Quick Laundry - Main Branch",
+          "location": {
+            "address": "Street 123",
+            "lat": -1.2921,
+            "lng": 36.8219
+          },
+          "workingHours": {
+            "monday": "08:00-18:00"
+          }
+        }
+      ],
+      "slug": "quick-laundry",
+      "details": "Professional laundry services",
+      "vendorCategory": {
+        "_id": "650af1234567890abcdef123",
+        "name": "Laundry",
+        "slug": "laundry"
+      },
+      "createdAt": "2026-05-07T10:00:00.000Z",
+      "updatedAt": "2026-05-07T10:00:00.000Z",
+      "__v": 1
     }
   }
 }
@@ -721,7 +1005,12 @@ curl -X PUT http://localhost:3500/api/vendors/profile \
   "data": {
     "vendor": {
       "_id": "650af1234567890abcdef999",
-      "name": "Quick Laundry Pro"
+      "userId": "65e26b1c09b068c201383801",
+      "name": "Quick Laundry Pro",
+      "details": "Best laundry in town",
+      "vendorCategory": "650af1234567890abcdef123",
+      "slug": "quick-laundry-pro",
+      "updatedAt": "2026-05-07T11:00:00.000Z"
     }
   }
 }

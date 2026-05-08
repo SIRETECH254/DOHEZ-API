@@ -5,9 +5,9 @@ import { uploadToCloudinary, deleteFromCloudinary } from "../config/cloudinary";
 
 export const createProductType = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
-    const { name, details, order } = req.body;
+    const { name, details, order, service } = req.body;
     const slug = name.toLowerCase().replace(/ /g, '-');
-    const productTypeData: any = { name, details, order, slug };
+    const productTypeData: any = { name, details, order, slug, service };
 
     if (req.file) {
       const uploadResult = await uploadToCloudinary(req.file, "dohez/product-types/icons");
@@ -25,12 +25,22 @@ export const createProductType = async (req: Request, res: Response, next: NextF
 
 export const getProductTypes = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
-    const { page = 1, limit = 10, search } = req.query;
-    const query: any = search ? { name: { $regex: search, $options: "i" } } : {};
+    const { page = 1, limit = 10, search, service } = req.query;
+    const query: any = {};
+    
+    if (search) {
+      query.name = { $regex: search, $options: "i" };
+    }
+    
+    if (service) {
+      query.service = service;
+    }
+
     const options = { page: parseInt(page as string) || 1, limit: parseInt(limit as string) || 10 };
 
     const productTypes = await ProductType.find(query)
-      .sort({ order: 1, name: 1 })
+      .populate("service")
+      .sort({ createdAt: -1 })
       .limit(options.limit)
       .skip((options.page - 1) * options.limit);
 
@@ -57,7 +67,7 @@ export const getProductTypes = async (req: Request, res: Response, next: NextFun
 
 export const getProductTypeById = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
-    const productType = await ProductType.findById(req.params.id);
+    const productType = await ProductType.findById(req.params.id).populate("service");
 
     if (!productType) return next(errorHandler(404, "Product Type not found"));
 
@@ -69,7 +79,7 @@ export const getProductTypeById = async (req: Request, res: Response, next: Next
 
 export const updateProductType = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
-    const { name, details, order } = req.body;
+    const { name, details, order, service } = req.body;
     const productType = await ProductType.findById(req.params.id);
 
     if (!productType) return next(errorHandler(404, "Product Type not found"));
@@ -81,6 +91,7 @@ export const updateProductType = async (req: Request, res: Response, next: NextF
 
     if (details !== undefined) productType.details = details;
     if (order !== undefined) productType.order = order;
+    if (service !== undefined) productType.service = service;
 
     if (req.file) {
       if (productType.iconPublicId) await deleteFromCloudinary(productType.iconPublicId);

@@ -25,6 +25,7 @@ Product Modifiers are options that can be added to products, such as extra toppi
 export interface IProductModifier extends Document {
   name: string;
   description?: string;
+  options: IOption[];
   price: number;
   min_selection: number;
   max_selection: number;
@@ -42,7 +43,26 @@ export interface IProductModifier extends Document {
 
 ```typescript
 import mongoose, { Schema } from 'mongoose';
-import { IProductModifier } from '../types';
+import { IProductModifier, IOption } from '../types';
+
+const optionSchema = new Schema<IOption>(
+  {
+    value: {
+      type: String,
+      required: true,
+      trim: true,
+    },
+    isActive: {
+      type: Boolean,
+      default: true,
+    },
+    sortOrder: {
+      type: Number,
+      default: 0,
+    },
+  },
+  { _id: true }
+);
 
 const productModifierSchema = new Schema<IProductModifier>(
   {
@@ -55,6 +75,7 @@ const productModifierSchema = new Schema<IProductModifier>(
       type: String,
       trim: true,
     },
+    options: [optionSchema],
     price: {
       type: Number,
       default: 0,
@@ -94,6 +115,7 @@ export default ProductModifier;
 ```typescript
 name:          { required: true, trim: true }
 description:   { trim: true }
+options:       { type: Array, subSchema: optionSchema }
 price:         { default: 0 }
 min_selection: { default: 1 }
 max_selection: { default: 1 }
@@ -129,7 +151,7 @@ import Branch from "../models/Branch";
 ```typescript
 export const createProductModifier = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
-    const { name, description, price, min_selection, max_selection, is_required, branchId, sortOrder } = req.body;
+    const { name, description, options, price, min_selection, max_selection, is_required, branchId, sortOrder } = req.body;
 
     const branch = await Branch.findById(branchId);
     if (!branch) return next(errorHandler(404, "Branch not found"));
@@ -137,6 +159,7 @@ export const createProductModifier = async (req: Request, res: Response, next: N
     const modifier = await ProductModifier.create({
       name,
       description,
+      options,
       price,
       min_selection,
       max_selection,
@@ -246,13 +269,14 @@ export const getProductModifierById = async (req: Request, res: Response, next: 
 ```typescript
 export const updateProductModifier = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
-    const { name, description, price, min_selection, max_selection, is_required, branchId, sortOrder } = req.body;
+    const { name, description, options, price, min_selection, max_selection, is_required, branchId, sortOrder } = req.body;
     const modifier = await ProductModifier.findById(req.params.id);
 
     if (!modifier) return next(errorHandler(404, "Product modifier not found"));
 
     if (name) modifier.name = name;
     if (description !== undefined) modifier.description = description;
+    if (options !== undefined) modifier.options = options;
     if (price !== undefined) modifier.price = price;
     if (min_selection !== undefined) modifier.min_selection = min_selection;
     if (max_selection !== undefined) modifier.max_selection = max_selection;

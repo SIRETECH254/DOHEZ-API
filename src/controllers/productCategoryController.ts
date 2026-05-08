@@ -31,7 +31,7 @@ export const getProductCategories = async (req: Request, res: Response, next: Ne
 
     const categories = await ProductCategory.find(query)
       .populate("productType")
-      .sort({ sort: 1, name: 1 })
+      .sort({ createdAt: -1 })
       .limit(options.limit)
       .skip((options.page - 1) * options.limit);
 

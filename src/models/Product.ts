@@ -34,6 +34,7 @@ const skuSchema = new Schema<ISKU>(
       type: String,
       required: true,
       unique: true,
+      sparse: true,
     },
     barcode: {
       type: String,

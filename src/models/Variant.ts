@@ -15,7 +15,7 @@ const optionSchema = new Schema<IOption>({
     type: Number, 
     default: 0 
   }
-}, { _id: false });
+}, { _id: true });
 
 const variantSchema = new Schema<IVariant>({
   name: {

@@ -85,6 +85,7 @@ const skuSchema = new Schema<ISKU>(
       type: String,
       required: true,
       unique: true,
+      sparse: true,
     },
     barcode: {
       type: String,
@@ -459,6 +460,15 @@ export const createProduct = async (req: Request, res: Response, next: NextFunct
       trackInventory 
     } = req.body;
 
+    // 1. Validation to prevent slugify error
+    if (!name || typeof name !== 'string') {
+      return next(errorHandler(400, "Product name is required"));
+    }
+
+    // 2. Parse JSON strings (common in multipart/form-data)
+    const parsedVariants = variants ? (typeof variants === 'string' ? JSON.parse(variants) : variants) : [];
+    const parsedSelectedVariantOptions = selectedVariantOptions ? (typeof selectedVariantOptions === 'string' ? JSON.parse(selectedVariantOptions) : selectedVariantOptions) : [];
+
     const files = req.files as Express.Multer.File[];
     let images: Array<{ url: string; publicId: string }> = [];
 
@@ -474,7 +484,8 @@ export const createProduct = async (req: Request, res: Response, next: NextFunct
     // Generate lowercased slug from name
     const slug = slugify(name, { lower: true, strict: true });
 
-    const product = await Product.create({
+    // 3. Create instance without saving yet to prevent unique index conflicts on null SKU codes
+    const product = new Product({
       name,
       slug,
       details,
@@ -485,16 +496,15 @@ export const createProduct = async (req: Request, res: Response, next: NextFunct
       vendor,
       branch,
       service,
-      variants,
-      selectedVariantOptions,
+      variants: parsedVariants,
+      selectedVariantOptions: parsedSelectedVariantOptions,
       status,
       trackInventory
     });
 
-    // Generate SKUs if variant options are selected
-    if (selectedVariantOptions && selectedVariantOptions.length > 0) {
-      await product.generateSKUs();
-    }
+    // 4. Always generate SKUs (handles both default and variant cases)
+    // This method calls product.save() internally
+    await product.generateSKUs();
 
     res.status(201).json({
       success: true,
@@ -670,13 +680,19 @@ export const updateProduct = async (req: Request, res: Response, next: NextFunct
     if (vendor) product.vendor = vendor;
     if (branch) product.branch = branch;
     if (service) product.service = service;
-    if (variants !== undefined) product.variants = variants;
+    
+    if (variants !== undefined) {
+      product.variants = typeof variants === 'string' ? JSON.parse(variants) : variants;
+    }
+    
     if (status !== undefined) product.status = status;
     if (trackInventory !== undefined) product.trackInventory = trackInventory;
 
     // Handle variant option updates and SKU regeneration
     if (selectedVariantOptions !== undefined) {
-      product.selectedVariantOptions = selectedVariantOptions;
+      product.selectedVariantOptions = typeof selectedVariantOptions === 'string' 
+        ? JSON.parse(selectedVariantOptions) 
+        : selectedVariantOptions;
       await product.generateSKUs(); // This handles saving
     } else {
       await product.save();

@@ -1,5 +1,24 @@
 import mongoose, { Schema } from 'mongoose';
-import { IProductModifier } from '../types';
+import { IProductModifier, IOption } from '../types';
+
+const optionSchema = new Schema<IOption>(
+  {
+    value: {
+      type: String,
+      required: true,
+      trim: true,
+    },
+    isActive: {
+      type: Boolean,
+      default: true,
+    },
+    sortOrder: {
+      type: Number,
+      default: 0,
+    },
+  },
+  { _id: true }
+);
 
 const productModifierSchema = new Schema<IProductModifier>(
   {
@@ -12,6 +31,7 @@ const productModifierSchema = new Schema<IProductModifier>(
       type: String,
       trim: true,
     },
+    options: [optionSchema],
     price: {
       type: Number,
       default: 0,

@@ -61,7 +61,7 @@ const optionSchema = new Schema<IOption>({
     type: Number, 
     default: 0 
   }
-}, { _id: false });
+}, { _id: true });
 
 const variantSchema = new Schema<IVariant>({
   name: {
@@ -108,9 +108,90 @@ branchId:  { required: true, ref: 'Branch' }
 import { Request, Response, NextFunction } from "express";
 import { errorHandler } from "../middleware/errorHandler";
 import Variant from "../models/Variant";
+import Product from "../models/Product";
 ```
 
 ### Functions Overview
+
+#### `attachVariant()`
+**Purpose:** Attach and optionally configure a variant for a product  
+**Access:** Admin/Super Admin  
+**Process:** Add variant ID to product's variants array and update `selectedVariantOptions` with provided `optionIds`, then generate SKUs.
+
+**Controller Implementation:**
+```typescript
+export const attachVariant = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  try {
+    const { productId, variantId, optionIds = [] } = req.body;
+
+    const product = await Product.findById(productId);
+    if (!product) return next(errorHandler(404, "Product not found"));
+
+    const variant = await Variant.findById(variantId);
+    if (!variant) return next(errorHandler(404, "Variant not found"));
+
+    if (optionIds.length > 0) {
+      const validOptionIds = variant.options.map(opt => opt._id?.toString());
+      const invalidIds = optionIds.filter((id: string) => !validOptionIds.includes(id));
+      if (invalidIds.length > 0) {
+        return next(errorHandler(400, `Invalid option IDs for this variant: ${invalidIds.join(", ")}`));
+      }
+    }
+
+    const isAttached = product.variants.some((v: any) => v.toString() === variantId);
+    if (!isAttached) {
+      product.variants.push(variantId as any);
+    }
+    
+    const existingSelectionIndex = product.selectedVariantOptions.findIndex(
+      (sel: any) => sel.variantId.toString() === variantId
+    );
+
+    if (existingSelectionIndex > -1) {
+      product.selectedVariantOptions[existingSelectionIndex].optionIds = optionIds;
+    } else {
+      product.selectedVariantOptions.push({
+        variantId: variantId as any,
+        optionIds: optionIds
+      });
+    }
+
+    await product.generateSKUs();
+
+    res.status(200).json({ success: true, message: "Variant attached and configured successfully", data: { product } });
+  } catch (error: any) {
+    next(error);
+  }
+};
+```
+
+#### `detachVariant()`
+**Purpose:** Detach a variant from a product  
+**Access:** Admin/Super Admin  
+**Process:** Remove variant ID from product's variants and selectedVariantOptions arrays, then regenerate SKUs.
+
+**Controller Implementation:**
+```typescript
+export const detachVariant = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  try {
+    const { productId, variantId } = req.body;
+
+    const product = await Product.findById(productId);
+    if (!product) return next(errorHandler(404, "Product not found"));
+
+    product.variants = product.variants.filter((v: any) => v.toString() !== variantId);
+    product.selectedVariantOptions = product.selectedVariantOptions.filter(
+      (sel: any) => sel.variantId.toString() !== variantId
+    );
+
+    await product.generateSKUs();
+
+    res.status(200).json({ success: true, message: "Variant detached successfully", data: { product } });
+  } catch (error: any) {
+    next(error);
+  }
+};
+```
 
 #### `createVariant()`
 **Purpose:** Create a new product variant  
@@ -250,6 +331,8 @@ export const deleteVariant = async (req: Request, res: Response, next: NextFunct
 ### Base Path: `/api/variants`
 
 ```typescript
+POST   /attach            // Attach variant to product (Admin)
+POST   /detach            // Detach variant from product (Admin)
 POST   /                  // Create variant (Admin)
 GET    /                  // Get all (Public)
 GET    /:id               // Get details (Public)
@@ -268,12 +351,16 @@ import {
   getVariants,
   getVariantById,
   updateVariant,
-  deleteVariant
+  deleteVariant,
+  attachVariant,
+  detachVariant
 } from '../controllers/variantController';
 import { authenticateToken, authorizeRoles } from '../middleware/auth';
 
 const router = express.Router();
 
+router.post('/attach', authenticateToken, authorizeRoles(['admin', 'super_admin']), attachVariant);
+router.post('/detach', authenticateToken, authorizeRoles(['admin', 'super_admin']), detachVariant);
 router.post('/', authenticateToken, authorizeRoles(['admin', 'super_admin']), createVariant);
 
 router.get('/', getVariants);
@@ -288,6 +375,63 @@ export default router;
 ```
 
 ### Route Details
+
+#### `POST /api/variants/attach`
+**Headers:** `Authorization: Bearer <admin_token>`, `Content-Type: application/json`
+**Body:**
+```json
+{
+  "productId": "650af9994444444444444444",
+  "variantId": "650af1112222222222222222",
+  "optionIds": ["650af2223333333333333333"]
+}
+```
+**Response:**
+```json
+{
+  "success": true,
+  "message": "Variant attached and configured successfully",
+  "data": {
+    "product": {
+      "id": "650af9994444444444444444",
+      "name": "Luxury Pizza",
+      "variants": ["650af1112222222222222222"],
+      "selectedVariantOptions": [
+        { 
+          "variantId": "650af1112222222222222222", 
+          "optionIds": ["650af2223333333333333333"] 
+        }
+      ],
+      "skus": [ ... ]
+    }
+  }
+}
+```
+
+#### `POST /api/variants/detach`
+**Headers:** `Authorization: Bearer <admin_token>`, `Content-Type: application/json`
+**Body:**
+```json
+{
+  "productId": "650af9994444444444444444",
+  "variantId": "650af1112222222222222222"
+}
+```
+**Response:**
+```json
+{
+  "success": true,
+  "message": "Variant detached successfully",
+  "data": {
+    "product": {
+      "id": "650af9994444444444444444",
+      "name": "Luxury Pizza",
+      "variants": [],
+      "selectedVariantOptions": []
+    }
+  }
+}
+```
 
 #### `POST /api/variants`
 **Headers:** `Authorization: Bearer <admin_token>`, `Content-Type: application/json`
@@ -459,7 +603,68 @@ export default router;
 
 ## 📝 API Examples
 
-### 1. Create Product Variant
+### 1. Attach and Configure Variant to Product
+**Endpoint:** `POST /api/variants/attach`  
+**Access:** Admin/Super Admin
+
+**Request Example:**
+```bash
+curl -X POST http://localhost:3500/api/variants/attach \
+  -H "Authorization: Bearer <admin_token>" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "productId": "650af9994444444444444444",
+    "variantId": "650af1112222222222222222",
+    "optionIds": ["650af2223333333333333333", "650af4445555555555555555"]
+  }'
+```
+
+**Response (200 OK):**
+```json
+{
+  "success": true,
+  "message": "Variant attached and configured successfully",
+  "data": { 
+    "product": {
+      "id": "650af9994444444444444444",
+      "variants": ["650af1112222222222222222"],
+      "selectedVariantOptions": [
+        {
+          "variantId": "650af1112222222222222222",
+          "optionIds": ["650af2223333333333333333", "650af4445555555555555555"]
+        }
+      ],
+      "skus": [ ... ]
+    } 
+  }
+}
+```
+
+### 2. Detach Variant from Product
+**Endpoint:** `POST /api/variants/detach`  
+**Access:** Admin/Super Admin
+
+**Request Example:**
+```bash
+curl -X POST http://localhost:3500/api/variants/detach \
+  -H "Authorization: Bearer <admin_token>" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "productId": "650af9994444444444444444",
+    "variantId": "650af1112222222222222222"
+  }'
+```
+
+**Response (200 OK):**
+```json
+{
+  "success": true,
+  "message": "Variant detached successfully",
+  "data": { "product": { ... } }
+}
+```
+
+### 3. Create Product Variant
 **Endpoint:** `POST /api/variants`  
 **Access:** Admin
 

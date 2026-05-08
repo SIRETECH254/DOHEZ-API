@@ -4,11 +4,57 @@ import {
   getVariants,
   getVariantById,
   updateVariant,
-  deleteVariant
+  deleteVariant,
+  attachVariant,
+  detachVariant
 } from '../controllers/variantController';
 import { authenticateToken, authorizeRoles } from '../middleware/auth';
 
 const router = express.Router();
+
+/**
+ * @swagger
+ * /api/variants/attach:
+ *   post:
+ *     summary: Attach a variant to a product
+ *     tags: [Variants]
+ *     security: [{ bearerAuth: [] }]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [productId, variantId]
+ *             properties:
+ *               productId: { type: string }
+ *               variantId: { type: string }
+ *     responses:
+ *       200: { description: Attached }
+ */
+router.post('/attach', authenticateToken, authorizeRoles(['admin', 'super_admin']), attachVariant);
+
+/**
+ * @swagger
+ * /api/variants/detach:
+ *   post:
+ *     summary: Detach a variant from a product
+ *     tags: [Variants]
+ *     security: [{ bearerAuth: [] }]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [productId, variantId]
+ *             properties:
+ *               productId: { type: string }
+ *               variantId: { type: string }
+ *     responses:
+ *       200: { description: Detached }
+ */
+router.post('/detach', authenticateToken, authorizeRoles(['admin', 'super_admin']), detachVariant);
 
 /**
  * @swagger

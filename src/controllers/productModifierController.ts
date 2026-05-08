@@ -95,13 +95,14 @@ export const getProductModifierById = async (req: Request, res: Response, next: 
 
 export const updateProductModifier = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
-    const { name, description, price, min_selection, max_selection, is_required, branchId, sortOrder } = req.body;
+    const { name, description, options, price, min_selection, max_selection, is_required, branchId, sortOrder } = req.body;
     const modifier = await ProductModifier.findById(req.params.id);
 
     if (!modifier) return next(errorHandler(404, "Product modifier not found"));
 
     if (name) modifier.name = name;
     if (description !== undefined) modifier.description = description;
+    if (options !== undefined) modifier.options = options;
     if (price !== undefined) modifier.price = price;
     if (min_selection !== undefined) modifier.min_selection = min_selection;
     if (max_selection !== undefined) modifier.max_selection = max_selection;

@@ -21,6 +21,7 @@ Product Type Management handles the categorization and organizational ordering o
 ### Schema Definition
 ```typescript
 interface IProductType extends Document {
+  service: Types.ObjectId | IService;
   name: string;
   details?: string;
   order: number;
@@ -42,6 +43,11 @@ import { IProductType } from '../types';
 
 const productTypeSchema = new Schema<IProductType>(
   {
+    service: {
+      type: Schema.Types.ObjectId,
+      ref: 'Service',
+      required: true,
+    },
     name: { type: String, required: true, trim: true },
     details: { type: String, trim: true },
     order: { type: Number, default: 0 },
@@ -52,12 +58,16 @@ const productTypeSchema = new Schema<IProductType>(
   { timestamps: true }
 );
 
+productTypeSchema.index({ service: 1 });
+productTypeSchema.index({ name: 1 });
+
 const ProductType = mongoose.model<IProductType>('ProductType', productTypeSchema);
 export default ProductType;
 ```
 
 ### Validation Rules
 ```typescript
+service: { required: true, ref: 'Service' }
 name:    { required: true, trim: true }
 details: { trim: true }
 order:   { default: 0 }
@@ -83,16 +93,16 @@ import { uploadToCloudinary, deleteFromCloudinary } from "../config/cloudinary";
 #### `createProductType()`
 **Purpose:** Create a new product type  
 **Access:** Admin  
-**Process:** Creates product type, handles icon upload  
+**Process:** Creates product type with service reference, handles icon upload  
 **Response:** Created product type data
 
 **Controller Implementation:**
 ```typescript
 export const createProductType = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
-    const { name, details, order } = req.body;
+    const { name, details, order, service } = req.body;
     const slug = name.toLowerCase().replace(/ /g, '-');
-    const productTypeData: any = { name, details, order, slug };
+    const productTypeData: any = { name, details, order, slug, service };
 
     if (req.file) {
       const uploadResult = await uploadToCloudinary(req.file, "dohez/product-types/icons");
@@ -109,20 +119,30 @@ export const createProductType = async (req: Request, res: Response, next: NextF
 ```
 
 #### `getProductTypes()`
-**Purpose:** List all product types with pagination  
+**Purpose:** List all product types with pagination and service filtering  
 **Access:** Public  
-**Response:** List of product types and pagination metadata
+**Response:** List of product types (populated with service) and pagination metadata
 
 **Controller Implementation:**
 ```typescript
 export const getProductTypes = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
-    const { page = 1, limit = 10, search } = req.query;
-    const query: any = search ? { name: { $regex: search, $options: "i" } } : {};
+    const { page = 1, limit = 10, search, service } = req.query;
+    const query: any = {};
+    
+    if (search) {
+      query.name = { $regex: search, $options: "i" };
+    }
+    
+    if (service) {
+      query.service = service;
+    }
+
     const options = { page: parseInt(page as string) || 1, limit: parseInt(limit as string) || 10 };
 
     const productTypes = await ProductType.find(query)
-      .sort({ order: 1, name: 1 })
+      .populate("service")
+      .sort({ createdAt: -1 })
       .limit(options.limit)
       .skip((options.page - 1) * options.limit);
 
@@ -149,7 +169,7 @@ export const getProductTypes = async (req: Request, res: Response, next: NextFun
 ```
 
 #### `getProductTypeById()`
-**Purpose:** Get single product type by ID  
+**Purpose:** Get single product type by ID with populated service  
 **Access:** Public  
 **Response:** Product type data
 
@@ -157,7 +177,7 @@ export const getProductTypes = async (req: Request, res: Response, next: NextFun
 ```typescript
 export const getProductTypeById = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
-    const productType = await ProductType.findById(req.params.id);
+    const productType = await ProductType.findById(req.params.id).populate("service");
     if (!productType) return next(errorHandler(404, "Product Type not found"));
     res.status(200).json({ success: true, data: { productType } });
   } catch (error: any) {
@@ -169,14 +189,14 @@ export const getProductTypeById = async (req: Request, res: Response, next: Next
 #### `updateProductType()`
 **Purpose:** Update product type  
 **Access:** Admin  
-**Process:** Update fields, handle icon update  
+**Process:** Update fields including service, handle icon update  
 **Response:** Updated product type
 
 **Controller Implementation:**
 ```typescript
 export const updateProductType = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
-    const { name, details, order } = req.body;
+    const { name, details, order, service } = req.body;
     const productType = await ProductType.findById(req.params.id);
     if (!productType) return next(errorHandler(404, "Product Type not found"));
 
@@ -186,6 +206,7 @@ export const updateProductType = async (req: Request, res: Response, next: NextF
     }
     if (details !== undefined) productType.details = details;
     if (order !== undefined) productType.order = order;
+    if (service !== undefined) productType.service = service;
 
     if (req.file) {
       if (productType.iconPublicId) await deleteFromCloudinary(productType.iconPublicId);
@@ -267,6 +288,7 @@ export default router;
 #### `POST /api/product-types`
 **Headers:** `Authorization: Bearer <admin_token>`, `Content-Type: multipart/form-data`
 **Body (multipart/form-data):**
+- `service`: "650af987654321fedcba0987"
 - `name`: "Electronics"
 - `details`: "Electronic devices and accessories"
 - `order`: 1
@@ -279,6 +301,7 @@ export default router;
   "data": {
     "productType": {
       "_id": "650af1234567890abcdef123",
+      "service": "650af987654321fedcba0987",
       "name": "Electronics",
       "details": "Electronic devices and accessories",
       "order": 1,
@@ -293,7 +316,7 @@ export default router;
 ```
 
 #### `GET /api/product-types`
-**Query:** `page=1`, `limit=10`
+**Query:** `page=1`, `limit=10`, `service=650af987654321fedcba0987`
 **Response:**
 ```json
 {
@@ -302,6 +325,10 @@ export default router;
     "productTypes": [
       {
         "_id": "650af1234567890abcdef123",
+        "service": {
+          "_id": "650af987654321fedcba0987",
+          "name": "General Delivery"
+        },
         "name": "Electronics",
         "details": "Electronic devices and accessories",
         "order": 1,
@@ -332,6 +359,10 @@ export default router;
   "data": {
     "productType": {
       "_id": "650af1234567890abcdef123",
+      "service": {
+        "_id": "650af987654321fedcba0987",
+        "name": "General Delivery"
+      },
       "name": "Electronics",
       "details": "Electronic devices and accessories",
       "order": 1,
@@ -355,6 +386,7 @@ export default router;
   "data": {
     "productType": {
       "_id": "650af1234567890abcdef123",
+      "service": "650af987654321fedcba0987",
       "name": "Home Appliances",
       "details": "Kitchen and home electronics",
       "order": 2,
@@ -391,6 +423,7 @@ export default router;
 ```bash
 curl -X POST http://localhost:3500/api/product-types \
   -H "Authorization: Bearer <admin_token>" \
+  -F "service=650af987654321fedcba0987" \
   -F "name=Electronics" \
   -F "details=Electronic devices and accessories" \
   -F "order=1" \
@@ -404,6 +437,7 @@ curl -X POST http://localhost:3500/api/product-types \
   "data": {
     "productType": {
       "_id": "650af1234567890abcdef123",
+      "service": "650af987654321fedcba0987",
       "name": "Electronics",
       "details": "Electronic devices and accessories",
       "order": 1,
@@ -423,7 +457,7 @@ curl -X POST http://localhost:3500/api/product-types \
 
 **Request Example:**
 ```bash
-curl -X GET "http://localhost:3500/api/product-types?page=1&limit=10"
+curl -X GET "http://localhost:3500/api/product-types?page=1&limit=10&service=650af987654321fedcba0987"
 ```
 
 **Response (200 OK):**
@@ -434,6 +468,10 @@ curl -X GET "http://localhost:3500/api/product-types?page=1&limit=10"
     "productTypes": [
       {
         "_id": "650af1234567890abcdef123",
+        "service": {
+          "_id": "650af987654321fedcba0987",
+          "name": "General Delivery"
+        },
         "name": "Electronics",
         "details": "Electronic devices and accessories",
         "order": 1,
@@ -471,6 +509,10 @@ curl -X GET http://localhost:3500/api/product-types/650af1234567890abcdef123
   "data": {
     "productType": {
       "_id": "650af1234567890abcdef123",
+      "service": {
+        "_id": "650af987654321fedcba0987",
+        "name": "General Delivery"
+      },
       "name": "Electronics",
       "details": "Electronic devices and accessories",
       "order": 1,
@@ -492,6 +534,7 @@ curl -X GET http://localhost:3500/api/product-types/650af1234567890abcdef123
 ```bash
 curl -X PUT http://localhost:3500/api/product-types/650af1234567890abcdef123 \
   -H "Authorization: Bearer <admin_token>" \
+  -F "service=650af987654321fedcba0987" \
   -F "name=Home Appliances" \
   -F "details=Kitchen and home electronics" \
   -F "order=2"
@@ -504,6 +547,7 @@ curl -X PUT http://localhost:3500/api/product-types/650af1234567890abcdef123 \
   "data": {
     "productType": {
       "_id": "650af1234567890abcdef123",
+      "service": "650af987654321fedcba0987",
       "name": "Home Appliances",
       "details": "Kitchen and home electronics",
       "order": 2,

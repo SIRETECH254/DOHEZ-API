@@ -200,6 +200,7 @@ export interface IVendorType extends Document {
 }
 
 export interface IProductType extends Document {
+  service: Types.ObjectId | IService;
   name: string;
   details?: string;
   order: number;
@@ -223,6 +224,7 @@ export interface IProductCategory extends Document {
 }
 
 export interface IOption {
+  _id?: Types.ObjectId;
   value: string;
   isActive: boolean;
   sortOrder: number;
@@ -240,6 +242,7 @@ export interface IVariant extends Document {
 export interface IProductModifier extends Document {
   name: string;
   description?: string;
+  options: IOption[];
   price: number;
   min_selection: number;
   max_selection: number;

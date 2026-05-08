@@ -2,6 +2,96 @@ import { Request, Response, NextFunction } from "express";
 import { errorHandler } from "../middleware/errorHandler";
 import Variant from "../models/Variant";
 import Branch from "../models/Branch";
+import Product from "../models/Product";
+
+/**
+ * @description Attach a variant to a product
+ * @access Admin/Super Admin
+ */
+export const attachVariant = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  try {
+    const { productId, variantId, optionIds = [] } = req.body;
+
+    const product = await Product.findById(productId);
+    if (!product) return next(errorHandler(404, "Product not found"));
+
+    const variant = await Variant.findById(variantId);
+    if (!variant) return next(errorHandler(404, "Variant not found"));
+
+    // Optional: Validate that provided optionIds exist within the variant
+    if (optionIds.length > 0) {
+      const validOptionIds = variant.options.map(opt => opt._id?.toString());
+      const invalidIds = optionIds.filter((id: string) => !validOptionIds.includes(id));
+      if (invalidIds.length > 0) {
+        return next(errorHandler(400, `Invalid option IDs for this variant: ${invalidIds.join(", ")}`));
+      }
+    }
+
+    // 1. Add to variants array if not already there
+    const isAttached = product.variants.some((v: any) => v.toString() === variantId);
+    if (!isAttached) {
+      product.variants.push(variantId as any);
+    }
+    
+    // 2. Update or Add to selectedVariantOptions
+    const existingSelectionIndex = product.selectedVariantOptions.findIndex(
+      (sel: any) => sel.variantId.toString() === variantId
+    );
+
+    if (existingSelectionIndex > -1) {
+      // Update existing selection
+      product.selectedVariantOptions[existingSelectionIndex].optionIds = optionIds;
+    } else {
+      // Add new selection
+      product.selectedVariantOptions.push({
+        variantId: variantId as any,
+        optionIds: optionIds
+      });
+    }
+
+    // 3. Generate SKUs and save
+    await product.generateSKUs();
+
+    res.status(200).json({
+      success: true,
+      message: "Variant attached and configured successfully",
+      data: { product }
+    });
+  } catch (error: any) {
+    next(error);
+  }
+};
+
+/**
+ * @description Detach a variant from a product
+ * @access Admin/Super Admin
+ */
+export const detachVariant = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  try {
+    const { productId, variantId } = req.body;
+
+    const product = await Product.findById(productId);
+    if (!product) return next(errorHandler(404, "Product not found"));
+
+    // Remove from variants array
+    product.variants = product.variants.filter((v: any) => v.toString() !== variantId) as any;
+
+    // Remove from selectedVariantOptions array
+    product.selectedVariantOptions = product.selectedVariantOptions.filter(
+      (sel: any) => sel.variantId.toString() !== variantId
+    );
+
+    await product.generateSKUs();
+
+    res.status(200).json({
+      success: true,
+      message: "Variant detached successfully",
+      data: { product }
+    });
+  } catch (error: any) {
+    next(error);
+  }
+};
 
 export const createVariant = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {

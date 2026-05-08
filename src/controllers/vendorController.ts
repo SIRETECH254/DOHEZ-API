@@ -94,7 +94,8 @@ export const getVendors = async (req: Request, res: Response, next: NextFunction
 
     const vendors = await Vendor.find(query)
       .populate('vendorCategory')
-      .sort({ name: 1 })
+      .populate('branches')
+      .sort({ createdAt: -1 })
       .limit(options.limit)
       .skip((options.page - 1) * options.limit);
 
@@ -126,7 +127,9 @@ export const getVendors = async (req: Request, res: Response, next: NextFunction
  */
 export const getVendorById = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
-    const vendor = await Vendor.findById(req.params.vendorId).populate('vendorCategory');
+    const vendor = await Vendor.findById(req.params.vendorId)
+      .populate('vendorCategory')
+      .populate('branches');
 
     if (!vendor) {
       return next(errorHandler(404, "Vendor not found"));

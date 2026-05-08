@@ -25,6 +25,15 @@ export const createProduct = async (req: Request, res: Response, next: NextFunct
       trackInventory 
     } = req.body;
 
+    // 1. Validation to prevent slugify error
+    if (!name || typeof name !== 'string') {
+      return next(errorHandler(400, "Product name is required"));
+    }
+
+    // 2. Parse JSON strings (common in multipart/form-data)
+    const parsedVariants = variants ? (typeof variants === 'string' ? JSON.parse(variants) : variants) : [];
+    const parsedSelectedVariantOptions = selectedVariantOptions ? (typeof selectedVariantOptions === 'string' ? JSON.parse(selectedVariantOptions) : selectedVariantOptions) : [];
+
     const files = req.files as Express.Multer.File[];
     let images: Array<{ url: string; publicId: string }> = [];
 
@@ -40,7 +49,8 @@ export const createProduct = async (req: Request, res: Response, next: NextFunct
     // Generate lowercased slug from name
     const slug = slugify(name, { lower: true, strict: true });
 
-    const product = await Product.create({
+    // 3. Create instance without saving yet to prevent unique index conflicts on null SKU codes
+    const product = new Product({
       name,
       slug,
       details,
@@ -51,16 +61,15 @@ export const createProduct = async (req: Request, res: Response, next: NextFunct
       vendor,
       branch,
       service,
-      variants,
-      selectedVariantOptions,
+      variants: parsedVariants,
+      selectedVariantOptions: parsedSelectedVariantOptions,
       status,
       trackInventory
     });
 
-    // Generate SKUs if variant options are selected
-    if (selectedVariantOptions && selectedVariantOptions.length > 0) {
-      await product.generateSKUs();
-    }
+    // 4. Always generate SKUs (handles both default and variant cases)
+    // This method calls product.save() internally
+    await product.generateSKUs();
 
     res.status(201).json({
       success: true,
@@ -206,26 +215,47 @@ export const updateProduct = async (req: Request, res: Response, next: NextFunct
       product.images = newImages;
     }
 
+    let shouldRegenerateSKUs = false;
+
     // Update basic fields
     if (name) {
       product.name = name;
       product.slug = slugify(name, { lower: true, strict: true });
+      shouldRegenerateSKUs = true; // Slug change affects SKU codes
     }
     
     if (details !== undefined) product.details = details;
-    if (price !== undefined) product.price = price;
+    
+    if (price !== undefined) {
+      product.price = price;
+      shouldRegenerateSKUs = true;
+    }
+    
     if (offerPrice !== undefined) product.offerPrice = offerPrice;
     if (category) product.category = category;
     if (vendor) product.vendor = vendor;
     if (branch) product.branch = branch;
     if (service) product.service = service;
-    if (variants !== undefined) product.variants = variants;
+    
+    if (variants !== undefined) {
+      product.variants = typeof variants === 'string' ? JSON.parse(variants) : variants;
+      // Changing allowed variants might not immediately affect SKUs, 
+      // but it's safer to check integrity. 
+      // For now, we only regenerate if selected options change.
+    }
+    
     if (status !== undefined) product.status = status;
     if (trackInventory !== undefined) product.trackInventory = trackInventory;
 
     // Handle variant option updates and SKU regeneration
     if (selectedVariantOptions !== undefined) {
-      product.selectedVariantOptions = selectedVariantOptions;
+      product.selectedVariantOptions = typeof selectedVariantOptions === 'string' 
+        ? JSON.parse(selectedVariantOptions) 
+        : selectedVariantOptions;
+      shouldRegenerateSKUs = true;
+    }
+
+    if (shouldRegenerateSKUs) {
       await product.generateSKUs(); // This handles saving
     } else {
       await product.save();
