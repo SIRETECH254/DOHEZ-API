@@ -21,6 +21,8 @@ export const createProduct = async (req: Request, res: Response, next: NextFunct
       service, 
       variants, 
       selectedVariantOptions, 
+      modifiers,
+      selectedModifierOptions,
       status, 
       trackInventory 
     } = req.body;
@@ -33,6 +35,8 @@ export const createProduct = async (req: Request, res: Response, next: NextFunct
     // 2. Parse JSON strings (common in multipart/form-data)
     const parsedVariants = variants ? (typeof variants === 'string' ? JSON.parse(variants) : variants) : [];
     const parsedSelectedVariantOptions = selectedVariantOptions ? (typeof selectedVariantOptions === 'string' ? JSON.parse(selectedVariantOptions) : selectedVariantOptions) : [];
+    const parsedModifiers = modifiers ? (typeof modifiers === 'string' ? JSON.parse(modifiers) : modifiers) : [];
+    const parsedSelectedModifierOptions = selectedModifierOptions ? (typeof selectedModifierOptions === 'string' ? JSON.parse(selectedModifierOptions) : selectedModifierOptions) : [];
 
     const files = req.files as Express.Multer.File[];
     let images: Array<{ url: string; publicId: string }> = [];
@@ -63,6 +67,8 @@ export const createProduct = async (req: Request, res: Response, next: NextFunct
       service,
       variants: parsedVariants,
       selectedVariantOptions: parsedSelectedVariantOptions,
+      modifiers: parsedModifiers,
+      selectedModifierOptions: parsedSelectedModifierOptions,
       status,
       trackInventory
     });
@@ -125,6 +131,7 @@ export const getProducts = async (req: Request, res: Response, next: NextFunctio
       .populate("branch")
       .populate("service")
       .populate("variants")
+      .populate("modifiers")
       .sort({ createdAt: "desc" })
       .limit(options.limit)
       .skip((options.page - 1) * options.limit);
@@ -161,7 +168,8 @@ export const getProductById = async (req: Request, res: Response, next: NextFunc
       .populate("vendor")
       .populate("branch")
       .populate("service")
-      .populate("variants");
+      .populate("variants")
+      .populate("modifiers");
 
     if (!product) return next(errorHandler(404, "Product not found"));
 
@@ -191,6 +199,8 @@ export const updateProduct = async (req: Request, res: Response, next: NextFunct
       service, 
       variants, 
       selectedVariantOptions, 
+      modifiers,
+      selectedModifierOptions,
       status, 
       trackInventory 
     } = req.body;
@@ -242,6 +252,16 @@ export const updateProduct = async (req: Request, res: Response, next: NextFunct
       // Changing allowed variants might not immediately affect SKUs, 
       // but it's safer to check integrity. 
       // For now, we only regenerate if selected options change.
+    }
+
+    if (modifiers !== undefined) {
+      product.modifiers = typeof modifiers === 'string' ? JSON.parse(modifiers) : modifiers;
+    }
+
+    if (selectedModifierOptions !== undefined) {
+      product.selectedModifierOptions = typeof selectedModifierOptions === 'string' 
+        ? JSON.parse(selectedModifierOptions) 
+        : selectedModifierOptions;
     }
     
     if (status !== undefined) product.status = status;

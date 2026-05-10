@@ -4,11 +4,58 @@ import {
   getProductModifiers,
   getProductModifierById,
   updateProductModifier,
-  deleteProductModifier
+  deleteProductModifier,
+  attachModifier,
+  detachModifier
 } from '../controllers/productModifierController';
 import { authenticateToken, authorizeRoles } from '../middleware/auth';
 
 const router = express.Router();
+
+/**
+ * @swagger
+ * /api/product-modifiers/attach:
+ *   post:
+ *     summary: Attach a modifier to a product
+ *     tags: [Product Modifiers]
+ *     security: [{ bearerAuth: [] }]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [productId, modifierId]
+ *             properties:
+ *               productId: { type: string }
+ *               modifierId: { type: string }
+ *               optionIds: { type: array, items: { type: string } }
+ *     responses:
+ *       200: { description: Attached }
+ */
+router.post('/attach', authenticateToken, authorizeRoles(['admin', 'super_admin']), attachModifier);
+
+/**
+ * @swagger
+ * /api/product-modifiers/detach:
+ *   post:
+ *     summary: Detach a modifier from a product
+ *     tags: [Product Modifiers]
+ *     security: [{ bearerAuth: [] }]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [productId, modifierId]
+ *             properties:
+ *               productId: { type: string }
+ *               modifierId: { type: string }
+ *     responses:
+ *       200: { description: Detached }
+ */
+router.post('/detach', authenticateToken, authorizeRoles(['admin', 'super_admin']), detachModifier);
 
 /**
  * @swagger

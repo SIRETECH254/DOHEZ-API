@@ -156,10 +156,12 @@ export const createProductModifier = async (req: Request, res: Response, next: N
     const branch = await Branch.findById(branchId);
     if (!branch) return next(errorHandler(404, "Branch not found"));
 
+    const parsedOptions = options ? (typeof options === 'string' ? JSON.parse(options) : options) : [];
+
     const modifier = await ProductModifier.create({
       name,
       description,
-      options,
+      options: parsedOptions,
       price,
       min_selection,
       max_selection,
@@ -276,7 +278,11 @@ export const updateProductModifier = async (req: Request, res: Response, next: N
 
     if (name) modifier.name = name;
     if (description !== undefined) modifier.description = description;
-    if (options !== undefined) modifier.options = options;
+    
+    if (options !== undefined) {
+      modifier.options = typeof options === 'string' ? JSON.parse(options) : options;
+    }
+    
     if (price !== undefined) modifier.price = price;
     if (min_selection !== undefined) modifier.min_selection = min_selection;
     if (max_selection !== undefined) modifier.max_selection = max_selection;
@@ -328,6 +334,96 @@ export const deleteProductModifier = async (req: Request, res: Response, next: N
 };
 ```
 
+#### `attachModifier()`
+**Purpose:** Attach a modifier to a product and configure available options.  
+**Access:** Admin/Super Admin  
+**Process:** Validate product and modifier exist, validate option IDs, add to product's modifiers and selectedModifierOptions arrays.
+**Response:** Updated product object.
+
+**Controller Implementation:**
+```typescript
+export const attachModifier = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  try {
+    const { productId, modifierId, optionIds = [] } = req.body;
+
+    const product = await Product.findById(productId);
+    if (!product) return next(errorHandler(404, "Product not found"));
+
+    const modifier = await ProductModifier.findById(modifierId);
+    if (!modifier) return next(errorHandler(404, "Product modifier not found"));
+
+    if (optionIds.length > 0) {
+      const validOptionIds = modifier.options.map(opt => opt._id?.toString());
+      const invalidIds = optionIds.filter((id: string) => !validOptionIds.includes(id));
+      if (invalidIds.length > 0) {
+        return next(errorHandler(400, `Invalid option IDs for this modifier: ${invalidIds.join(", ")}`));
+      }
+    }
+
+    const isAttached = product.modifiers.some((m: any) => m.toString() === modifierId);
+    if (!isAttached) {
+      product.modifiers.push(modifierId as any);
+    }
+
+    const existingSelectionIndex = product.selectedModifierOptions.findIndex(
+      (sel: any) => sel.modifierId.toString() === modifierId
+    );
+
+    if (existingSelectionIndex > -1) {
+      product.selectedModifierOptions[existingSelectionIndex].optionIds = optionIds;
+    } else {
+      product.selectedModifierOptions.push({
+        modifierId: modifierId as any,
+        optionIds: optionIds
+      });
+    }
+
+    await product.save();
+
+    res.status(200).json({
+      success: true,
+      message: "Modifier attached and configured successfully",
+      data: { product }
+    });
+  } catch (error: any) {
+    next(error);
+  }
+};
+```
+
+#### `detachModifier()`
+**Purpose:** Remove a modifier from a product.  
+**Access:** Admin/Super Admin  
+**Process:** Remove modifier from product's modifiers and selectedModifierOptions arrays.
+**Response:** Updated product object.
+
+**Controller Implementation:**
+```typescript
+export const detachModifier = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  try {
+    const { productId, modifierId } = req.body;
+
+    const product = await Product.findById(productId);
+    if (!product) return next(errorHandler(404, "Product not found"));
+
+    product.modifiers = product.modifiers.filter((m: any) => m.toString() !== modifierId) as any;
+    product.selectedModifierOptions = product.selectedModifierOptions.filter(
+      (sel: any) => sel.modifierId.toString() !== modifierId
+    );
+
+    await product.save();
+
+    res.status(200).json({
+      success: true,
+      message: "Modifier detached successfully",
+      data: { product }
+    });
+  } catch (error: any) {
+    next(error);
+  }
+};
+```
+
 ---
 
 ## Product Modifier Routes
@@ -340,6 +436,8 @@ GET    /                  // Get all product modifiers (Public)
 GET    /:id               // Get single modifier (Public)
 PUT    /:id               // Update modifier (Admin)
 DELETE /:id               // Delete modifier (Admin)
+POST   /attach            // Attach modifier to product (Admin)
+POST   /detach            // Detach modifier from product (Admin)
 ```
 
 ### Router Implementation
@@ -353,20 +451,20 @@ import {
   getProductModifiers,
   getProductModifierById,
   updateProductModifier,
-  deleteProductModifier
+  deleteProductModifier,
+  attachModifier,
+  detachModifier
 } from '../controllers/productModifierController';
 import { authenticateToken, authorizeRoles } from '../middleware/auth';
 
 const router = express.Router();
 
+router.post('/attach', authenticateToken, authorizeRoles(['admin', 'super_admin']), attachModifier);
+router.post('/detach', authenticateToken, authorizeRoles(['admin', 'super_admin']), detachModifier);
 router.post('/', authenticateToken, authorizeRoles(['admin', 'super_admin']), createProductModifier);
-
 router.get('/', getProductModifiers);
-
 router.get('/:id', getProductModifierById);
-
 router.put('/:id', authenticateToken, authorizeRoles(['admin', 'super_admin']), updateProductModifier);
-
 router.delete('/:id', authenticateToken, authorizeRoles(['admin', 'super_admin']), deleteProductModifier);
 
 export default router;
@@ -374,19 +472,80 @@ export default router;
 
 ### Route Details
 
+#### `POST /api/product-modifiers/attach`
+**Headers:** `Authorization: Bearer <admin_token>`
+**Body:**
+```json
+{
+  "productId": "650af1234567890abcdef123",
+  "modifierId": "650af1234567890abcdef789",
+  "optionIds": ["650af1234567890abcdef001", "650af1234567890abcdef002"]
+}
+```
+**Response:**
+```json
+{
+  "success": true,
+  "message": "Modifier attached and configured successfully",
+  "data": {
+    "product": {
+      "_id": "650af1234567890abcdef123",
+      "name": "Pizza",
+      "modifiers": ["650af1234567890abcdef789"],
+      "selectedModifierOptions": [
+        {
+          "modifierId": "650af1234567890abcdef789",
+          "optionIds": ["650af1234567890abcdef001", "650af1234567890abcdef002"]
+        }
+      ]
+    }
+  }
+}
+```
+
+#### `POST /api/product-modifiers/detach`
+**Headers:** `Authorization: Bearer <admin_token>`
+**Body:**
+```json
+{
+  "productId": "650af1234567890abcdef123",
+  "modifierId": "650af1234567890abcdef789"
+}
+```
+**Response:**
+```json
+{
+  "success": true,
+  "message": "Modifier detached successfully",
+  "data": {
+    "product": {
+      "_id": "650af1234567890abcdef123",
+      "name": "Pizza",
+      "modifiers": [],
+      "selectedModifierOptions": []
+    }
+  }
+}
+```
+
 #### `POST /api/product-modifiers`
 **Headers:** `Authorization: Bearer <admin_token>`
 **Body:**
 ```json
 {
-  "name": "Extra Cheese",
-  "description": "Add an extra layer of mozzarella",
-  "price": 50,
-  "min_selection": 0,
-  "max_selection": 3,
-  "is_required": false,
+  "name": "Toppings",
+  "description": "Choose your pizza toppings",
+  "price": 0,
+  "min_selection": 1,
+  "max_selection": 5,
+  "is_required": true,
   "branchId": "650af1234567890abcdef123",
-  "sortOrder": 1
+  "sortOrder": 1,
+  "options": [
+    { "value": "Extra Cheese", "sortOrder": 1 },
+    { "value": "Mushrooms", "sortOrder": 2 },
+    { "value": "Pepperoni", "sortOrder": 3 }
+  ]
 }
 ```
 **Response:**

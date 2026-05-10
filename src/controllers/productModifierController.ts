@@ -2,17 +2,109 @@ import type { Request, Response, NextFunction } from "express";
 import { errorHandler } from "../middleware/errorHandler";
 import ProductModifier from "../models/ProductModifier";
 import Branch from "../models/Branch";
+import Product from "../models/Product";
+
+/**
+ * @description Attach a modifier to a product
+ * @access Admin/Super Admin
+ */
+export const attachModifier = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  try {
+    const { productId, modifierId, optionIds = [] } = req.body;
+
+    const product = await Product.findById(productId);
+    if (!product) return next(errorHandler(404, "Product not found"));
+
+    const modifier = await ProductModifier.findById(modifierId);
+    if (!modifier) return next(errorHandler(404, "Product modifier not found"));
+
+    // Optional: Validate that provided optionIds exist within the modifier
+    if (optionIds.length > 0) {
+      const validOptionIds = modifier.options.map(opt => opt._id?.toString());
+      const invalidIds = optionIds.filter((id: string) => !validOptionIds.includes(id));
+      if (invalidIds.length > 0) {
+        return next(errorHandler(400, `Invalid option IDs for this modifier: ${invalidIds.join(", ")}`));
+      }
+    }
+
+    // 1. Add to modifiers array if not already there
+    const isAttached = product.modifiers.some((m: any) => m.toString() === modifierId);
+    if (!isAttached) {
+      product.modifiers.push(modifierId as any);
+    }
+
+    // 2. Update or Add to selectedModifierOptions
+    const existingSelectionIndex = product.selectedModifierOptions.findIndex(
+      (sel: any) => sel.modifierId.toString() === modifierId
+    );
+
+    if (existingSelectionIndex > -1) {
+      // Update existing selection
+      product.selectedModifierOptions[existingSelectionIndex].optionIds = optionIds;
+    } else {
+      // Add new selection
+      product.selectedModifierOptions.push({
+        modifierId: modifierId as any,
+        optionIds: optionIds
+      });
+    }
+
+    await product.save();
+
+    res.status(200).json({
+      success: true,
+      message: "Modifier attached and configured successfully",
+      data: { product }
+    });
+  } catch (error: any) {
+    next(error);
+  }
+};
+
+/**
+ * @description Detach a modifier from a product
+ * @access Admin/Super Admin
+ */
+export const detachModifier = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  try {
+    const { productId, modifierId } = req.body;
+
+    const product = await Product.findById(productId);
+    if (!product) return next(errorHandler(404, "Product not found"));
+
+    // Remove from modifiers array
+    product.modifiers = product.modifiers.filter((m: any) => m.toString() !== modifierId) as any;
+
+    // Remove from selectedModifierOptions array
+    product.selectedModifierOptions = product.selectedModifierOptions.filter(
+      (sel: any) => sel.modifierId.toString() !== modifierId
+    );
+
+    await product.save();
+
+    res.status(200).json({
+      success: true,
+      message: "Modifier detached successfully",
+      data: { product }
+    });
+  } catch (error: any) {
+    next(error);
+  }
+};
 
 export const createProductModifier = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
-    const { name, description, price, min_selection, max_selection, is_required, branchId, sortOrder } = req.body;
+    const { name, description, options, price, min_selection, max_selection, is_required, branchId, sortOrder } = req.body;
 
     const branch = await Branch.findById(branchId);
     if (!branch) return next(errorHandler(404, "Branch not found"));
 
+    const parsedOptions = options ? (typeof options === 'string' ? JSON.parse(options) : options) : [];
+
     const modifier = await ProductModifier.create({
       name,
       description,
+      options: parsedOptions,
       price,
       min_selection,
       max_selection,
@@ -102,7 +194,11 @@ export const updateProductModifier = async (req: Request, res: Response, next: N
 
     if (name) modifier.name = name;
     if (description !== undefined) modifier.description = description;
-    if (options !== undefined) modifier.options = options;
+    
+    if (options !== undefined) {
+      modifier.options = typeof options === 'string' ? JSON.parse(options) : options;
+    }
+    
     if (price !== undefined) modifier.price = price;
     if (min_selection !== undefined) modifier.min_selection = min_selection;
     if (max_selection !== undefined) modifier.max_selection = max_selection;

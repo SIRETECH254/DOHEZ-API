@@ -283,6 +283,11 @@ export interface ISelectedVariantOption {
   optionIds: Types.ObjectId[];
 }
 
+export interface ISelectedModifierOption {
+  modifierId: Types.ObjectId;
+  optionIds: Types.ObjectId[];
+}
+
 export interface IProduct extends Document {
   name: string;
   slug: string;
@@ -296,6 +301,8 @@ export interface IProduct extends Document {
   service: Types.ObjectId | IService;
   variants: Types.ObjectId[] | IVariant[];
   selectedVariantOptions: ISelectedVariantOption[];
+  modifiers: Types.ObjectId[] | IProductModifier[];
+  selectedModifierOptions: ISelectedModifierOption[];
   skus: Types.DocumentArray<ISKU & Types.Subdocument>;
   status: boolean;
   trackInventory: boolean;

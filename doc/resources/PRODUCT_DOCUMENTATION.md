@@ -36,6 +36,8 @@ export interface IProduct extends Document {
   service: Types.ObjectId | IService;
   variants: Types.ObjectId[] | IVariant[];
   selectedVariantOptions: ISelectedVariantOption[];
+  modifiers: Types.ObjectId[] | IProductModifier[];
+  selectedModifierOptions: ISelectedModifierOption[];
   skus: Types.DocumentArray<ISKU & Types.Subdocument>;
   status: boolean;
   trackInventory: boolean;
@@ -184,6 +186,27 @@ const productSchema = new Schema<IProduct>(
         variantId: {
           type: Schema.Types.ObjectId,
           ref: "Variant",
+          required: true,
+        },
+        optionIds: [
+          {
+            type: Schema.Types.ObjectId,
+            required: true,
+          },
+        ],
+      },
+    ],
+    modifiers: [
+      {
+        type: Schema.Types.ObjectId,
+        ref: "ProductModifier",
+      },
+    ],
+    selectedModifierOptions: [
+      {
+        modifierId: {
+          type: Schema.Types.ObjectId,
+          ref: "ProductModifier",
           required: true,
         },
         optionIds: [

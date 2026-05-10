@@ -143,6 +143,27 @@ const productSchema = new Schema<IProduct>(
         ],
       },
     ],
+    modifiers: [
+      {
+        type: Schema.Types.ObjectId,
+        ref: "ProductModifier",
+      },
+    ],
+    selectedModifierOptions: [
+      {
+        modifierId: {
+          type: Schema.Types.ObjectId,
+          ref: "ProductModifier",
+          required: true,
+        },
+        optionIds: [
+          {
+            type: Schema.Types.ObjectId,
+            required: true,
+          },
+        ],
+      },
+    ],
     skus: [skuSchema],
     status: {
       type: Boolean,
