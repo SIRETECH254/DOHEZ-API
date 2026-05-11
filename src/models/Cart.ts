@@ -26,6 +26,12 @@ const cartItemSchema = new Schema<ICartItem>({
       optionId: { type: Schema.Types.ObjectId },
     },
   ],
+  modifiers: [
+    {
+      modifierId: { type: Schema.Types.ObjectId },
+      optionId: { type: Schema.Types.ObjectId },
+    },
+  ],
 });
 
 const cartGroupSchema = new Schema<ICartGroup>({

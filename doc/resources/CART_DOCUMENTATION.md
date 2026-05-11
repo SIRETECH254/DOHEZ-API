@@ -44,6 +44,7 @@ interface ICartItem {
   quantity: number;
   priceAtAddition: number;
   variants?: Array<{ variantId: Types.ObjectId; optionId: Types.ObjectId }>;
+  modifiers?: Array<{ modifierId: Types.ObjectId; optionId: Types.ObjectId }>;
 }
 ```
 
@@ -60,11 +61,20 @@ const cartItemSchema = new Schema({
   skuId: { type: Schema.Types.ObjectId, required: true },
   quantity: { type: Number, required: true, min: 1 },
   priceAtAddition: { type: Number, required: true },
-  variants: [{
-    variantId: { type: Schema.Types.ObjectId },
-    optionId: { type: Schema.Types.ObjectId }
-  }]
-});
+  variants: [
+    {
+      variantId: { type: Schema.Types.ObjectId },
+      optionId: { type: Schema.Types.ObjectId }
+    }
+  ],
+  modifiers: [
+    {
+      modifierId: { type: Schema.Types.ObjectId },
+      optionId: { type: Schema.Types.ObjectId }
+    }
+  ]
+  });
+
 
 const cartGroupSchema = new Schema({
   vendorId: { type: Schema.Types.ObjectId, ref: 'Vendor', required: true },
@@ -140,7 +150,7 @@ export const getCart = async (req: Request, res: Response, next: NextFunction): 
 ```typescript
 export const addToCart = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
-    const { vendorId, branchId, productId, skuId, quantity, priceAtAddition, variants } = req.body;
+    const { vendorId, branchId, productId, skuId, quantity, priceAtAddition, variants, modifiers } = req.body;
     
     const product = await Product.findById(productId);
     if (!product) return next(errorHandler(404, "Product not found"));
@@ -157,13 +167,13 @@ export const addToCart = async (req: Request, res: Response, next: NextFunction)
       if (itemIndex > -1) {
         group.items[itemIndex].quantity += quantity;
       } else {
-        group.items.push({ productId, skuId, quantity, priceAtAddition, variants });
+        group.items.push({ productId, skuId, quantity, priceAtAddition, variants, modifiers });
       }
     } else {
       cart.cartGroups.push({
         vendorId,
         branchId,
-        items: [{ productId, skuId, quantity, priceAtAddition, variants }],
+        items: [{ productId, skuId, quantity, priceAtAddition, variants, modifiers }],
         groupSubtotal: 0
       });
       group = cart.cartGroups[cart.cartGroups.length - 1];
@@ -185,14 +195,14 @@ export const addToCart = async (req: Request, res: Response, next: NextFunction)
 #### `updateQuantity()`
 **Purpose:** Update item quantity  
 **Access:** Authenticated users  
-**Process:** Update specific item qty, remove if 0, update totals.  
+**Process:** Update specific item qty using its unique `cartItemId`, remove if 0, update totals.  
 **Response:** Success message
 
 **Controller Implementation:**
 ```typescript
 export const updateQuantity = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
-    const { branchId, skuId, quantity } = req.body;
+    const { branchId, cartItemId, quantity } = req.body;
     
     const cart = await Cart.findOne({ userId: req.user?._id });
     if (!cart) return next(errorHandler(404, "Cart not found"));
@@ -200,11 +210,11 @@ export const updateQuantity = async (req: Request, res: Response, next: NextFunc
     const group = cart.cartGroups.find(g => g.branchId.toString() === branchId);
     if (!group) return next(errorHandler(404, "Branch group not found in cart"));
 
-    const item = group.items.find(i => i.skuId.toString() === skuId);
+    const item = group.items.find(i => i._id?.toString() === cartItemId);
     if (!item) return next(errorHandler(404, "Item not found in cart"));
 
     if (quantity <= 0) {
-      group.items = group.items.filter(i => i.skuId.toString() !== skuId);
+      group.items = group.items.filter(i => i._id?.toString() !== cartItemId);
       if (group.items.length === 0) {
         cart.cartGroups = cart.cartGroups.filter(g => g.branchId.toString() !== branchId);
       }
@@ -228,14 +238,14 @@ export const updateQuantity = async (req: Request, res: Response, next: NextFunc
 #### `removeItem()`
 **Purpose:** Remove item from cart  
 **Access:** Authenticated users  
-**Process:** Remove item, remove empty group, update totals.  
+**Process:** Remove item using its unique `cartItemId`, remove empty group, update totals.  
 **Response:** Success message
 
 **Controller Implementation:**
 ```typescript
 export const removeItem = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
-    const { branchId, skuId } = req.body;
+    const { branchId, cartItemId } = req.body;
 
     const cart = await Cart.findOne({ userId: req.user?._id });
     if (!cart) return next(errorHandler(404, "Cart not found"));
@@ -243,7 +253,7 @@ export const removeItem = async (req: Request, res: Response, next: NextFunction
     const group = cart.cartGroups.find(g => g.branchId.toString() === branchId);
     if (!group) return next(errorHandler(404, "Branch group not found"));
 
-    group.items = group.items.filter(i => i.skuId.toString() !== skuId);
+    group.items = group.items.filter(i => i._id?.toString() !== cartItemId);
     if (group.items.length === 0) {
       cart.cartGroups = cart.cartGroups.filter(g => g.branchId.toString() !== branchId);
     }
@@ -380,6 +390,24 @@ export default router;
   "priceAtAddition": 1500
 }
 ```
+
+**Complex Request Body (with Variants and Modifiers):**
+```json
+{
+  "vendorId": "660af4569999999999999999",
+  "branchId": "660af7890000000000000000",
+  "productId": "660af9995555555555555555",
+  "skuId": "660af8881111111111111111",
+  "quantity": 1,
+  "priceAtAddition": 1800,
+  "variants": [
+    { "variantId": "660af0001111111111111111", "optionId": "660af0002222222222222222" }
+  ],
+  "modifiers": [
+    { "modifierId": "660af0003333333333333333", "optionId": "660af0004444444444444444" }
+  ]
+}
+```
 - **Response:**
 ```json
 {
@@ -402,10 +430,15 @@ export default router;
 ```json
 {
   "branchId": "660af7890000000000000000",
-  "skuId": "660af8881111111111111111",
+  "cartItemId": "660af8881111111111111222",
   "quantity": 5
 }
 ```
+**Body Fields:**
+- `branchId`: (String) The ID of the branch group containing the item.
+- `cartItemId`: (String) The unique `_id` of the cart line item. This ID represents a specific combination of SKU + Variants + Modifiers.
+- `quantity`: (Number) The new total quantity for this specific configuration.
+
 - **Response:**
 ```json
 {
@@ -427,16 +460,12 @@ export default router;
 ```json
 {
   "branchId": "660af7890000000000000000",
-  "skuId": "660af8881111111111111111"
+  "cartItemId": "660af8881111111111111222"
 }
 ```
-- **Response:**
-```json
-{
-  "success": true,
-  "message": "Item removed"
-}
-```
+**Body Fields:**
+- `branchId`: (String) The ID of the branch group containing the item.
+- `cartItemId`: (String) The unique `_id` of the specific cart line item configuration to remove.
 
 #### 5. Clear Cart
 - **Route:** `DELETE /api/cart/clear`
@@ -527,6 +556,27 @@ curl -X POST http://localhost:3500/api/cart/add \
     "priceAtAddition": 1500
   }'
 ```
+
+**Complex Add Item (with Variants and Modifiers):**
+```bash
+curl -X POST http://localhost:3500/api/cart/add \
+  -H "Authorization: Bearer <token>" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "vendorId": "660af4569999999999999999",
+    "branchId": "660af7890000000000000000",
+    "productId": "660af9995555555555555555",
+    "skuId": "660af8881111111111111111",
+    "quantity": 1,
+    "priceAtAddition": 1800,
+    "variants": [
+      { "variantId": "660af0001111111111111111", "optionId": "660af0002222222222222222" }
+    ],
+    "modifiers": [
+      { "modifierId": "660af0003333333333333333", "optionId": "660af0004444444444444444" }
+    ]
+  }'
+```
 **Response:**
 ```json
 {
@@ -549,7 +599,7 @@ curl -X PUT http://localhost:3500/api/cart/update \
   -H "Content-Type: application/json" \
   -d '{
     "branchId": "660af7890000000000000000",
-    "skuId": "660af8881111111111111111",
+    "cartItemId": "660af8881111111111111222",
     "quantity": 5
   }'
 ```
@@ -574,7 +624,7 @@ curl -X DELETE http://localhost:3500/api/cart/remove \
   -H "Content-Type: application/json" \
   -d '{
     "branchId": "660af7890000000000000000",
-    "skuId": "660af8881111111111111111"
+    "cartItemId": "660af8881111111111111222"
   }'
 ```
 **Response:**

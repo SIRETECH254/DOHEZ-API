@@ -318,11 +318,13 @@ export interface IProduct extends Document {
 }
 
 export interface ICartItem {
+  _id?: Types.ObjectId;
   productId: Types.ObjectId | IProduct;
   skuId: Types.ObjectId;
   quantity: number;
   priceAtAddition: number;
   variants?: Array<{ variantId: Types.ObjectId; optionId: Types.ObjectId }>;
+  modifiers?: Array<{ modifierId: Types.ObjectId; optionId: Types.ObjectId }>;
 }
 
 export interface ICartGroup {
@@ -345,9 +347,10 @@ export interface IOrderItem {
   sku: Types.ObjectId;
   product: Types.ObjectId | IProduct;
   title: string;
-  variantOptions?: Map<string, string>;
   quantity: number;
   unitPrice: number;
+  variants?: Array<{ variantId: Types.ObjectId; optionId: Types.ObjectId }>;
+  modifiers?: Array<{ modifierId: Types.ObjectId; optionId: Types.ObjectId }>;
   packagingChoice?: {
     id: string;
     name: string;

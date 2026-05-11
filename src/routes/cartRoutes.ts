@@ -38,6 +38,7 @@ router.get('/', authenticateToken, getCart);
  *               quantity: { type: number }
  *               priceAtAddition: { type: number }
  *               variants: { type: array, items: { type: object } }
+ *               modifiers: { type: array, items: { type: object } }
  *     responses:
  *       200: { description: Success }
  */
@@ -56,11 +57,11 @@ router.post('/add', authenticateToken, addToCart);
  *         application/json:
  *           schema:
  *             type: object
- *             required: [branchId, skuId, quantity]
+ *             required: [branchId, cartItemId, quantity]
  *             properties:
- *               branchId: { type: string }
- *               skuId: { type: string }
- *               quantity: { type: number }
+ *               branchId: { type: string, description: "ID of the branch group" }
+ *               cartItemId: { type: string, description: "Unique ID of the specific item configuration (_id from cart item)" }
+ *               quantity: { type: number, description: "New quantity" }
  *     responses:
  *       200: { description: Success }
  */
@@ -79,10 +80,10 @@ router.put('/update', authenticateToken, updateQuantity);
  *         application/json:
  *           schema:
  *             type: object
- *             required: [branchId, skuId]
+ *             required: [branchId, cartItemId]
  *             properties:
- *               branchId: { type: string }
- *               skuId: { type: string }
+ *               branchId: { type: string, description: "ID of the branch group" }
+ *               cartItemId: { type: string, description: "Unique ID of the specific item configuration to remove" }
  *     responses:
  *       200: { description: Success }
  */

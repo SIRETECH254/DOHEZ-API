@@ -22,6 +22,7 @@ import productCategoryRoutes from "./routes/productCategoryRoutes";
 import variantRoutes from "./routes/variantRoutes";
 import productModifierRoutes from "./routes/productModifierRoutes";
 import productRoutes from "./routes/productRoutes";
+import cartRoutes from "./routes/cartRoutes";
 import orderRoutes from "./routes/orderRoutes";
 import couponRoutes from "./routes/couponRoutes";
 import packagingRoutes from "./routes/packagingRoutes";
@@ -154,6 +155,8 @@ app.use("/api/variants", variantRoutes);
 app.use("/api/product-modifiers", productModifierRoutes);
 
 app.use("/api/products", productRoutes);
+
+app.use("/api/cart", cartRoutes);
 
 app.use("/api/orders", orderRoutes);
 
