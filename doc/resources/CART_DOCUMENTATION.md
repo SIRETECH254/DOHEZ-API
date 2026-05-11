@@ -27,6 +27,7 @@ interface ICart extends Document {
   userId: Types.ObjectId;
   cartGroups: ICartGroup[];
   totalCartValue: number;
+  totalItems: number;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -87,7 +88,8 @@ const cartSchema = new Schema<ICart>(
   {
     userId: { type: Schema.Types.ObjectId, ref: 'User', required: true, unique: true },
     cartGroups: [cartGroupSchema],
-    totalCartValue: { type: Number, default: 0 }
+    totalCartValue: { type: Number, default: 0 },
+    totalItems: { type: Number, default: 0 }
   },
   { timestamps: true }
 );
@@ -182,6 +184,7 @@ export const addToCart = async (req: Request, res: Response, next: NextFunction)
     // Recalculate Subtotals
     group.groupSubtotal = group.items.reduce((sum, item) => sum + (item.priceAtAddition * item.quantity), 0);
     cart.totalCartValue = cart.cartGroups.reduce((sum, g) => sum + g.groupSubtotal, 0);
+    cart.totalItems = cart.cartGroups.reduce((sum, g) => sum + g.items.reduce((iSum, item) => iSum + item.quantity, 0), 0);
 
     await cart.save();
 
@@ -369,6 +372,7 @@ export default router;
         }
       ],
       "totalCartValue": 3000,
+      "totalItems": 2,
       "createdAt": "2026-04-30T10:00:00.000Z",
       "updatedAt": "2026-04-30T10:00:00.000Z"
     }
@@ -417,6 +421,7 @@ export default router;
       "id": "660af9994444444444444444",
       "userId": "660af1238888888888888888",
       "totalCartValue": 1500,
+      "totalItems": 1,
       "updatedAt": "2026-04-30T10:05:00.000Z"
     }
   }
@@ -535,6 +540,7 @@ curl -X GET http://localhost:3500/api/cart \
         }
       ],
       "totalCartValue": 3000,
+      "totalItems": 2,
       "createdAt": "2026-04-30T10:00:00.000Z",
       "updatedAt": "2026-04-30T10:00:00.000Z"
     }
@@ -586,6 +592,7 @@ curl -X POST http://localhost:3500/api/cart/add \
       "id": "660af9994444444444444444",
       "userId": "660af1238888888888888888",
       "totalCartValue": 1500,
+      "totalItems": 1,
       "updatedAt": "2026-04-30T10:05:00.000Z"
     }
   }

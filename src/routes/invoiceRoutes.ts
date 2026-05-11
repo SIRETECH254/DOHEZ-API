@@ -35,13 +35,13 @@ const router = express.Router();
  *       201:
  *         description: Invoice created successfully
  */
-router.post('/', authenticateToken, authorizeRoles(['admin', 'vendor']), createInvoice);
+router.post('/', authenticateToken, authorizeRoles(['admin', 'vendor', 'super_admin']), createInvoice);
 
 /**
  * @swagger
  * /api/invoices:
  *   get:
- *     summary: List all invoices (Admin)
+ *     summary: List all invoices (Admin/Super-Admin)
  *     tags: [Invoices]
  *     security: [{ bearerAuth: [] }]
  *     parameters:
@@ -58,13 +58,13 @@ router.post('/', authenticateToken, authorizeRoles(['admin', 'vendor']), createI
  *       200:
  *         description: List of invoices
  */
-router.get('/', authenticateToken, authorizeRoles(['admin']), getInvoices);
+router.get('/', authenticateToken, authorizeRoles(['admin', 'super_admin']), getInvoices);
 
 /**
  * @swagger
  * /api/invoices/{id}:
  *   get:
- *     summary: Get invoice by ID (Admin)
+ *     summary: Get invoice by ID (Admin/Super-Admin)
  *     tags: [Invoices]
  *     security: [{ bearerAuth: [] }]
  *     parameters:
@@ -76,6 +76,6 @@ router.get('/', authenticateToken, authorizeRoles(['admin']), getInvoices);
  *       200:
  *         description: Invoice details
  */
-router.get('/:id', authenticateToken, authorizeRoles(['admin']), getInvoiceById);
+router.get('/:id', authenticateToken, authorizeRoles(['admin', 'super_admin']), getInvoiceById);
 
 export default router;

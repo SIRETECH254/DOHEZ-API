@@ -66,9 +66,10 @@ export const createOrder = async (req: Request, res: Response, next: NextFunctio
       sku: ci.skuId,
       product: ci.productId,
       title: productIdToName.get(String(ci.productId)) || 'Unknown product',
-      variantOptions: new Map() as any,
       quantity: ci.quantity,
       unitPrice: ci.priceAtAddition,
+      variants: ci.variants,
+      modifiers: ci.modifiers,
       packagingChoice: packagingMap.has(String(ci.skuId)) ? { id: packagingMap.get(String(ci.skuId)), name: '', fee: 0 } : undefined
     }));
 
@@ -161,6 +162,11 @@ export const createOrder = async (req: Request, res: Response, next: NextFunctio
     cart.cartGroups = cart.cartGroups.filter(
       (g) => !(g.vendorId.toString() === vendorId && g.branchId.toString() === branchId)
     );
+
+    // Recalculate total cart value after removing the ordered group
+    cart.totalCartValue = cart.cartGroups.reduce((sum, g) => sum + g.groupSubtotal, 0);
+    cart.totalItems = cart.cartGroups.reduce((sum, g) => sum + g.items.reduce((iSum, item) => iSum + item.quantity, 0), 0);
+
     await cart.save();
 
     io?.emit('order.created', { orderId: order._id.toString() });
@@ -228,9 +234,10 @@ export const adminCreateOrder = async (req: Request, res: Response, next: NextFu
         sku: sku._id,
         product: product._id,
         title: product.name,
-        variantOptions: new Map() as any,
         quantity: inputItem.quantity,
         unitPrice: sku.price,
+        variants: inputItem.variants,
+        modifiers: inputItem.modifiers,
         packagingChoice: undefined
       });
     }

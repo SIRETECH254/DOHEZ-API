@@ -35,9 +35,10 @@ interface IOrder {
     sku: string; // SKU ObjectId
     product: string; // Product ObjectId
     title: string;
-    variantOptions?: Map<string, string>;
     quantity: number;
     unitPrice: number;
+    variants?: Array<{ variantId: string; optionId: string }>;
+    modifiers?: Array<{ modifierId: string; optionId: string }>;
     packagingChoice?: {
       id?: string; // Packaging ObjectId
       name?: string;
@@ -109,10 +110,6 @@ const orderItemSchema = new Schema<IOrderItem>(
       type: String,
       required: true,
     },
-    variantOptions: {
-      type: Map,
-      of: String,
-    },
     quantity: {
       type: Number,
       required: true,
@@ -123,6 +120,18 @@ const orderItemSchema = new Schema<IOrderItem>(
       required: true,
       min: 0,
     },
+    variants: [
+      {
+        variantId: { type: Schema.Types.ObjectId },
+        optionId: { type: Schema.Types.ObjectId },
+      },
+    ],
+    modifiers: [
+      {
+        modifierId: { type: Schema.Types.ObjectId },
+        optionId: { type: Schema.Types.ObjectId },
+      },
+    ],
     packagingChoice: {
       id: { type: String },
       name: { type: String },
@@ -298,9 +307,10 @@ items:          { required: true, type: Array of orderItemSchema }
   sku:            { required: true, type: ObjectId }
   product:        { required: true, type: ObjectId, ref: 'Product' }
   title:          { required: true, type: String }
-  variantOptions: { type: Map, of: String }
   quantity:       { required: true, type: Number, min: 1 }
   unitPrice:      { required: true, type: Number, min: 0 }
+  variants:       { type: Array of { variantId: ObjectId, optionId: ObjectId } }
+  modifiers:      { type: Array of { modifierId: ObjectId, optionId: ObjectId } }
   packagingChoice: { type: Object of { id: String, name: String, fee: Number } }
 pricing:        { required: true, type: pricingSchema }
   subtotal:       { required: true, type: Number, min: 0 }
@@ -327,6 +337,19 @@ metadata:       { type: Mixed, default: {} }
 ---
 
 ## 🎮 Order Controller
+
+### Required Imports
+```typescript
+import type { Request, Response, NextFunction } from "express";
+import Order from "../models/Order";
+import Invoice from "../models/Invoice";
+import Cart from "../models/Cart";
+import Product from "../models/Product";
+import Coupon from "../models/Coupon";
+import Packaging from "../models/Packaging";
+import { generateInvoiceNumber } from "../services/internal/paymentService";
+import { IOrderItem } from "../types";
+```
 
 ### Functions Overview
 
@@ -393,9 +416,10 @@ export const createOrder = async (req: Request, res: Response, next: NextFunctio
       sku: ci.skuId,
       product: ci.productId,
       title: productIdToName.get(String(ci.productId)) || 'Unknown product',
-      variantOptions: new Map() as any,
       quantity: ci.quantity,
       unitPrice: ci.priceAtAddition,
+      variants: ci.variants,
+      modifiers: ci.modifiers,
       packagingChoice: packagingMap.has(String(ci.skuId)) ? { id: packagingMap.get(String(ci.skuId)), name: '', fee: 0 } : undefined
     }));
 
@@ -560,9 +584,10 @@ export const adminCreateOrder = async (req: Request, res: Response, next: NextFu
         sku: sku._id,
         product: product._id,
         title: product.name,
-        variantOptions: new Map() as any,
         quantity: inputItem.quantity,
         unitPrice: sku.price,
+        variants: inputItem.variants,
+        modifiers: inputItem.modifiers,
         packagingChoice: undefined
       });
     }
@@ -986,7 +1011,6 @@ router.delete('/:id', authenticateToken, requireAdmin, deleteOrder);
 export default router;
 ```
 
-### Route Details
 
 ### Route Details
 

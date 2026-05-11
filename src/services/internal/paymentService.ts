@@ -17,10 +17,8 @@ export const generatePaymentNumber = async (): Promise<string> => {
 
 export const generateInvoiceNumber = async (): Promise<string> => {
   const year = new Date().getFullYear();
-  const count = await Invoice.countDocuments({
-    createdAt: { $gte: new Date(year, 0, 1) }
-  });
-  return `INV-${year}-${String(count + 1).padStart(4, "0")}`;
+  const randomSuffix = Math.random().toString(36).substring(2, 6).toUpperCase();
+  return `INV-${year}-${randomSuffix}`;
 };
 
 export const generateReceiptNumber = async (): Promise<string> => {

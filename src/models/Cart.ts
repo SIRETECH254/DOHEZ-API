@@ -65,6 +65,10 @@ const cartSchema = new Schema<ICart>(
       type: Number,
       default: 0,
     },
+    totalItems: {
+      type: Number,
+      default: 0,
+    },
   },
   {
     timestamps: true,

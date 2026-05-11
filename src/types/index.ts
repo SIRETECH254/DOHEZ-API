@@ -339,6 +339,7 @@ export interface ICart extends Document {
   userId: Types.ObjectId | IUser;
   cartGroups: ICartGroup[];
   totalCartValue: number;
+  totalItems: number;
   createdAt: Date;
   updatedAt: Date;
 }

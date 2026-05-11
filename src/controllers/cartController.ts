@@ -105,6 +105,7 @@ export const addToCart = async (req: Request, res: Response, next: NextFunction)
     // Recalculate Subtotals
     group.groupSubtotal = group.items.reduce((sum, item) => sum + (item.priceAtAddition * item.quantity), 0);
     cart.totalCartValue = cart.cartGroups.reduce((sum, g) => sum + g.groupSubtotal, 0);
+    cart.totalItems = cart.cartGroups.reduce((sum, g) => sum + g.items.reduce((iSum, item) => iSum + item.quantity, 0), 0);
 
     await cart.save();
 
@@ -143,6 +144,7 @@ export const updateQuantity = async (req: Request, res: Response, next: NextFunc
     // Recalculate
     group.groupSubtotal = group.items.reduce((sum, i) => sum + (i.priceAtAddition * i.quantity), 0);
     cart.totalCartValue = cart.cartGroups.reduce((sum, g) => sum + g.groupSubtotal, 0);
+    cart.totalItems = cart.cartGroups.reduce((sum, g) => sum + g.items.reduce((iSum, item) => iSum + item.quantity, 0), 0);
 
     await cart.save();
 
@@ -176,6 +178,7 @@ export const removeItem = async (req: Request, res: Response, next: NextFunction
     }
 
     cart.totalCartValue = cart.cartGroups.reduce((sum, g) => sum + g.groupSubtotal, 0);
+    cart.totalItems = cart.cartGroups.reduce((sum, g) => sum + g.items.reduce((iSum, item) => iSum + item.quantity, 0), 0);
     await cart.save();
 
     res.status(200).json({ success: true, message: "Item removed" });
@@ -195,6 +198,7 @@ export const clearCart = async (req: Request, res: Response, next: NextFunction)
 
     cart.cartGroups = [];
     cart.totalCartValue = 0;
+    cart.totalItems = 0;
     await cart.save();
 
     res.status(200).json({ success: true, message: "Cart cleared" });

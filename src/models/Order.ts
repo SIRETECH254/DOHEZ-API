@@ -17,10 +17,6 @@ const orderItemSchema = new Schema<IOrderItem>(
       type: String,
       required: true,
     },
-    variantOptions: {
-      type: Map,
-      of: String,
-    },
     quantity: {
       type: Number,
       required: true,
@@ -31,6 +27,18 @@ const orderItemSchema = new Schema<IOrderItem>(
       required: true,
       min: 0,
     },
+    variants: [
+      {
+        variantId: { type: Schema.Types.ObjectId },
+        optionId: { type: Schema.Types.ObjectId },
+      },
+    ],
+    modifiers: [
+      {
+        modifierId: { type: Schema.Types.ObjectId },
+        optionId: { type: Schema.Types.ObjectId },
+      },
+    ],
     packagingChoice: {
       id: { type: String },
       name: { type: String },
