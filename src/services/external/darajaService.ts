@@ -93,7 +93,7 @@ export const initiateStkPush = async (params: { amount: number, phone: string, a
   };
 
   try {
-    const resp = await axios.post(`${base}/mpk/stkpush/v1/processrequest`, payload, {
+    const resp = await axios.post(`${base}/mpesa/stkpush/v1/processrequest`, payload, {
       headers: { Authorization: `Bearer ${accessToken}` }
     });
     return {

@@ -37,7 +37,7 @@ router.post('/webhooks/mpesa', mpesaWebhook);
  *     tags: [Payments]
  *     security: [{ bearerAuth: [] }]
  */
-router.get('/mpesa/:checkoutId', authenticateToken, queryMpesaByCheckoutId);
+router.get('/mpesa/:checkoutRequestId', authenticateToken, queryMpesaByCheckoutId);
 
 /**
  * @swagger

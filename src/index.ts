@@ -27,6 +27,7 @@ import orderRoutes from "./routes/orderRoutes";
 import couponRoutes from "./routes/couponRoutes";
 import packagingRoutes from "./routes/packagingRoutes";
 import invoiceRoutes from "./routes/invoiceRoutes";
+import paymentRoutes from "./routes/paymentRoutes";
 import addressRoutes from "./routes/addressRoutes";
 import locationRoutes from "./routes/locationRoutes";
 
@@ -165,6 +166,8 @@ app.use("/api/coupons", couponRoutes);
 app.use("/api/packaging", packagingRoutes);
 
 app.use("/api/invoices", invoiceRoutes);
+
+app.use("/api/payments", paymentRoutes);
 
 app.use("/api/addresses", addressRoutes);
 
