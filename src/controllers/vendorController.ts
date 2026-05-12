@@ -2,6 +2,8 @@ import { Request, Response, NextFunction } from "express";
 import { errorHandler } from "../middleware/errorHandler";
 import Vendor from "../models/Vendor";
 import Branch from "../models/Branch";
+import User from "../models/User";
+import Role from "../models/Role";
 import { uploadToCloudinary, deleteFromCloudinary } from "../config/cloudinary";
 import { IRole } from "../types";
 
@@ -62,6 +64,15 @@ export const registerVendor = async (req: Request, res: Response, next: NextFunc
     // Add branch to vendor
     vendor.branches.push(branch._id as any);
     await vendor.save();
+
+    // Assign Role and Vendor to User
+    const vendorAdminRole = await Role.findOne({ name: 'vendor_admin' });
+    if (vendorAdminRole) {
+      await User.findByIdAndUpdate(userId, {
+        $addToSet: { roles: vendorAdminRole._id },
+        vendor: vendor._id,
+      });
+    }
 
     res.status(201).json({
       success: true,

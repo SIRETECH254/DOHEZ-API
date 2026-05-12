@@ -263,6 +263,15 @@ export const registerVendor = async (req: Request, res: Response, next: NextFunc
     vendor.branches.push(branch._id as any);
     await vendor.save();
 
+    // Assign Role and Vendor to User
+    const vendorAdminRole = await Role.findOne({ name: 'vendor_admin' });
+    if (vendorAdminRole) {
+      await User.findByIdAndUpdate(userId, {
+        $addToSet: { roles: vendorAdminRole._id },
+        vendor: vendor._id,
+      });
+    }
+
     res.status(201).json({
       success: true,
       message: "Vendor registered successfully",

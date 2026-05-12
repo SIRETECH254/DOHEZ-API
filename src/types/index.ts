@@ -20,7 +20,7 @@ export interface MultiChannelNotificationResponse {
   error?: string;
 }
 
-export type UserRoleType = 'customer' | 'super_admin' | 'admin' | 'staff' | 'rider' | 'vendor';
+export type UserRoleType = 'customer' | 'super_admin' | 'admin' | 'staff' | 'rider' | 'vendor' | 'vendor_admin' | 'branch_admin';
 
 export interface IPackaging extends Document {
   name: string;
@@ -84,6 +84,18 @@ export interface IUser extends Document {
     email?: boolean;
     sms?: boolean;
     inApp?: boolean;
+  };
+  vendor?: Types.ObjectId;
+  branch?: Types.ObjectId;
+  services?: Types.ObjectId[];
+  workingHours?: {
+    monday?: { start: string; end: string };
+    tuesday?: { start: string; end: string };
+    wednesday?: { start: string; end: string };
+    thursday?: { start: string; end: string };
+    friday?: { start: string; end: string };
+    saturday?: { start: string; end: string };
+    sunday?: { start: string; end: string };
   };
   createdAt: Date;
   updatedAt: Date;

@@ -18,6 +18,20 @@ const roles = [
     permissions: ['manage_users', 'manage_vendors', 'manage_orders'],
   },
   {
+    name: 'vendor_admin',
+    displayName: 'Vendor Administrator',
+    description: 'Full management of vendor-specific data and branches.',
+    isSystemRole: true,
+    permissions: ['manage_vendor', 'manage_branches', 'manage_staff', 'manage_products'],
+  },
+  {
+    name: 'branch_admin',
+    displayName: 'Branch Administrator',
+    description: 'Management of a specific branch and its operations.',
+    isSystemRole: true,
+    permissions: ['manage_branch', 'manage_branch_staff', 'manage_branch_orders'],
+  },
+  {
     name: 'staff',
     displayName: 'Staff',
     description: 'Internal operational access.',

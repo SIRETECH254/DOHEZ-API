@@ -158,7 +158,7 @@ import Vendor from "../models/Vendor";
 ```typescript
 export const createBranch = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
-    const { vendorId, name, email, phone, location, workingHours } = req.body;
+    const { vendorId, name, email, phone, location, workingHours, managerId } = req.body;
     
     const vendor = await Vendor.findById(vendorId);
     if (!vendor) return next(errorHandler(404, "Vendor not found"));
@@ -175,6 +175,18 @@ export const createBranch = async (req: Request, res: Response, next: NextFuncti
     const branch = await Branch.create(branchData);
     vendor.branches.push(branch._id as any);
     await vendor.save();
+
+    // Assign Role and Branch to User
+    const branchAdminRole = await Role.findOne({ name: 'branch_admin' });
+    const targetUserId = managerId || (req.user as any)?._id;
+    
+    if (branchAdminRole && targetUserId) {
+      await User.findByIdAndUpdate(targetUserId, {
+        $addToSet: { roles: branchAdminRole._id },
+        branch: branch._id,
+        vendor: vendorId
+      });
+    }
 
     res.status(201).json({ success: true, data: { branch } });
   } catch (error: any) {

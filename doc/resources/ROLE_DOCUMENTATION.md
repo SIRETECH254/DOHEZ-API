@@ -32,6 +32,8 @@ The Appointment API uses a unified role-based access control (RBAC) system where
 - `staff` - Basic admin access for staff members
 - `rider` - Delivery and logistics access
 - `super_admin` - Root-level system access
+- `vendor_admin` - Full management of vendor-specific data and branches
+- `branch_admin` - Management of a specific branch and its operations
 
 ---
 

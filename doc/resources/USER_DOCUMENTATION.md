@@ -44,6 +44,18 @@ interface IUser extends Document {
     sms?: boolean;
     inApp?: boolean;
   };
+  vendor?: Types.ObjectId;
+  branch?: Types.ObjectId;
+  services?: Types.ObjectId[];
+  workingHours?: {
+    monday?: { start: string; end: string };
+    tuesday?: { start: string; end: string };
+    wednesday?: { start: string; end: string };
+    thursday?: { start: string; end: string };
+    friday?: { start: string; end: string };
+    saturday?: { start: string; end: string };
+    sunday?: { start: string; end: string };
+  };
   createdAt: Date;
   updatedAt: Date;
 }
@@ -130,6 +142,31 @@ const userSchema = new Schema<IUser>(
       sms: { type: Boolean, default: true },
       inApp: { type: Boolean, default: true },
     },
+    vendor: {
+      type: Schema.Types.ObjectId,
+      ref: 'Vendor',
+      default: null,
+    },
+    branch: {
+      type: Schema.Types.ObjectId,
+      ref: 'Branch',
+      default: null,
+    },
+    services: [
+      {
+        type: Schema.Types.ObjectId,
+        ref: 'Product',
+      },
+    ],
+    workingHours: {
+      monday: { start: String, end: String },
+      tuesday: { start: String, end: String },
+      wednesday: { start: String, end: String },
+      thursday: { start: String, end: String },
+      friday: { start: String, end: String },
+      saturday: { start: String, end: String },
+      sunday: { start: String, end: String },
+    },
   },
   {
     timestamps: true,
@@ -149,10 +186,9 @@ email:     { required: true, unique: true, format: email }
 password:  { required: true, minlength: 6, select: false }
 roles:     { type: Array, ref: 'Role' }
 phone:     { required: true, unique: true }
-address:   { optional, maxlength: 200 }
-city:      { optional, maxlength: 50 }
-country:   { optional, maxlength: 50 }
-services:  { type: Array, ref: 'Service' }
+vendor:    { optional, ref: 'Vendor' }
+branch:    { optional, ref: 'Branch' }
+services:  { type: Array, ref: 'Product' }
 workingHours: { optional, days: monday-sunday }
 isActive:  { default: true }
 emailVerified: { default: false }
