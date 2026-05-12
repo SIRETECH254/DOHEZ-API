@@ -24,18 +24,18 @@ Invoice Management automatically generates detailed billing documents upon order
 ### Schema Definition
 ```typescript
 interface IInvoice extends Document {
-  order: Types.ObjectId;
+  order?: Types.ObjectId;
   branch: Types.ObjectId;
   vendor: Types.ObjectId;
   invoiceNumber: string;
-  lineItems: Array<{ label: string; amount: number }>;
+  lineItems?: Array<{ label: string; amount: number }>;
   subtotal: number;
   discounts: number;
   fees: number;
   tax: number;
   total: number;
   balanceDue: number;
-  paymentStatus: "PENDING" | "PAID" | "CANCELLED";
+  paymentStatus: "PENDING" | "PAID" | "PARTIAL" | "CANCELLED";
   metadata: any;
   createdAt: Date;
   updatedAt: Date;
@@ -63,7 +63,7 @@ const invoiceSchema = new Schema<IInvoice>(
     order: {
       type: Schema.Types.ObjectId,
       ref: 'Order',
-      required: true,
+      required: false,
     },
     branch: {
       type: Schema.Types.ObjectId,
@@ -142,10 +142,11 @@ export default Invoice;
 
 ### Validation Rules
 ```typescript
-order:         { required: true, ref: 'Order' }
+order:         { required: false, ref: 'Order' }
 branch:        { required: true, ref: 'Branch' }
 vendor:        { required: true, ref: 'Vendor' }
 invoiceNumber: { required: true, unique: true }
+lineItems:     { required: false, default: [] }
 paymentStatus: { enum: ['PENDING', 'PAID', 'CANCELLED'], default: 'PENDING' }
 ```
 

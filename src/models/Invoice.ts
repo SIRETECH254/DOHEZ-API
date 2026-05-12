@@ -14,7 +14,7 @@ const invoiceSchema = new Schema<IInvoice>(
     order: {
       type: Schema.Types.ObjectId,
       ref: 'Order',
-      required: true,
+      required: false,
     },
     branch: {
       type: Schema.Types.ObjectId,
@@ -70,7 +70,7 @@ const invoiceSchema = new Schema<IInvoice>(
     },
     paymentStatus: {
       type: String,
-      enum: ['PENDING', 'PAID', 'CANCELLED'],
+      enum: ['PENDING', 'PAID', 'PARTIAL', 'CANCELLED'],
       default: 'PENDING',
     },
     metadata: {

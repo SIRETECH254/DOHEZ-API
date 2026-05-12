@@ -318,6 +318,8 @@ export interface IProduct extends Document {
   skus: Types.DocumentArray<ISKU & Types.Subdocument>;
   status: boolean;
   trackInventory: boolean;
+  duration?: string;
+  buffertime?: string;
   createdAt: Date;
   updatedAt: Date;
 
@@ -430,18 +432,18 @@ export interface IPayment extends Document {
 }
 
 export interface IInvoice extends Document {
-  order: Types.ObjectId | IOrder;
+  order?: Types.ObjectId | IOrder;
   branch: Types.ObjectId | IBranch;
   vendor: Types.ObjectId | IVendor;
   invoiceNumber: string;
-  lineItems: IInvoiceLineItem[];
+  lineItems?: IInvoiceLineItem[];
   subtotal: number;
   discounts: number;
   fees: number;
   tax: number;
   total: number;
   balanceDue: number;
-  paymentStatus: "PENDING" | "PAID" | "CANCELLED";
+  paymentStatus: "PENDING" | "PAID" | "PARTIAL" | "CANCELLED";
   metadata: any;
   createdAt: Date;
   updatedAt: Date;

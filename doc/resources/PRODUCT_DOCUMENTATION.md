@@ -41,6 +41,8 @@ export interface IProduct extends Document {
   skus: Types.DocumentArray<ISKU & Types.Subdocument>;
   status: boolean;
   trackInventory: boolean;
+  duration?: string;
+  buffertime?: string;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -225,6 +227,14 @@ const productSchema = new Schema<IProduct>(
     trackInventory: {
       type: Boolean,
       default: true,
+    },
+    duration: {
+      type: String,
+      default: null,
+    },
+    buffertime: {
+      type: String,
+      default: null,
     },
   },
   {
@@ -439,6 +449,8 @@ branch:         { required: true, ref: 'Branch' }
 service:        { required: true, ref: 'Service' }
 status:         { default: true }
 trackInventory: { default: true }
+duration:       { optional, type: String }
+buffertime:     { optional, type: String }
 ```
 
 ---

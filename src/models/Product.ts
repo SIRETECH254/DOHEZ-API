@@ -173,6 +173,14 @@ const productSchema = new Schema<IProduct>(
       type: Boolean,
       default: true,
     },
+    duration: {
+      type: String,
+      default: null,
+    },
+    buffertime: {
+      type: String,
+      default: null,
+    },
   },
   {
     timestamps: true,
