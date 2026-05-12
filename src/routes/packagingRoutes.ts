@@ -43,7 +43,7 @@ const router = express.Router();
  *       201:
  *         description: Packaging option created successfully
  */
-router.post('/', authenticateToken, authorizeRoles(['admin', 'vendor']), createPackaging);
+router.post('/', authenticateToken, authorizeRoles(['admin', 'vendor', 'super_admin']), createPackaging);
 
 /**
  * @swagger
@@ -100,7 +100,7 @@ router.get('/:id', getPackagingById);
  * @swagger
  * /api/packaging/{id}:
  *   put:
- *     summary: Update packaging option (Admin/Vendor)
+ *     summary: Update packaging option (Admin/Vendor/Super-Admin)
  *     tags: [Packaging]
  *     security: [{ bearerAuth: [] }]
  *     parameters:
@@ -117,13 +117,13 @@ router.get('/:id', getPackagingById);
  *       200:
  *         description: Packaging option updated successfully
  */
-router.put('/:id', authenticateToken, authorizeRoles(['admin', 'vendor']), updatePackaging);
+router.put('/:id', authenticateToken, authorizeRoles(['admin', 'vendor', 'super_admin']), updatePackaging);
 
 /**
  * @swagger
  * /api/packaging/{id}:
  *   delete:
- *     summary: Delete packaging option (Admin/Vendor)
+ *     summary: Delete packaging option (Admin/Vendor/Super-Admin)
  *     tags: [Packaging]
  *     security: [{ bearerAuth: [] }]
  *     parameters:
@@ -135,13 +135,13 @@ router.put('/:id', authenticateToken, authorizeRoles(['admin', 'vendor']), updat
  *       200:
  *         description: Packaging option deleted successfully
  */
-router.delete('/:id', authenticateToken, authorizeRoles(['admin', 'vendor']), deletePackaging);
+router.delete('/:id', authenticateToken, authorizeRoles(['admin', 'vendor', 'super_admin']), deletePackaging);
 
 /**
  * @swagger
  * /api/packaging/{id}/default:
  *   patch:
- *     summary: Set packaging option as default (Admin/Vendor)
+ *     summary: Set packaging option as default (Admin/Vendor/Super-Admin)
  *     tags: [Packaging]
  *     security: [{ bearerAuth: [] }]
  *     parameters:
@@ -153,6 +153,6 @@ router.delete('/:id', authenticateToken, authorizeRoles(['admin', 'vendor']), de
  *       200:
  *         description: Packaging option set as default successfully
  */
-router.patch('/:id/default', authenticateToken, authorizeRoles(['admin', 'vendor']), setDefaultPackaging);
+router.patch('/:id/default', authenticateToken, authorizeRoles(['admin', 'vendor', 'super_admin']), setDefaultPackaging);
 
 export default router;

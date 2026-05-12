@@ -19,7 +19,7 @@ export const searchLocation = async (req: Request, res: Response, next: NextFunc
     const response = await client.textSearch({
       params: {
         query: query,
-        key: process.env.GOOGLE_PLACES_API_KEY || '',
+        key: process.env.GOOGLE_PLACE_API|| '',
       },
       timeout: 1000,
     });

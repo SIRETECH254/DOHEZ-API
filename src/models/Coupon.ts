@@ -95,6 +95,16 @@ const couponSchema = new Schema<ICoupon, ICouponModel>(
       ref: 'User',
       required: true,
     },
+    vendor: {
+      type: Schema.Types.ObjectId,
+      ref: 'Vendor',
+      required: true,
+    },
+    branch: {
+      type: Schema.Types.ObjectId,
+      ref: 'Branch',
+      required: true,
+    },
     lastUsedBy: [
       {
         user: {
@@ -118,6 +128,8 @@ const couponSchema = new Schema<ICoupon, ICouponModel>(
 // Indexes for better performance
 couponSchema.index({ isActive: 1, expiryDate: 1 });
 couponSchema.index({ createdBy: 1 });
+couponSchema.index({ vendor: 1 });
+couponSchema.index({ branch: 1 });
 
 // Virtual for checking if coupon is expired
 couponSchema.virtual('isExpired').get(function (this: ICoupon) {
