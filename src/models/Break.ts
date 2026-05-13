@@ -1,4 +1,4 @@
-import mongoose, { Schema } from "mongoose";
+import mongoose, { Schema, CallbackError } from "mongoose";
 import type { IBreak } from "../types/index";
 
 // Validation function for HH:MM format
@@ -25,13 +25,13 @@ const breakSchema = new Schema<IBreak>(
         message: "End time must be in HH:MM format (00:00 to 23:59)"
       }
     },
-    reason: { type: String, trim: true, maxlength: 300 }
+    reason: { type: String },
   },
   { timestamps: { createdAt: true, updatedAt: false } }
 );
 
 // Validate that startTime < endTime
-breakSchema.pre("save", function (next) {
+breakSchema.pre<IBreak>("save", function (next: any) {
   if (this.startTime && this.endTime) {
     if (this.startTime >= this.endTime) {
       return next(new Error("startTime must be earlier than endTime"));

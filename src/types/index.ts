@@ -529,5 +529,32 @@ export interface IBreak extends Document {
   createdAt: Date;
 }
 
+export interface IAppointmentItem {
+  service: Types.ObjectId;
+  staff: Types.ObjectId;
+  startTime: Date;
+  endTime: Date;
+  durationMinutes: number;
+  amount: number;
+}
+
+export interface IAppointment extends Document {
+  appointmentNumber: string;
+  customer: Types.ObjectId | IUser;
+  branch: Types.ObjectId;
+  vendor: Types.ObjectId;
+  staff: Types.ObjectId[];
+  items: IAppointmentItem[];
+  overallStartTime: Date;
+  overallEndTime: Date;
+  status: "PENDING" | "CONFIRMED" | "COMPLETED" | "CANCELLED" | "NO_SHOW";
+  bookingFeeAmount: number;
+  remainingAmount: number;
+  checkedInAt?: Date;
+  actualEndTime?: Date;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
 
 
