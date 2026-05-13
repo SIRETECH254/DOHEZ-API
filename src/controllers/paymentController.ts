@@ -3,11 +3,11 @@ import Payment from '../models/paymentModel';
 import Invoice from '../models/Invoice';
 import Order from '../models/Order';
 import Receipt from '../models/receiptModel';
-import { createPaymentRecord, initiateMpesaProductPayment, applySuccessfulPayment } from '../services/internal/paymentService';
+import { createPaymentRecord, initiateMpesaProductPayment, applySucceFullProductPayment } from '../services/internal/paymentService';
 import { normalizePhoneNumber, parseCallback as parseDarajaCallback, queryStkPushStatus } from '../services/external/darajaService';
 import { errorHandler } from '../middleware/errorHandler';
 
-export const payInvoice = async (req: Request, res: Response, next: NextFunction) => {
+export const payProductInvoice = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const io = req.app.get('io');
     const {
@@ -108,7 +108,7 @@ export const mpesaWebhook = async (req: Request, res: Response, next: NextFuncti
     if (parsed.success) {
       const invoice = await Invoice.findById(payment.invoice);
       if (invoice) {
-        await applySuccessfulPayment({ 
+        await applySucceFullProductPayment({ 
             invoice, 
             payment, 
             io, 
@@ -153,7 +153,7 @@ export const queryMpesaByCheckoutId = async (req: Request, res: Response, next: 
     if (result.resultCode === 0 && payment.status !== 'SUCCESS') {
       const invoice = await Invoice.findById(payment.invoice);
       if (invoice) {
-        await applySuccessfulPayment({ invoice, payment, io, method: 'mpesa_stk' });
+        await applySucceFullProductPayment({ invoice, payment, io, method: 'mpesa_stk' });
       }
     } else if (result.resultCode !== 0 && payment.status !== 'FAILED') {
       payment.status = 'FAILED';

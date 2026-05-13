@@ -395,12 +395,12 @@ const updateInventoryForOrder = async (order: any): Promise<void> => {
 };
 ```
 
-#### `applySuccessfulPayment(params)`
+#### `applySucceFullProductPayment(params)`
 **Purpose:** Apply a successful payment to the associated invoice and order, updates inventory, and generates a receipt.
 
 **Implementation:**
 ```typescript
-export const applySuccessfulPayment = async ({ invoice, payment, io, method }: any): Promise<{ receipt: any }> => {
+export const applySucceFullProductPayment = async ({ invoice, payment, io, method }: any): Promise<{ receipt: any }> => {
   payment.status = 'SUCCESS';
   await payment.save();
 
@@ -511,19 +511,19 @@ import Payment from '../models/paymentModel';
 import Invoice from '../models/Invoice';
 import Order from '../models/Order';
 import Receipt from '../models/receiptModel';
-import { createPaymentRecord, initiateMpesaProductPayment, applySuccessfulPayment } from '../services/internal/paymentService';
+import { createPaymentRecord, initiateMpesaProductPayment, applySucceFullProductPayment } from '../services/internal/paymentService';
 import { normalizePhoneNumber, parseCallback as parseDarajaCallback } from '../services/external/darajaService';
 import { errorHandler } from '../middleware/errorHandler';
 ```
 
 ### Function overview
 
-#### `payInvoice()`
+#### `payProductInvoice()`
 **Purpose:** Initiates a payment for a specific invoice. Handles M-Pesa STK Push initiation.
 
 **Implementation:**
 ```typescript
-export const payInvoice = async (req: Request, res: Response, next: NextFunction) => {
+export const payProductInvoice = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { invoiceId, method, amount: clientAmount, payerPhone } = req.body || {};
 
@@ -608,7 +608,7 @@ export const mpesaWebhook = async (req: Request, res: Response, next: NextFuncti
     if (parsed.success) {
       const invoice = await Invoice.findById(payment.invoice);
       if (invoice) {
-        await applySuccessfulPayment({ invoice, payment, io, method: 'mpesa_stk' });
+        await applySucceFullProductPayment({ invoice, payment, io, method: 'mpesa_stk' });
       }
     } else {
       payment.status = 'FAILED';
@@ -646,7 +646,7 @@ export const queryMpesaByCheckoutId = async (req: Request, res: Response, next: 
     if (result.resultCode === 0 && payment.status !== 'SUCCESS') {
       const invoice = await Invoice.findById(payment.invoice);
       if (invoice) {
-        await applySuccessfulPayment({ invoice, payment, io, method: 'mpesa_stk' });
+        await applySucceFullProductPayment({ invoice, payment, io, method: 'mpesa_stk' });
       }
     } else if (result.resultCode !== 0 && payment.status !== 'FAILED') {
       payment.status = 'FAILED';

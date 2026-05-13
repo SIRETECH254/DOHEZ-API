@@ -160,14 +160,14 @@ import Payment from '../models/paymentModel';
 import Invoice from '../models/Invoice';
 import Order from '../models/Order';
 import Receipt from '../models/receiptModel';
-import { createPaymentRecord, initiateMpesaProductPayment, applySuccessfulPayment } from '../services/internal/paymentService';
+import { createPaymentRecord, initiateMpesaProductPayment, applySucceFullProductPayment } from '../services/internal/paymentService';
 import { normalizePhoneNumber, parseCallback as parseDarajaCallback } from '../services/external/darajaService';
 import { errorHandler } from '../middleware/errorHandler';
 ```
 
 ### Functions Overview
 
-#### `payInvoice()`
+#### `payProductInvoice()`
 **Purpose:** Main payment initiation endpoint. Supports M-Pesa STK Push and creates payment records.  
 **Access:** Private (Authenticated User)  
 **Validation:** `invoiceId` and `method` are required. `payerPhone` is required for `mpesa_stk`.  
@@ -176,7 +176,7 @@ import { errorHandler } from '../middleware/errorHandler';
 
 **Controller Implementation:**
 ```typescript
-export const payInvoice = async (req: Request, res: Response, next: NextFunction) => {
+export const payProductInvoice = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const io = req.app.get('io');
     const {
@@ -284,7 +284,7 @@ export const mpesaWebhook = async (req: Request, res: Response, next: NextFuncti
     if (parsed.success) {
       const invoice = await Invoice.findById(payment.invoiceId);
       if (invoice) {
-        await applySuccessfulPayment({ 
+        await applySucceFullProductPayment({ 
             invoice, 
             payment, 
             io, 
@@ -333,7 +333,7 @@ export const queryMpesaByCheckoutId = async (req: Request, res: Response, next: 
     if (result.resultCode === 0 && payment.status !== 'SUCCESS') {
       const invoice = await Invoice.findById(payment.invoiceId);
       if (invoice) {
-        await applySuccessfulPayment({ invoice, payment, io, method: 'mpesa_stk' });
+        await applySucceFullProductPayment({ invoice, payment, io, method: 'mpesa_stk' });
       }
     } else if (result.resultCode !== 0 && payment.status !== 'FAILED') {
       payment.status = 'FAILED';
@@ -452,7 +452,7 @@ export const getPaymentById = async (req: Request, res: Response, next: NextFunc
 import express from 'express';
 import { authenticateToken, requireAdmin } from '../middleware/auth';
 import { 
-  payInvoice, 
+  payProductInvoice, 
   mpesaWebhook, 
   queryMpesaByCheckoutId, 
   getPayments, 
@@ -461,7 +461,7 @@ import {
 
 const router = express.Router();
 
-router.post('/pay', authenticateToken, payInvoice);
+router.post('/pay', authenticateToken, payProductInvoice);
 
 router.post('/webhooks/mpesa', mpesaWebhook);
 
@@ -676,7 +676,7 @@ export default router;
 **Purpose:** Verify JWT token and load user information  
 **Usage:**
 ```typescript
-router.post('/pay', authenticateToken, payInvoice);
+router.post('/pay', authenticateToken, payProductInvoice);
 ```
 
 #### `requireAdmin`

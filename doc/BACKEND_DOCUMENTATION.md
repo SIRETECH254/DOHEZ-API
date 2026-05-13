@@ -638,7 +638,7 @@ interface IStoreConfiguration {
 ### 8. Payment Controllers
 
 #### `paymentController.ts`
-- `payInvoice()` - Initiate payment for an invoice
+- `payProductInvoice()` - Initiate payment for an invoice
 - `mpesaWebhook()` - Handle M-Pesa callbacks
 - `queryMpesaByCheckoutId()` - Query payment status by checkout ID
 - `getPayments()` - List all payments (admin)

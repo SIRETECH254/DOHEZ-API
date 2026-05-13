@@ -1,7 +1,7 @@
 import express from 'express';
 import { authenticateToken, requireAdmin } from '../middleware/auth';
 import { 
-  payInvoice, 
+  payProductInvoice, 
   mpesaWebhook, 
   queryMpesaByCheckoutId, 
   getPayments, 
@@ -18,7 +18,7 @@ const router = express.Router();
  *     tags: [Payments]
  *     security: [{ bearerAuth: [] }]
  */
-router.post('/pay', authenticateToken, payInvoice);
+router.post('/pay', authenticateToken, payProductInvoice);
 
 /**
  * @swagger

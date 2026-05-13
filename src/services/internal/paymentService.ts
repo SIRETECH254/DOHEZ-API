@@ -85,7 +85,7 @@ export const createPaymentRecord = async (params: {
   } as any);
 };
 
-export const applySuccessfulPayment = async ({ invoice, payment, io, method }: any): Promise<{ receipt: any }> => {
+export const applySucceFullProductPayment = async ({ invoice, payment, io, method }: any): Promise<{ receipt: any }> => {
   payment.status = 'SUCCESS';
   await payment.save();
 

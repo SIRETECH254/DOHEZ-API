@@ -521,4 +521,13 @@ export interface IOrder extends Document {
   updatedAt: Date;
 }
 
+export interface IBreak extends Document {
+  staff: Types.ObjectId | IUser;
+  startTime: string;
+  endTime: string;
+  reason?: string;
+  createdAt: Date;
+}
+
+
 
