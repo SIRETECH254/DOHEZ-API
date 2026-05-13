@@ -16,6 +16,11 @@ const invoiceSchema = new Schema<IInvoice>(
       ref: 'Order',
       required: false,
     },
+    appointment: {
+      type: Schema.Types.ObjectId,
+      ref: 'Appointment',
+      required: false,
+    },
     branch: {
       type: Schema.Types.ObjectId,
       ref: 'Branch',

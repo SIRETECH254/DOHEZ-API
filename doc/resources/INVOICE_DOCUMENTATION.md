@@ -25,6 +25,7 @@ Invoice Management automatically generates detailed billing documents upon order
 ```typescript
 interface IInvoice extends Document {
   order?: Types.ObjectId;
+  appointment?: Types.ObjectId;
   branch: Types.ObjectId;
   vendor: Types.ObjectId;
   invoiceNumber: string;
@@ -63,6 +64,11 @@ const invoiceSchema = new Schema<IInvoice>(
     order: {
       type: Schema.Types.ObjectId,
       ref: 'Order',
+      required: false,
+    },
+    appointment: {
+      type: Schema.Types.ObjectId,
+      ref: 'Appointment',
       required: false,
     },
     branch: {
@@ -143,6 +149,7 @@ export default Invoice;
 ### Validation Rules
 ```typescript
 order:         { required: false, ref: 'Order' }
+appointment:   { required: false, ref: 'Appointment' }
 branch:        { required: true, ref: 'Branch' }
 vendor:        { required: true, ref: 'Vendor' }
 invoiceNumber: { required: true, unique: true }

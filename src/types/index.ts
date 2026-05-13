@@ -433,6 +433,7 @@ export interface IPayment extends Document {
 
 export interface IInvoice extends Document {
   order?: Types.ObjectId | IOrder;
+  appointment?: Types.ObjectId;
   branch: Types.ObjectId | IBranch;
   vendor: Types.ObjectId | IVendor;
   invoiceNumber: string;
