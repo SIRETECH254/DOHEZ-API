@@ -31,6 +31,7 @@ import paymentRoutes from "./routes/paymentRoutes";
 import addressRoutes from "./routes/addressRoutes";
 import locationRoutes from "./routes/locationRoutes";
 import breakRoutes from "./routes/breakRoutes";
+import availabilityRoutes from "./routes/availabilityRoutes";
 
 // Initialize application
 const app = express();
@@ -175,6 +176,8 @@ app.use("/api/addresses", addressRoutes);
 app.use("/api/locations", locationRoutes);
 
 app.use("/api/breaks", breakRoutes);
+
+app.use("/api/availability", availabilityRoutes);
 
 // Socket.io setup for real-time features
 const server = createServer(app);
