@@ -32,6 +32,7 @@ import addressRoutes from "./routes/addressRoutes";
 import locationRoutes from "./routes/locationRoutes";
 import breakRoutes from "./routes/breakRoutes";
 import availabilityRoutes from "./routes/availabilityRoutes";
+import appointmentRoutes from "./routes/appointmentRoutes";
 
 // Initialize application
 const app = express();
