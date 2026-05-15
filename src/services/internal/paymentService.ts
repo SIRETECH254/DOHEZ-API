@@ -4,6 +4,7 @@ import Order from '../../models/Order';
 import Receipt from '../../models/receiptModel';
 import Coupon from '../../models/Coupon';
 import Product from '../../models/Product';
+import Appointment from '../../models/Appointment';
 import { initiateStkPush } from '../external/darajaService';
 import type { IPayment } from '../../types';
 
@@ -144,6 +145,56 @@ export const applySucceFullProductPayment = async ({ invoice, payment, io, metho
   return { receipt };
 };
 
+export const applySuccessFullAppointmentPayment = async ({ invoice, payment, io, method }: any): Promise<{ receipt?: any }> => {
+  payment.status = 'SUCCESS';
+  await payment.save();
+
+  const appointment = await Appointment.findById(invoice.appointment);
+  if (!appointment) {
+    throw new Error('Appointment not found for successful payment');
+  }
+
+  let receipt = null;
+
+  if (payment.type === 'BOOKING_FEE' && appointment.status === 'PENDING') {
+    invoice.paymentStatus = 'PARTIAL';
+    invoice.balanceDue = appointment.remainingAmount;
+    await invoice.save();
+
+    appointment.status = 'CONFIRMED';
+    await appointment.save();
+  } else if (payment.type === 'FULLPAYMENT') {
+    invoice.paymentStatus = 'PAID';
+    invoice.balanceDue = 0;
+    await invoice.save();
+
+    appointment.remainingAmount = 0;
+    if (appointment.status === 'PENDING') {
+      appointment.status = 'CONFIRMED';
+    }
+    await appointment.save();
+
+    receipt = await Receipt.create({
+      appointment: invoice.appointment,
+      invoice: invoice._id,
+      branch: invoice.branch,
+      vendor: invoice.vendor,
+      receiptNumber: await generateReceiptNumber(),
+      amountPaid: payment.amount,
+      paymentMethod: method === 'mpesa_stk' ? 'mpesa' : (method === 'paystack_card' ? 'paystack' : method),
+      issuedAt: new Date(),
+    });
+  }
+
+  io?.emit('payment.updated', { paymentId: payment._id.toString(), status: payment.status });
+  if (receipt) {
+    io?.emit('receipt.created', { receiptId: receipt._id.toString(), appointmentId: String(invoice.appointment) });
+  }
+
+  return { receipt };
+  
+};
+
 export const initiateMpesaProductPayment = async (params: {
   invoiceId?: any;
   branch: any;
@@ -178,3 +229,41 @@ export const initiateMpesaProductPayment = async (params: {
 
   return { payment, res };
 };
+
+export const initiateMpesaAppointmentPayment = async (params: {
+  invoiceId?: any;
+  branch: any;
+  vendor: any;
+  amount: number;
+  phone: string;
+  invoiceNumber: string;
+  type: 'BOOKING_FEE' | 'FULLPAYMENT';
+}): Promise<any> => {
+  const { invoiceId, amount, phone, invoiceNumber, branch, vendor, type } = params;
+
+  const res = await initiateStkPush({
+    amount,
+    phone,
+    accountReference: invoiceNumber
+  });
+
+  const payment = await Payment.create({
+    paymentNumber: await generatePaymentNumber(),
+    invoice: invoiceId,
+    branch,
+    vendor,
+    method: 'mpesa',
+    amount,
+    type,
+    status: 'INITIATED',
+    processorRefs: {
+      daraja: {
+        merchantRequestId: res.merchantRequestId,
+        checkoutRequestId: res.checkoutRequestId
+      }
+    }
+  });
+
+  return { payment, res };
+};
+

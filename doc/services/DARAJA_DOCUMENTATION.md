@@ -376,22 +376,45 @@ export const createPaymentRecord = async (params: {
 **Implementation:**
 ```typescript
 const updateInventoryForOrder = async (order: any): Promise<void> => {
-  if (!order.items || order.items.length === 0) return;
+  if (!order.items || order.items.length === 0) {
+    console.log('No items in order to update inventory');
+    return;
+  }
+
+  console.log(`Updating inventory for order ${order._id} with ${order.items.length} items`);
 
   for (const item of order.items) {
     try {
-      const product = await Product.findOne({ 'skus._id': item.sku });
-      if (!product) continue;
+      const product = await Product.findOne({ 
+        'skus._id': item.sku 
+      });
+
+      if (!product) {
+        console.error(`Product not found for SKU ${item.sku}`);
+        continue;
+      }
 
       const sku = (product.skus as any).id(item.sku);
-      if (!sku) continue;
+      if (!sku) {
+        console.error(`SKU ${item.sku} not found in product ${product._id}`);
+        continue;
+      }
+
+      if (sku.stock < item.quantity) {
+        console.warn(`Insufficient stock for SKU ${item.sku}. Available: ${sku.stock}, Requested: ${item.quantity}`);
+      }
 
       sku.stock = Math.max(0, sku.stock - item.quantity);
+
+      console.log(`Updated SKU ${item.sku} stock: ${sku.stock} (reduced by ${item.quantity})`);
+
       await product.save();
     } catch (error) {
       console.error(`Failed to update inventory for SKU ${item.sku}:`, error);
     }
   }
+
+  console.log(`Completed inventory update for order ${order._id}`);
 };
 ```
 
@@ -409,7 +432,9 @@ export const applySucceFullProductPayment = async ({ invoice, payment, io, metho
   await invoice.save();
 
   const order = await Order.findById(invoice.order);
-  if (!order) throw new Error('Order not found for successful payment');
+  if (!order) {
+    throw new Error('Order not found for successful payment');
+  }
 
   order.paymentStatus = 'PAID';
   await order.save();
@@ -419,7 +444,9 @@ export const applySucceFullProductPayment = async ({ invoice, payment, io, metho
   if (couponSnapshot) {
     try {
       const c = await Coupon.findById(couponSnapshot._id);
-      if (c) await c.incrementUsage(String(order.customer));
+      if (c) {
+        await c.incrementUsage(String(order.customer));
+      }
     } catch (couponError) {
       console.error('Failed to increment coupon usage after payment:', couponError);
     }
@@ -432,16 +459,15 @@ export const applySucceFullProductPayment = async ({ invoice, payment, io, metho
     console.error('Failed to update inventory for order:', order._id, inventoryError);
   }
 
-  const receipt = await Receipt.create({
+  const receipt: any = await Receipt.create({
     order: invoice.order,
     invoice: invoice._id,
     branch: invoice.branch,
     vendor: invoice.vendor,
     receiptNumber: await generateReceiptNumber(),
     amountPaid: payment.amount,
-    paymentMethod: method,
+    paymentMethod: method === 'mpesa_stk' ? 'mpesa' : (method === 'paystack_card' ? 'paystack' : method),
     issuedAt: new Date(),
-    pdfUrl: null,
     metadata: {
       coupon: invoice?.metadata?.coupon || null
     }
@@ -457,15 +483,70 @@ export const applySucceFullProductPayment = async ({ invoice, payment, io, metho
 };
 ```
 
+#### `applySuccessFullAppointmentPayment(params)`
+**Purpose:** Apply a successful payment to an appointment, updates invoice and appointment status, and generates a receipt for full payments.
+
+**Implementation:**
+```typescript
+export const applySuccessFullAppointmentPayment = async ({ invoice, payment, io, method }: any): Promise<{ receipt?: any }> => {
+  payment.status = 'SUCCESS';
+  await payment.save();
+
+  const appointment = await Appointment.findById(invoice.appointment);
+  if (!appointment) {
+    throw new Error('Appointment not found for successful payment');
+  }
+
+  let receipt = null;
+
+  if (payment.type === 'BOOKING_FEE' && appointment.status === 'PENDING') {
+    invoice.paymentStatus = 'PARTIAL';
+    invoice.balanceDue = appointment.remainingAmount;
+    await invoice.save();
+
+    appointment.status = 'CONFIRMED';
+    await appointment.save();
+  } else if (payment.type === 'FULLPAYMENT') {
+    invoice.paymentStatus = 'PAID';
+    invoice.balanceDue = 0;
+    await invoice.save();
+
+    appointment.remainingAmount = 0;
+    if (appointment.status === 'PENDING') {
+      appointment.status = 'CONFIRMED';
+    }
+    await appointment.save();
+
+    receipt = await Receipt.create({
+      appointment: invoice.appointment,
+      invoice: invoice._id,
+      branch: invoice.branch,
+      vendor: invoice.vendor,
+      receiptNumber: await generateReceiptNumber(),
+      amountPaid: payment.amount,
+      paymentMethod: method === 'mpesa_stk' ? 'mpesa' : (method === 'paystack_card' ? 'paystack' : method),
+      issuedAt: new Date(),
+    });
+  }
+
+  io?.emit('payment.updated', { paymentId: payment._id.toString(), status: payment.status });
+  if (receipt) {
+    io?.emit('receipt.created', { receiptId: receipt._id.toString(), appointmentId: String(invoice.appointment) });
+  }
+
+  return { receipt };
+};
+```
+
 #### `initiateMpesaProductPayment(params)`
-**Purpose:** Orchestrate M-Pesa STK Push payment and create an INITIATED payment record.
+**Purpose:** Orchestrate M-Pesa STK Push payment for products and create an INITIATED payment record.
 
 **Implementation:**
 ```typescript
 export const initiateMpesaProductPayment = async (params: {
-  invoiceId?: string;
-  branch: string;
-  vendor: string;
+  invoiceId?: any;
+  branch: any;
+  vendor: any;
   amount: number;
   phone: string;
   invoiceNumber: string;
@@ -497,6 +578,50 @@ export const initiateMpesaProductPayment = async (params: {
   return { payment, res };
 };
 ```
+
+#### `initiateMpesaAppointmentPayment(params)`
+**Purpose:** Orchestrate M-Pesa STK Push payment for appointments and create an INITIATED payment record with type.
+
+**Implementation:**
+```typescript
+export const initiateMpesaAppointmentPayment = async (params: {
+  invoiceId?: any;
+  branch: any;
+  vendor: any;
+  amount: number;
+  phone: string;
+  invoiceNumber: string;
+  type: 'BOOKING_FEE' | 'FULLPAYMENT';
+}): Promise<any> => {
+  const { invoiceId, amount, phone, invoiceNumber, branch, vendor, type } = params;
+
+  const res = await initiateStkPush({
+    amount,
+    phone,
+    accountReference: invoiceNumber
+  });
+
+  const payment = await Payment.create({
+    paymentNumber: await generatePaymentNumber(),
+    invoice: invoiceId,
+    branch,
+    vendor,
+    method: 'mpesa',
+    amount,
+    type,
+    status: 'INITIATED',
+    processorRefs: {
+      daraja: {
+        merchantRequestId: res.merchantRequestId,
+        checkoutRequestId: res.checkoutRequestId
+      }
+    }
+  });
+
+  return { payment, res };
+};
+```
+
 
 ---
 
