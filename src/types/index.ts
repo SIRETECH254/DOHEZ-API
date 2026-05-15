@@ -394,7 +394,8 @@ export interface IInvoiceLineItem {
 }
 
 export interface IReceipt extends Document {
-  order: Types.ObjectId | IOrder;
+  order?: Types.ObjectId | IOrder;
+  appointment?: Types.ObjectId;
   invoice: Types.ObjectId | IInvoice;
   branch: Types.ObjectId | IBranch;
   vendor: Types.ObjectId | IVendor;
@@ -426,6 +427,7 @@ export interface IPayment extends Document {
     };
   };
   status: "INITIATED" | "PENDING" | "SUCCESS" | "FAILED" | "CANCELLED";
+  type?: "BOOKING_FEE" | "FULLPAYMENT";
   rawPayload?: any;
   createdAt: Date;
   updatedAt: Date;

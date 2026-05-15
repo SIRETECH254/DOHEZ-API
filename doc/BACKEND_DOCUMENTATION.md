@@ -294,7 +294,8 @@ interface IInvoice {
 ```typescript
 interface IReceipt {
   _id: string;
-  orderId: string; // Order ObjectId
+  orderId?: string; // Order ObjectId
+  appointmentId?: string; // Appointment ObjectId
   invoiceId: string; // Invoice ObjectId
   receiptNumber: string;
   amountPaid: number;
@@ -325,6 +326,7 @@ interface IPayment {
     };
   };
   status: "INITIATED" | "PENDING" | "SUCCESS" | "FAILED" | "CANCELLED";
+  type?: "BOOKING_FEE" | "FULLPAYMENT";
   rawPayload?: any; // Raw webhook payload for debugging
   createdAt: Date;
   updatedAt: Date;

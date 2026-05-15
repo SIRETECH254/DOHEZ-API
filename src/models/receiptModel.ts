@@ -6,7 +6,10 @@ const receiptSchema = new Schema<IReceipt>(
     order: {
       type: Schema.Types.ObjectId,
       ref: 'Order',
-      required: true,
+    },
+    appointment: {
+      type: Schema.Types.ObjectId,
+      ref: 'Appointment',
     },
     invoice: {
       type: Schema.Types.ObjectId,
@@ -57,6 +60,7 @@ const receiptSchema = new Schema<IReceipt>(
 );
 
 receiptSchema.index({ order: 1 });
+receiptSchema.index({ appointment: 1 });
 receiptSchema.index({ invoice: 1 });
 receiptSchema.index({ branch: 1 });
 receiptSchema.index({ vendor: 1 });

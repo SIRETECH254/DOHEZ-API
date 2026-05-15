@@ -49,6 +49,7 @@ export interface IPayment extends Document {
     };
   };
   status: "INITIATED" | "PENDING" | "SUCCESS" | "FAILED" | "CANCELLED";
+  type?: "BOOKING_FEE" | "FULLPAYMENT";
   rawPayload?: any;
   createdAt: Date;
   updatedAt: Date;
@@ -112,6 +113,10 @@ const paymentSchema = new Schema<IPayment>(
       enum: ['INITIATED', 'PENDING', 'SUCCESS', 'FAILED', 'CANCELLED'],
       default: 'INITIATED',
     },
+    type: {
+      type: String,
+      enum: ['BOOKING_FEE', 'FULLPAYMENT'],
+    },
     rawPayload: {
       type: Schema.Types.Mixed,
       default: {},
@@ -146,6 +151,7 @@ processorRefs:    { type: Object }
   paystack:         { type: Object }
     reference:         { type: String }
 status:           { type: String, enum: ['INITIATED', 'PENDING', 'SUCCESS', 'FAILED', 'CANCELLED'], default: 'INITIATED' }
+type:             { type: String, enum: ['BOOKING_FEE', 'FULLPAYMENT'] }
 rawPayload:       { type: Mixed, default: {} }
 ```
 

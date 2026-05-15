@@ -50,6 +50,10 @@ const paymentSchema = new Schema<IPayment>(
       enum: ['INITIATED', 'PENDING', 'SUCCESS', 'FAILED', 'CANCELLED'],
       default: 'INITIATED',
     },
+    type: {
+      type: String,
+      enum: ['BOOKING_FEE', 'FULLPAYMENT'],
+    },
     rawPayload: {
       type: Schema.Types.Mixed,
       default: {},
