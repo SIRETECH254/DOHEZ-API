@@ -623,6 +623,7 @@ export const initiateMpesaAppointmentPayment = async (params: {
 ```
 
 
+
 ---
 
 ## Usage in Controllers

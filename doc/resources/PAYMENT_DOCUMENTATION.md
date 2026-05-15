@@ -173,7 +173,148 @@ import { errorHandler } from '../middleware/errorHandler';
 
 ### Functions Overview
 
-#### `payProductInvoice()`
+#### `confirmAppointment()`
+**Purpose:** Validates appointment slot and initiates a booking fee payment.  
+**Access:** Private (Authenticated User)  
+**Validation:** Appointment must exist, not be completed/cancelled/no-show, not be in the past, and slot must be available (validated via `validateOptionAvailability`).  
+**Process:** Validates slot, creates an invoice, and initiates M-Pesa STK Push if method is 'mpesa'.  
+**Response:** Success message, and appointment details.
+
+**Controller Implementation:**
+```typescript
+export const confirmAppointment = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const { appointmentId } = req.params;
+    const { method, payerPhone } = req.body || {};
+
+    if (!appointmentId || !method) {
+      return next(errorHandler(400, 'appointmentId (params) and method are required'));
+    }
+
+    const appointment = await Appointment.findById(appointmentId).populate('items.service');
+    if (!appointment) return next(errorHandler(404, 'Appointment not found'));
+
+    if (['COMPLETED', 'CANCELLED', 'NO_SHOW'].includes(appointment.status)) {
+      return next(errorHandler(400, 'Cannot pay for a completed, cancelled, or no-show appointment'));
+    }
+
+    if (appointment.overallStartTime < new Date()) {
+      return next(errorHandler(400, 'Appointment time is in the past'));
+    }
+
+    const availability = await validateOptionAvailability(
+      String(appointment.branch),
+      String(appointment.vendor),
+      appointment.items.map(item => ({
+        serviceId: (item.service as any)._id,
+        staffId: String(item.staff),
+        startTime: item.startTime,
+        endTime: item.endTime
+      })),
+      String(appointment._id)
+    );
+
+    if (!availability.ok) {
+      return next(errorHandler(400, availability.message || 'Appointment slot is no longer available'));
+    }
+
+    const invoice = await Invoice.create({
+      appointment: appointment._id,
+      branch: appointment.branch,
+      vendor: appointment.vendor,
+      subtotal: appointment.bookingFeeAmount,
+      total: appointment.bookingFeeAmount,
+      balanceDue: appointment.remainingAmount,
+      paymentStatus: 'PENDING',
+      invoiceNumber: await generateInvoiceNumber()
+    });
+
+    if (method === 'mpesa') {
+      if (!payerPhone) return next(errorHandler(400, 'payerPhone is required for mpesa'));
+
+      const msisdn = normalizePhoneNumber(payerPhone);
+
+      await initiateMpesaAppointmentPayment({
+        invoiceId: invoice._id,
+        branch: appointment.branch,
+        vendor: appointment.vendor,
+        amount: appointment.bookingFeeAmount,
+        phone: msisdn,
+        invoiceNumber: invoice.invoiceNumber,
+        type: 'BOOKING_FEE'
+      });
+    }
+
+    return res.status(200).json({ 
+      success: true, 
+      message: 'Booking fee initiated',
+      data: { appointment } 
+    });
+  } catch (err) {
+    next(err);
+  }
+};
+```
+
+#### `payAppointmentInvoice()`
+**Purpose:** Pay the appointment invoice (full payment).  
+**Access:** Private (Authenticated User)  
+**Validation:** Invoice must exist and not be paid/cancelled. Appointment must not be completed/cancelled/no-show.  
+**Process:** Retrieves invoice by appointment ID, validates statuses, and initiates M-Pesa STK Push (as 'FULLPAYMENT') if method is 'mpesa'.  
+**Response:** Success message, appointment, and invoice details.
+
+**Controller Implementation:**
+```typescript
+export const payAppointmentInvoice = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const { payerPhone, method, appointmentId } = req.body || {};
+
+    if (!appointmentId || !method) {
+      return next(errorHandler(400, 'appointmentId and method are required'));
+    }
+
+    const invoice = await Invoice.findOne({ appointment: appointmentId });
+    if (!invoice) return next(errorHandler(404, 'Invoice not found'));
+
+    const appointment = await Appointment.findById(appointmentId);
+    if (!appointment) return next(errorHandler(404, 'Appointment not found'));
+
+    if (invoice.paymentStatus === 'PAID') return next(errorHandler(409, 'Invoice already paid'));
+    if (invoice.paymentStatus === 'CANCELLED') return next(errorHandler(409, 'Invoice is cancelled'));
+
+    if (appointment.status === 'COMPLETED') return next(errorHandler(409, 'Appointment is already completed'));
+    if (appointment.status === 'CANCELLED') return next(errorHandler(409, 'Appointment is cancelled'));
+    if (appointment.status === 'NO_SHOW') return next(errorHandler(409, 'Appointment was a no-show'));
+
+    const amount = invoice.balanceDue;
+
+    if (method === 'mpesa') {
+      if (!payerPhone) return next(errorHandler(400, 'payerPhone is required for mpesa'));
+
+      const msisdn = normalizePhoneNumber(payerPhone);
+
+      await initiateMpesaAppointmentPayment({
+        invoiceId: invoice._id,
+        branch: appointment.branch,
+        vendor: appointment.vendor,
+        amount,
+        phone: msisdn,
+        invoiceNumber: invoice.invoiceNumber,
+        type: 'FULLPAYMENT'
+      });
+    }
+
+    return res.status(200).json({ 
+      success: true, 
+      message: "appointment paidfully",
+      data: { appointment, invoice } 
+    });
+  } catch (err) {
+    next(err);
+  }
+};
+```
+
 **Purpose:** Main payment initiation endpoint. Supports M-Pesa STK Push and creates payment records.  
 **Access:** Private (Authenticated User)  
 **Validation:** `invoiceId` and `method` are required. `payerPhone` is required for `mpesa_stk`.  
@@ -261,7 +402,7 @@ export const payProductInvoice = async (req: Request, res: Response, next: NextF
 **Purpose:** Handles M-Pesa STK Push callback webhooks from Safaricom.  
 **Access:** Public (no authentication required)  
 **Validation:** Validates the webhook payload structure.  
-**Process:** Parses the payload, finds the payment record, and updates its status. If successful, applies the payment to the invoice. Emits real-time updates via Socket.io.  
+**Process:** Parses the payload, finds the payment record, and updates its status. If successful, checks if the linked invoice belongs to an order or an appointment and routes to the appropriate handler (`applySucceFullProductPayment` or `applySuccessFullAppointmentPayment`). Emits real-time updates via Socket.io.  
 **Response:** Success message.
 
 **Controller Implementation:**
@@ -288,14 +429,13 @@ export const mpesaWebhook = async (req: Request, res: Response, next: NextFuncti
     payment.rawPayload = payload;
 
     if (parsed.success) {
-      const invoice = await Invoice.findById(payment.invoiceId);
+      const invoice = await Invoice.findById(payment.invoice);
       if (invoice) {
-        await applySucceFullProductPayment({ 
-            invoice, 
-            payment, 
-            io, 
-            method: 'mpesa_stk' 
-        });
+        if (invoice.order) {
+          await applySucceFullProductPayment({ invoice, payment, io, method: 'mpesa_stk' });
+        } else if (invoice.appointment) {
+          await applySuccessFullAppointmentPayment({ invoice, payment, io, method: 'mpesa_stk' });
+        }
       }
     } else {
       payment.status = 'FAILED';
@@ -309,6 +449,7 @@ export const mpesaWebhook = async (req: Request, res: Response, next: NextFuncti
   }
 };
 ```
+
 
 #### `queryMpesaByCheckoutId()`
 **Purpose:** Manually queries the status of an M-Pesa STK Push transaction.  
@@ -482,7 +623,74 @@ export default router;
 
 ### Route Details
 
-#### `POST /api/payments/pay`
+#### `POST /api/payments/appointments/confirm/:appointmentId`
+**Headers:** 
+- `Authorization: Bearer <token>`
+- `Content-Type: application/json`
+
+**URL Parameters:**
+- `appointmentId`: `65e26b1c09b068c201383812`
+
+**Request Body (JSON):**
+```json
+{
+  "method": "mpesa",
+  "payerPhone": "254712345678"
+}
+```
+
+**Purpose:** Confirm appointment and initiate booking fee.
+**Access:** Private (Authenticated User)
+**Response (200 OK):**
+```json
+{
+  "success": true,
+  "message": "Booking fee initiated",
+  "data": {
+    "appointment": {
+      "_id": "65e26b1c09b068c201383812",
+      "status": "PENDING",
+      "bookingFeeAmount": 500
+    }
+  }
+}
+```
+
+#### `POST /api/payments/appointments/pay`
+**Headers:** 
+- `Authorization: Bearer <token>`
+- `Content-Type: application/json`
+
+**Request Body (JSON):**
+```json
+{
+  "appointmentId": "65e26b1c09b068c201383812",
+  "method": "mpesa",
+  "payerPhone": "254712345678"
+}
+```
+
+**Purpose:** Pay appointment invoice.
+**Access:** Private (Authenticated User)
+**Response (200 OK):**
+```json
+{
+  "success": true,
+  "message": "appointment paidfully",
+  "data": {
+    "appointment": {
+      "_id": "65e26b1c09b068c201383812",
+      "status": "CONFIRMED"
+    },
+    "invoice": {
+      "_id": "66389f4b52e2a1b4e8d1a2c3",
+      "invoiceNumber": "INV-2026-001",
+      "paymentStatus": "PENDING"
+    }
+  }
+}
+```
+
 **Headers:** 
 - `Authorization: Bearer <token>`
 - `Content-Type: application/json`
@@ -696,7 +904,29 @@ router.get('/', authenticateToken, requireAdmin, getPayments);
 
 ## 📝 API Examples
 
-### Initiate M-Pesa Payment
+### Confirm Appointment and Initiate Booking Fee
+```bash
+curl -X POST http://localhost:5000/api/payments/appointments/confirm/65e26b1c09b068c201383812 \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer <access_token>" \
+  -d '{
+    "method": "mpesa",
+    "payerPhone": "254712345678"
+  }'
+```
+
+### Pay Appointment Invoice
+```bash
+curl -X POST http://localhost:5000/api/payments/appointments/pay \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer <access_token>" \
+  -d '{
+    "appointmentId": "65e26b1c09b068c201383812",
+    "method": "mpesa",
+    "payerPhone": "254712345678"
+  }'
+```
+
 ```bash
 curl -X POST http://localhost:5000/api/payments/pay \
   -H "Content-Type: application/json" \

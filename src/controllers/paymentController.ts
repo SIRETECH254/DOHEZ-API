@@ -1,11 +1,93 @@
 import { Request, Response, NextFunction } from 'express';
 import Payment from '../models/paymentModel';
 import Invoice from '../models/Invoice';
+import Appointment from '../models/Appointment';
 import Order from '../models/Order';
 import Receipt from '../models/receiptModel';
-import { createPaymentRecord, initiateMpesaProductPayment, applySucceFullProductPayment } from '../services/internal/paymentService';
+import { 
+  createPaymentRecord, 
+  initiateMpesaAppointmentPayment, 
+  initiateMpesaProductPayment,
+  applySucceFullProductPayment, 
+  applySuccessFullAppointmentPayment,
+  generateInvoiceNumber 
+} from '../services/internal/paymentService';
 import { normalizePhoneNumber, parseCallback as parseDarajaCallback, queryStkPushStatus } from '../services/external/darajaService';
 import { errorHandler } from '../middleware/errorHandler';
+import { validateOptionAvailability } from '../utils/availability';
+
+export const confirmAppointment = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const { appointmentId } = req.params;
+    const { method, payerPhone } = req.body || {};
+
+    if (!appointmentId || !method) {
+      return next(errorHandler(400, 'appointmentId (params) and method are required'));
+    }
+
+    const appointment = await Appointment.findById(appointmentId).populate('items.service');
+    if (!appointment) return next(errorHandler(404, 'Appointment not found'));
+
+    if (['COMPLETED', 'CANCELLED', 'NO_SHOW'].includes(appointment.status)) {
+      return next(errorHandler(400, 'Cannot pay for a completed, cancelled, or no-show appointment'));
+    }
+
+    if (appointment.overallStartTime < new Date()) {
+      return next(errorHandler(400, 'Appointment time is in the past'));
+    }
+
+    const availability = await validateOptionAvailability(
+      String(appointment.branch),
+      String(appointment.vendor),
+      appointment.items.map(item => ({
+        serviceId: (item.service as any)._id,
+        staffId: String(item.staff),
+        startTime: item.startTime,
+        endTime: item.endTime
+      })),
+      String(appointment._id)
+    );
+
+    if (!availability.ok) {
+      return next(errorHandler(400, availability.message || 'Appointment slot is no longer available'));
+    }
+
+    const invoice = await Invoice.create({
+      appointment: appointment._id,
+      branch: appointment.branch,
+      vendor: appointment.vendor,
+      subtotal: appointment.bookingFeeAmount,
+      total: appointment.bookingFeeAmount,
+      balanceDue: appointment.remainingAmount,
+      paymentStatus: 'PENDING',
+      invoiceNumber: await generateInvoiceNumber()
+    });
+
+    if (method === 'mpesa') {
+      if (!payerPhone) return next(errorHandler(400, 'payerPhone is required for mpesa'));
+
+      const msisdn = normalizePhoneNumber(payerPhone);
+
+      await initiateMpesaAppointmentPayment({
+        invoiceId: invoice._id,
+        branch: appointment.branch,
+        vendor: appointment.vendor,
+        amount: appointment.bookingFeeAmount,
+        phone: msisdn,
+        invoiceNumber: invoice.invoiceNumber,
+        type: 'BOOKING_FEE'
+      });
+    }
+
+    return res.status(200).json({ 
+      success: true, 
+      message: 'Booking fee initiated',
+      data: { appointment } 
+    });
+  } catch (err) {
+    next(err);
+  }
+};
 
 export const payProductInvoice = async (req: Request, res: Response, next: NextFunction) => {
   try {
@@ -81,6 +163,55 @@ export const payProductInvoice = async (req: Request, res: Response, next: NextF
   }
 };
 
+export const payAppointmentInvoice = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const { payerPhone, method, appointmentId } = req.body || {};
+
+    if (!appointmentId || !method) {
+      return next(errorHandler(400, 'appointmentId and method are required'));
+    }
+
+    const invoice = await Invoice.findOne({ appointment: appointmentId });
+    if (!invoice) return next(errorHandler(404, 'Invoice not found'));
+
+    const appointment = await Appointment.findById(appointmentId);
+    if (!appointment) return next(errorHandler(404, 'Appointment not found'));
+
+    if (invoice.paymentStatus === 'PAID') return next(errorHandler(409, 'Invoice already paid'));
+    if (invoice.paymentStatus === 'CANCELLED') return next(errorHandler(409, 'Invoice is cancelled'));
+
+    if (appointment.status === 'COMPLETED') return next(errorHandler(409, 'Appointment is already completed'));
+    if (appointment.status === 'CANCELLED') return next(errorHandler(409, 'Appointment is cancelled'));
+    if (appointment.status === 'NO_SHOW') return next(errorHandler(409, 'Appointment was a no-show'));
+
+    const amount = invoice.balanceDue;
+
+    if (method === 'mpesa') {
+      if (!payerPhone) return next(errorHandler(400, 'payerPhone is required for mpesa'));
+
+      const msisdn = normalizePhoneNumber(payerPhone);
+
+      await initiateMpesaAppointmentPayment({
+        invoiceId: invoice._id,
+        branch: appointment.branch,
+        vendor: appointment.vendor,
+        amount,
+        phone: msisdn,
+        invoiceNumber: invoice.invoiceNumber,
+        type: 'FULLPAYMENT'
+      });
+    }
+
+    return res.status(200).json({ 
+      success: true, 
+      message: "appointment paidfully",
+      data: { appointment, invoice } 
+    });
+  } catch (err) {
+    next(err);
+  }
+};
+
 export const mpesaWebhook = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const io = req.app.get('io');
@@ -108,12 +239,11 @@ export const mpesaWebhook = async (req: Request, res: Response, next: NextFuncti
     if (parsed.success) {
       const invoice = await Invoice.findById(payment.invoice);
       if (invoice) {
-        await applySucceFullProductPayment({ 
-            invoice, 
-            payment, 
-            io, 
-            method: 'mpesa_stk' 
-        });
+        if (invoice.order) {
+          await applySucceFullProductPayment({ invoice, payment, io, method: 'mpesa_stk' });
+        } else if (invoice.appointment) {
+          await applySuccessFullAppointmentPayment({ invoice, payment, io, method: 'mpesa_stk' });
+        }
       }
     } else {
       payment.status = 'FAILED';
@@ -153,7 +283,11 @@ export const queryMpesaByCheckoutId = async (req: Request, res: Response, next: 
     if (result.resultCode === 0 && payment.status !== 'SUCCESS') {
       const invoice = await Invoice.findById(payment.invoice);
       if (invoice) {
-        await applySucceFullProductPayment({ invoice, payment, io, method: 'mpesa_stk' });
+        if (invoice.order) {
+          await applySucceFullProductPayment({ invoice, payment, io, method: 'mpesa_stk' });
+        } else if (invoice.appointment) {
+          await applySuccessFullAppointmentPayment({ invoice, payment, io, method: 'mpesa_stk' });
+        }
       }
     } else if (result.resultCode !== 0 && payment.status !== 'FAILED') {
       payment.status = 'FAILED';
@@ -225,6 +359,9 @@ export const getPayments = async (req: Request, res: Response, next: NextFunctio
     next(error);
   }
 };
+
+
+
 
 export const getPaymentById = async (req: Request, res: Response, next: NextFunction) => {
   try {

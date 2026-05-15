@@ -2,6 +2,8 @@ import express from 'express';
 import { authenticateToken, requireAdmin } from '../middleware/auth';
 import { 
   payProductInvoice, 
+  confirmAppointment,
+  payAppointmentInvoice,
   mpesaWebhook, 
   queryMpesaByCheckoutId, 
   getPayments, 
@@ -19,6 +21,33 @@ const router = express.Router();
  *     security: [{ bearerAuth: [] }]
  */
 router.post('/pay', authenticateToken, payProductInvoice);
+
+/**
+ * @swagger
+ * /api/payments/appointments/confirm/{appointmentId}:
+ *   post:
+ *     summary: Confirm appointment and initiate booking fee
+ *     tags: [Payments]
+ *     security: [{ bearerAuth: [] }]
+ *     parameters:
+ *       - in: path
+ *         name: appointmentId
+ *         required: true
+ *         schema:
+ *           type: string
+ */
+router.post('/appointments/confirm/:appointmentId', authenticateToken, confirmAppointment);
+
+/**
+ * @swagger
+ * /api/payments/appointments/pay:
+ *   post:
+ *     summary: Pay appointment invoice
+ *     tags: [Payments]
+ *     security: [{ bearerAuth: [] }]
+ */
+router.post('/appointments/pay', authenticateToken, payAppointmentInvoice);
+
 
 /**
  * @swagger
