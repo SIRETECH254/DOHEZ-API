@@ -14,11 +14,10 @@ import { IRole } from "../types";
  */
 export const registerVendor = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
-    const { name, description, categoryId, phone, email, location, workingHours, userId: bodyUserId } = req.body;
-    const userId = bodyUserId || (req.user as any)?._id;
+    const { userId, name, description, categoryId, phone, email, location, workingHours } = req.body;
 
     if (!userId) {
-      return next(errorHandler(401, "User ID is required to register as vendor"));
+      return next(errorHandler(400, "User ID is required in request body"));
     }
 
     const vendorData: any = {
@@ -39,8 +38,8 @@ export const registerVendor = async (req: Request, res: Response, next: NextFunc
       vendorData.logo = uploadResult.url;
       vendorData.logoPublicId = uploadResult.public_id;
     }
-    if (files?.cover) {
-      const uploadResult = await uploadToCloudinary(files.cover[0], "dohez/vendors/covers");
+    if (files?.banner) {
+      const uploadResult = await uploadToCloudinary(files.banner[0], "dohez/vendors/covers");
       vendorData.cover = uploadResult.url;
       vendorData.coverPublicId = uploadResult.public_id;
     }

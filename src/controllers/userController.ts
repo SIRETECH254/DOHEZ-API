@@ -218,8 +218,8 @@ export const getUserById = async (req: Request, res: Response, next: NextFunctio
 
 export const updateUser = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
-    const { firstName, lastName, phone, email, isActive, avatar } = req.body;
-    const user = await User.findById(req.params.userId);
+    const { firstName, lastName, phone, email, isActive, avatar, workingHours, services } = req.body;
+    const user = await User.findById(req.params.userId).populate("roles");
     
     if (!user) return next(errorHandler(404, "User not found"));
 
@@ -228,6 +228,12 @@ export const updateUser = async (req: Request, res: Response, next: NextFunction
     if (phone) user.phone = phone;
     if (email) user.email = email;
     if (isActive !== undefined) user.isActive = isActive;
+
+    const isStaff = (user.roles as any[]).some((role: any) => role.name === "staff");
+    if (isStaff) {
+      if (workingHours) user.workingHours = workingHours;
+      if (services) user.services = services;
+    }
 
     if (req.file) {
       const uploadResult = await uploadToCloudinary(req.file, "dohez/avatars");
@@ -374,14 +380,20 @@ export const adminCreateCustomer = async (req: Request, res: Response, next: Nex
 
 export const assignRole = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
-    const { roleName } = req.body;
+    const { roleName, vendor, branch } = req.body;
     const user = await User.findById(req.params.userId);
     if (!user) return next(errorHandler(404, "User not found"));
     
     const role = await Role.findOne({ name: roleName });
     if (!role) return next(errorHandler(404, "Role not found"));
     
-    user.roles = [...(user.roles as any[]), role._id];
+    if (!(user.roles as any[]).includes(role._id)) {
+      user.roles = [...(user.roles as any[]), role._id];
+    }
+
+    if (vendor) user.vendor = vendor;
+    if (branch) user.branch = branch;
+
     await user.save();
 
     res.status(200).json({

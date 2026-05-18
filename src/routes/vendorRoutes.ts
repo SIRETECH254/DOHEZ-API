@@ -18,13 +18,13 @@ const router = express.Router();
  *     Vendor:
  *       type: object
  *       required:
- *         - ownerId
+ *         - userId
  *         - name
  *         - categoryId
  *       properties:
  *         id:
  *           type: string
- *         ownerId:
+ *         userId:
  *           type: string
  *         name:
  *           type: string
@@ -32,7 +32,7 @@ const router = express.Router();
  *           type: string
  *         logo:
  *           type: string
- *         banner:
+ *         cover:
  *           type: string
  *         categoryId:
  *           type: string
@@ -55,13 +55,31 @@ const router = express.Router();
  *         multipart/form-data:
  *           schema:
  *             type: object
+ *             required:
+ *               - userId
+ *               - name
+ *               - categoryId
+ *               - phone
+ *               - email
  *             properties:
+ *               userId:
+ *                 type: string
  *               name:
  *                 type: string
  *               description:
  *                 type: string
  *               categoryId:
  *                 type: string
+ *               phone:
+ *                 type: string
+ *               email:
+ *                 type: string
+ *               location:
+ *                 type: string
+ *                 description: JSON string of location object
+ *               workingHours:
+ *                 type: string
+ *                 description: JSON string of working hours array
  *               logo:
  *                 type: string
  *                 format: binary

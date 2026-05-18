@@ -39,9 +39,10 @@ export const minutesToIso = (dateStr: string, minutes: number): string => {
  * Utility: Parse duration string (could be minutes "180" or HH:MM "03:00")
  */
 export const parseDuration = (d: string | null | undefined): number => {
-  if (!d) return 30;
+  if (d === null || d === undefined || d === "") return 30;
   if (d.includes(':')) return timeToMinutes(d);
-  return parseInt(d, 10) || 30;
+  const parsed = parseInt(d, 10);
+  return isNaN(parsed) ? 30 : parsed;
 };
 
 export interface OptionItem {

@@ -24,19 +24,25 @@ Vendor Management handles the registration, profiling, and operational status of
 ### Schema Definition
 ```typescript
 interface IVendor extends Document {
-  user: Types.ObjectId | IUser;
+  userId: Types.ObjectId | IUser;
   vendorCategory: Types.ObjectId | IVendorCategory;
-  vendorType: Types.ObjectId | IVendorType;
-  branch: Types.ObjectId | IBranch;
+  service: Types.ObjectId | IService;
+  branches: Types.ObjectId[] | IBranch[];
   name: string;
-  description?: string;
+  details?: string;
   phone: string;
   email: string;
-  address: string;
   isActive: boolean;
   isVerified: boolean;
-  avatar?: string | null;
-  avatarPublicId?: string | null;
+  isFeatured: boolean;
+  logo?: string | null;
+  logoPublicId?: string | null;
+  cover?: string | null;
+  coverPublicId?: string | null;
+  location: any;
+  slug: string;
+  kraPin?: string | null;
+  regNo?: string | null;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -52,25 +58,9 @@ import { IVendor } from '../types';
 
 const vendorSchema = new Schema<IVendor>(
   {
-    name: {
-      type: String,
-      required: true,
-      trim: true,
-      index: true,
-    },
-    email: {
-      type: String,
-      required: true,
-      lowercase: true,
-    },
     userId: {
       type: Schema.Types.ObjectId,
       ref: 'User',
-      required: true,
-    },
-    vendorCategory: {
-      type: Schema.Types.ObjectId,
-      ref: 'VendorCategory',
       required: true,
     },
     service: {
@@ -78,19 +68,23 @@ const vendorSchema = new Schema<IVendor>(
       ref: 'Service',
       default: null,
     },
+    name: {
+      type: String,
+      required: true,
+      trim: true,
+    },
     phone: {
       type: String,
       required: true,
     },
+    email: {
+      type: String,
+      required: true,
+      lowercase: true,
+    },
     isActive: {
       type: Boolean,
       default: true,
-      index: true,
-    },
-    isVerified: {
-      type: Boolean,
-      default: false,
-      index: true,
     },
     isFeatured: {
       type: Boolean,
@@ -126,12 +120,10 @@ const vendorSchema = new Schema<IVendor>(
       },
       place_id: { type: String },
     },
-    branches: [
-      {
-        type: Schema.Types.ObjectId,
-        ref: 'Branch',
-      },
-    ],
+    branches: [{
+      type: Schema.Types.ObjectId,
+      ref: 'Branch',
+    }],
     slug: {
       type: String,
       required: true,
@@ -149,6 +141,11 @@ const vendorSchema = new Schema<IVendor>(
       type: String,
       default: null,
     },
+    vendorCategory: {
+      type: Schema.Types.ObjectId,
+      ref: 'VendorCategory',
+      required: true,
+    },
   },
   {
     timestamps: true,
@@ -162,16 +159,12 @@ export default Vendor;
 
 ### Validation Rules
 ```typescript
-user:           { required: true, ref: 'User' }
+userId:         { required: true, ref: 'User' }
 vendorCategory: { required: true, ref: 'VendorCategory' }
-vendorType:     { required: true, ref: 'VendorType' }
-branch:         { required: true, ref: 'Branch' }
 name:           { required: true, trim: true }
 phone:          { required: true }
 email:          { required: true }
-address:        { required: true }
 isActive:       { default: true }
-isVerified:     { default: false }
 ```
 
 ---
@@ -187,6 +180,8 @@ import { Request, Response, NextFunction } from "express";
 import { errorHandler } from "../middleware/errorHandler";
 import Vendor from "../models/Vendor";
 import Branch from "../models/Branch";
+import User from "../models/User";
+import Role from "../models/Role";
 import { uploadToCloudinary, deleteFromCloudinary } from "../config/cloudinary";
 import { IRole } from "../types";
 ```
@@ -195,28 +190,18 @@ import { IRole } from "../types";
 
 #### `registerVendor()`
 **Purpose:** Register as a new vendor  
-**Access:** Private (Authenticated users)  
-**Process:** Validates user, creates vendor profile, creates main branch  
+**Access:** Private (Super Admin)  
+**Process:** Validates userId in body, creates vendor profile, creates main branch  
 **Response:** Success message, vendor, and branch objects
 
 **Controller Implementation:**
 ```typescript
 export const registerVendor = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
-    if (!req.body) {
-      return next(errorHandler(400, "Request body is missing"));
-    }
-    const { name, description, categoryId, phone, email, location, workingHours } = req.body;
-    const userId = (req.user as any)?._id;
+    const { userId, name, description, categoryId, phone, email, location, workingHours } = req.body;
 
     if (!userId) {
-      return next(errorHandler(401, "Not authorized to register as vendor"));
-    }
-
-    // Check if user is already a vendor
-    const existingVendor = await Vendor.findOne({ userId });
-    if (existingVendor) {
-      return next(errorHandler(400, "User already has a vendor profile"));
+      return next(errorHandler(400, "User ID is required in request body"));
     }
 
     const vendorData: any = {
@@ -230,15 +215,15 @@ export const registerVendor = async (req: Request, res: Response, next: NextFunc
       slug: name ? name.toLowerCase().replace(/ /g, '-') : '',
     };
 
-    // Handle logo and cover uploads
+    // Handle logo and banner uploads
     const files = req.files as { [fieldname: string]: Express.Multer.File[] };
     if (files?.logo) {
       const uploadResult = await uploadToCloudinary(files.logo[0], "dohez/vendors/logos");
       vendorData.logo = uploadResult.url;
       vendorData.logoPublicId = uploadResult.public_id;
     }
-    if (files?.cover) {
-      const uploadResult = await uploadToCloudinary(files.cover[0], "dohez/vendors/covers");
+    if (files?.banner) {
+      const uploadResult = await uploadToCloudinary(files.banner[0], "dohez/vendors/covers");
       vendorData.cover = uploadResult.url;
       vendorData.coverPublicId = uploadResult.public_id;
     }
@@ -286,7 +271,7 @@ export const registerVendor = async (req: Request, res: Response, next: NextFunc
 #### `getVendors()`
 **Purpose:** List all vendors  
 **Access:** Public  
-**Process:** Paginate and filter by search. Returns only active and verified vendors.  
+**Process:** Paginate and filter by search. Returns only active vendors.  
 **Response:** List of vendors and pagination metadata
 
 **Controller Implementation:**
@@ -294,7 +279,7 @@ export const registerVendor = async (req: Request, res: Response, next: NextFunc
 export const getVendors = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
     const { search, page = 1, limit = 10 } = req.query;
-    const query: any = { isActive: true, isVerified: true };
+    const query: any = { isActive: true };
 
     if (search) {
       query.name = { $regex: search, $options: "i" };
@@ -363,7 +348,7 @@ export const getVendorById = async (req: Request, res: Response, next: NextFunct
 
 #### `updateVendorProfile()`
 **Purpose:** Update vendor profile  
-**Access:** Private (Vendor Owner)  
+**Access:** Private (Super Admin / Admin)  
 **Process:** Update fields, handle logo/banner uploads  
 **Response:** Updated vendor profile
 
@@ -372,8 +357,14 @@ export const getVendorById = async (req: Request, res: Response, next: NextFunct
 export const updateVendorProfile = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
     const { name, description, categoryId } = req.body;
-    const ownerId = (req.user as any)?._id;
-    const vendor = await Vendor.findOne({ ownerId });
+    const { vendorId } = req.params;
+    const userRole = (req.user as any)?.role;
+
+    if (userRole !== 'super_admin' && userRole !== 'admin') {
+      return next(errorHandler(403, "Not authorized to update vendor"));
+    }
+
+    const vendor = await Vendor.findById(vendorId);
 
     if (!vendor) {
       return next(errorHandler(404, "Vendor profile not found"));
@@ -385,12 +376,10 @@ export const updateVendorProfile = async (req: Request, res: Response, next: Nex
 
     const files = req.files as { [fieldname: string]: Express.Multer.File[] };
     if (files?.logo) {
-      // Logic for updating logo... (Simplified for now)
       const uploadResult = await uploadToCloudinary(files.logo[0], "dohez/vendors/logos");
       vendor.logo = uploadResult.url;
     }
     if (files?.banner) {
-      // Logic for updating banner...
       const uploadResult = await uploadToCloudinary(files.banner[0], "dohez/vendors/banners");
       vendor.cover = uploadResult.url;
     }
@@ -423,11 +412,13 @@ export const deleteVendor = async (req: Request, res: Response, next: NextFuncti
       return next(errorHandler(404, "Vendor not found"));
     }
 
+    // Delete associated branches
+    await Branch.deleteMany({ vendorId: vendor._id });
     await vendor.deleteOne();
 
     res.status(200).json({
       success: true,
-      message: "Vendor profile deleted successfully",
+      message: "Vendor profile and associated branches deleted successfully",
     });
   } catch (error: any) {
     next(error);
@@ -442,10 +433,10 @@ export const deleteVendor = async (req: Request, res: Response, next: NextFuncti
 ### Base Path: `/api/vendors`
 
 ```typescript
-POST   /                  // Create vendor (Auth)
+POST   /register          // Register vendor (Super Admin)
 GET    /                  // Get all vendors (Public)
 GET    /:vendorId         // Get vendor details (Public)
-PUT    /:vendorId         // Update vendor (Auth/Admin)
+PUT    /:vendorId         // Update vendor (Admin/Super Admin)
 DELETE /:vendorId         // Delete vendor (Admin)
 ```
 
@@ -457,26 +448,24 @@ DELETE /:vendorId         // Delete vendor (Admin)
 import express from 'express';
 import upload from '../middleware/upload';
 import {
-  createVendor,
+  registerVendor,
   getVendors,
   getVendorById,
-  updateVendor,
+  updateVendorProfile,
   deleteVendor
 } from '../controllers/vendorController';
-import { authenticateToken, authorizeRoles, optionalAuthenticateToken } from '../middleware/auth';
+import { authenticateToken, authorizeRoles } from '../middleware/auth';
 
 const router = express.Router();
 
-router.post('/', authenticateToken, upload.single('avatar'), createVendor);
-router.get('/', optionalAuthenticateToken, getVendors);
+router.post('/register', authenticateToken, upload.fields([{ name: 'logo', maxCount: 1 }, { name: 'banner', maxCount: 1 }]), registerVendor);
+router.get('/', getVendors);
 router.get('/:vendorId', getVendorById);
-router.put('/:vendorId', authenticateToken, upload.single('avatar'), updateVendor);
-router.delete('/:vendorId', authenticateToken, authorizeRoles(['admin', 'super_admin']), deleteVendor);
+router.put('/:vendorId', authenticateToken, authorizeRoles(['super_admin', 'admin']), upload.fields([{ name: 'logo', maxCount: 1 }, { name: 'banner', maxCount: 1 }]), updateVendorProfile);
+router.delete('/:vendorId', authenticateToken, authorizeRoles(['super_admin']), deleteVendor);
 
 export default router;
 ```
-
-### Route Details
 
 ### Route Details
 
@@ -485,6 +474,7 @@ export default router;
 **Body:**
 ```json
 {
+  "userId": "65e26b1c09b068c201383801",
   "name": "Quick Laundry",
   "description": "Professional laundry services",
   "categoryId": "650af1234567890abcdef123",
@@ -708,7 +698,7 @@ export default router;
 }
 ```
 
-#### `PUT /api/vendors/profile`
+#### `PUT /api/vendors/:vendorId`
 **Headers:** `Authorization: Bearer <token>`, `Content-Type: multipart/form-data`
 **Body:**
 ```json
@@ -744,7 +734,7 @@ export default router;
 ```json
 {
   "success": true,
-  "message": "Vendor profile deleted successfully"
+  "message": "Vendor profile and associated branches deleted successfully"
 }
 ```
 
@@ -758,21 +748,14 @@ export default router;
 **Purpose:** Verify JWT token and load user with roles  
 **Usage:**
 ```typescript
-router.post('/', authenticateToken, upload.single('avatar'), createVendor);
-```
-
-#### `optionalAuthenticateToken`
-**Purpose:** Optionally verify JWT token to identify user without enforcing authentication  
-**Usage:**
-```typescript
-router.get('/', optionalAuthenticateToken, getVendors);
+router.post('/register', authenticateToken, upload.fields([{ name: 'logo', maxCount: 1 }, { name: 'banner', maxCount: 1 }]), registerVendor);
 ```
 
 #### `authorizeRoles(allowedRoles)`
 **Purpose:** Check if user has any of the allowed roles  
 **Usage:**
 ```typescript
-router.delete('/:vendorId', authenticateToken, authorizeRoles(['admin', 'super_admin']), deleteVendor);
+router.delete('/:vendorId', authenticateToken, authorizeRoles(['super_admin']), deleteVendor);
 ```
 
 ---
@@ -780,14 +763,15 @@ router.delete('/:vendorId', authenticateToken, authorizeRoles(['admin', 'super_a
 ## 📝 API Examples
 
 ### 1. Register as Vendor
-**Endpoint:** `POST /api/vendors`  
-**Access:** Private (Authenticated Users)  
+**Endpoint:** `POST /api/vendors/register`  
+**Access:** Private (Super Admin)  
 **Content-Type:** `multipart/form-data`
 
 **Request Example:**
 ```bash
-curl -X POST http://localhost:3500/api/vendors \
+curl -X POST http://localhost:3500/api/vendors/register \
   -H "Authorization: Bearer <access_token>" \
+  -F "userId=65e26b1c09b068c201383801" \
   -F "name=Quick Laundry" \
   -F "description=Professional laundry services" \
   -F "categoryId=650af1234567890abcdef123" \
@@ -796,7 +780,7 @@ curl -X POST http://localhost:3500/api/vendors \
   -F "location={\"address\": \"Street 123\", \"lat\": -1.2921, \"lng\": 36.8219, \"place_id\": \"chIJsx...\"}" \
   -F "workingHours={\"monday\": \"08:00-18:00\"}" \
   -F "logo=@/path/to/logo.jpg" \
-  -F "cover=@/path/to/cover.jpg"
+  -F "banner=@/path/to/banner.jpg"
 ```
 
 **Response (201 Created):**
@@ -993,13 +977,13 @@ curl -X GET http://localhost:3500/api/vendors/650af1234567890abcdef999
 ```
 
 ### 4. Update Vendor Profile
-**Endpoint:** `PUT /api/vendors/profile`  
-**Access:** Private (Vendor Owner)  
+**Endpoint:** `PUT /api/vendors/:vendorId`  
+**Access:** Private (Super Admin / Admin)  
 **Content-Type:** `multipart/form-data`
 
 **Request Example:**
 ```bash
-curl -X PUT http://localhost:3500/api/vendors/profile \
+curl -X PUT http://localhost:3500/api/vendors/650af1234567890abcdef999 \
   -H "Authorization: Bearer <access_token>" \
   -F "name=Quick Laundry Pro" \
   -F "description=Best laundry in town" \
@@ -1039,7 +1023,7 @@ curl -X DELETE http://localhost:3500/api/vendors/650af1234567890abcdef999 \
 ```json
 {
   "success": true,
-  "message": "Vendor profile deleted successfully"
+  "message": "Vendor profile and associated branches deleted successfully"
 }
 ```
 
@@ -1048,7 +1032,7 @@ curl -X DELETE http://localhost:3500/api/vendors/650af1234567890abcdef999 \
 ## 🛡️ Security Features
 
 - **RBAC:** Protected routes for creation and deletion.
-- **Verification:** `isVerified` flag for platform validation.
+- **Verification:** `isActive` flag for platform status.
 - **Storage:** Secure image handling via Cloudinary.
 
 ---
@@ -1062,11 +1046,11 @@ Standard error: `{ "success": false, "message": "..." }`
 ## 📊 Database Indexes
 
 ```typescript
-vendorSchema.index({ vendorCategory: 1 });
-vendorSchema.index({ vendorType: 1 });
 vendorSchema.index({ isActive: 1 });
+vendorSchema.index({ name: 1 });
 ```
 
 ---
-**Last Updated:** April 2026  
-**Version:** 1.0.0
+**Last Updated:** May 2026  
+**Version:** 1.1.0
+

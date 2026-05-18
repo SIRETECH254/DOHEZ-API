@@ -427,18 +427,19 @@ export const getUserById = async (req: Request, res: Response, next: NextFunctio
 ```
 
 #### `updateUser()`
-**Purpose:** Update user record by ID, including avatar.  
-**Access:** Admin  
-**Validation:** User must exist  
-**Process:** Update fields, handle avatar upload via Cloudinary, and save.  
+**Purpose:** Update user record by ID, including avatar, and staff-specific fields (workingHours, services).
+**Access:** Admin
+**Validation:** User must exist
+**Process:** Update standard fields, check for staff role to update workingHours and services, handle avatar upload via Cloudinary, and save.
 **Response:** Updated user
 
 **Controller Implementation:**
 ```typescript
 export const updateUser = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
-    const { firstName, lastName, phone, email, isActive, avatar } = req.body;
-    const user = await User.findById(req.params.userId);
+    const { firstName, lastName, phone, email, isActive, avatar, workingHours, services } = req.body;
+    const user = await User.findById(req.params.userId).populate("roles");
+
     if (!user) return next(errorHandler(404, "User not found"));
 
     if (firstName) user.firstName = firstName;
@@ -447,25 +448,63 @@ export const updateUser = async (req: Request, res: Response, next: NextFunction
     if (email) user.email = email;
     if (isActive !== undefined) user.isActive = isActive;
 
+    const isStaff = (user.roles as any[]).some((role: any) => role.name === "staff");
+    if (isStaff) {
+      if (workingHours) user.workingHours = workingHours;
+      if (services) user.services = services;
+    }
+
     if (req.file) {
       const uploadResult = await uploadToCloudinary(req.file, "dohez/avatars");
-      if (user.avatarPublicId) await deleteFromCloudinary(user.avatarPublicId);
+
+      if (user.avatarPublicId) {
+        try {
+          await deleteFromCloudinary(user.avatarPublicId);
+        } catch (deleteError) {
+          console.error("Failed to delete previous avatar:", deleteError);
+        }
+      }
+
       user.avatar = uploadResult.url;
       user.avatarPublicId = uploadResult.public_id;
-    } else if (avatar === null || avatar === "") {
-        if (user.avatarPublicId) await deleteFromCloudinary(user.avatarPublicId);
-        user.avatar = null;
-        user.avatarPublicId = null;
+    } else if (avatar === null || (typeof avatar === "string" && avatar.trim().length === 0)) {
+      if (user.avatarPublicId) {
+        try {
+          await deleteFromCloudinary(user.avatarPublicId);
+        } catch (deleteError) {
+          console.error("Failed to delete previous avatar:", deleteError);
+        }
+      }
+
+      user.avatar = null;
+      user.avatarPublicId = null;
+    } else if (typeof avatar === "string" && avatar.trim().length > 0) {
+      if (user.avatarPublicId) {
+        try {
+          await deleteFromCloudinary(user.avatarPublicId);
+        } catch (deleteError) {
+          console.error("Failed to delete previous avatar:", deleteError);
+        }
+      }
+
+      user.avatar = avatar.trim();
+      user.avatarPublicId = null;
     }
 
     await user.save();
-    res.status(200).json({ success: true, message: "User updated successfully", data: { user } });
+
+    res.status(200).json({
+      success: true,
+      message: "User updated successfully",
+      data: {
+        user
+      }
+    });
   } catch (error: any) {
     next(error);
   }
 };
 ```
-
 #### `updateUserStatus()`
 **Purpose:** Activate/deactivate user  
 **Access:** Admin  
@@ -574,27 +613,39 @@ export const adminCreateCustomer = async (req: Request, res: Response, next: Nex
 ```
 
 #### `assignRole()`
-**Purpose:** Assign role  
+**Purpose:** Assign role and optionally link to vendor/branch  
 **Access:** Admin  
 **Validation:** Role must exist  
-**Process:** Append role to list  
+**Process:** Append role to list and update vendor/branch if provided  
 **Response:** Success message
 
 **Controller Implementation:**
 ```typescript
 export const assignRole = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
-    try {
-        const { roleName } = req.body;
-        const user = await User.findById(req.params.userId);
-        if (!user) return next(errorHandler(404, "User not found"));
-        const role = await Role.findOne({ name: roleName });
-        if (!role) return next(errorHandler(404, "Role not found"));
-        user.roles = [...(user.roles as any[]), role._id];
-        await user.save();
-        res.status(200).json({ success: true, message: "Role assigned" });
-    } catch(error: any) {
-        next(error);
+  try {
+    const { roleName, vendor, branch } = req.body;
+    const user = await User.findById(req.params.userId);
+    if (!user) return next(errorHandler(404, "User not found"));
+    
+    const role = await Role.findOne({ name: roleName });
+    if (!role) return next(errorHandler(404, "Role not found"));
+    
+    if (!(user.roles as any[]).includes(role._id)) {
+      user.roles = [...(user.roles as any[]), role._id];
     }
+
+    if (vendor) user.vendor = vendor;
+    if (branch) user.branch = branch;
+
+    await user.save();
+
+    res.status(200).json({
+      success: true,
+      message: "Role assigned"
+    });
+  } catch(error: any) {
+    next(error);
+  }
 };
 ```
 

@@ -168,19 +168,24 @@ import {
 #### `getAvailability()`
 **Purpose:** Fetch available schedule options based on services and preferences.  
 **Access:** Authenticated users  
-**Process:** Aggregate staff, calculate sequential slots, validate constraints, and return options.  
-**Response:** JSON with available `scheduleOptions`.
+**Validation:** 
+- Date, branch, vendor, and items are required.
+- Selected date must not have passed.
+- Vendor must exist.
+- Branch must exist.
+- All requested items must be available in the selected branch.
+**Process:** Validate inputs, aggregate qualified staff, recursively calculate sequential slots for multiple services, check constraints (working hours, overlaps, breaks), and return paginated schedule options.
+**Response:** JSON with available `scheduleOptions` and `pagination` metadata.
 
 **Controller Implementation:**
 ```typescript
-
 
 /**
  * Fetch available schedule options based on services and preferences.
  */
 export const getAvailability = async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const { date, branch: branchId, vendor: vendorId, items, preferredStaffs } = req.body;
+    const { date, branch: branchId, vendor: vendorId, items, preferredStaffs, page = 1, limit = 10 } = req.body;
 
     if (!date || !branchId || !vendorId || !items || !Array.isArray(items)) {
       return res.status(400).json({
@@ -189,27 +194,44 @@ export const getAvailability = async (req: Request, res: Response, next: NextFun
       });
     }
 
-    // 1. Get branch and working hours for the selected day
+    // Validation: Date has passed
+    const selectedDate = new Date(date);
+    const today = new Date();
+    today.setUTCHours(0, 0, 0, 0);
+    if (selectedDate < today) {
+      return res.status(400).json({
+        success: false,
+        message: "Selected date has already passed."
+      });
+    }
+
+    // Validation: Vendor exists
+    const vendor = await Vendor.findById(vendorId);
+    if (!vendor) {
+      return res.status(404).json({ success: false, message: "Vendor not found" });
+    }
+
+    // Validation: Branch exists
     const branch = await Branch.findById(branchId);
     if (!branch) {
       return res.status(404).json({ success: false, message: "Branch not found" });
     }
 
-    const dayOfWeek = new Date(date).toLocaleDateString('en-US', { weekday: 'long', timeZone: 'UTC' }).toLowerCase();
+    const dayOfWeek = selectedDate.toLocaleDateString('en-US', { weekday: 'long', timeZone: 'UTC' }).toLowerCase();
     const branchWH = (branch.workingHours as any)?.[dayOfWeek];
 
     if (!branchWH || !branchWH.start || !branchWH.end) {
       return res.status(200).json({
         success: true,
         message: "The branch is closed on the selected date.",
-        data: { vendorId, branchId, date, services: [], scheduleOptions: [] }
+        data: { vendorId, branchId, date, services: [], scheduleOptions: [], pagination: { currentPage: 1, totalPages: 0, totalOptions: 0, hasNextPage: false, hasPrevPage: false } }
       });
     }
 
     const branchStartMin = timeToMinutes(branchWH.start);
     const branchEndMin = timeToMinutes(branchWH.end);
 
-    // 2. Fetch requested products
+    // 2. Fetch requested products and Validate items are provided in the branch
     const products = await Product.find({
       $or: [
         { _id: { $in: items.filter(id => Types.ObjectId.isValid(id)) } },
@@ -223,28 +245,70 @@ export const getAvailability = async (req: Request, res: Response, next: NextFun
       products.find(p => p._id.toString() === id || p.slug === id)
     ).filter(p => !!p) as any[];
 
-    if (orderedProducts.length === 0) {
-      return res.status(404).json({ success: false, message: "No valid products found for the given items." });
+    if (orderedProducts.length !== items.length) {
+      return res.status(404).json({ 
+        success: false, 
+        message: "One or more items are not available in this branch." 
+      });
     }
 
     // 3. Identify all qualified staff for each product
     const staffByProduct = new Map<string, any[]>();
     const allQualifiedStaffIds = new Set<string>();
+    
+    const staffRole = await Role.findOne({ name: "staff" });
 
     for (const product of orderedProducts) {
       const staffs = await User.find({
         branch: branchId,
         vendor: vendorId,
         services: product._id,
-        isActive: true
+        isActive: true,
+        ...(staffRole && { roles: staffRole._id })
       });
       staffByProduct.set(product._id.toString(), staffs);
       staffs.forEach(s => allQualifiedStaffIds.add(s._id.toString()));
     }
 
+    if (allQualifiedStaffIds.size === 0) {
+      return res.status(200).json({
+        success: true,
+        message: "No qualified staff members found for the requested services in this branch.",
+        data: { 
+          vendorId, 
+          branchId, 
+          date, 
+          services: orderedProducts.map(p => ({ serviceId: p.slug || p._id.toString(), serviceName: p.name })), 
+          scheduleOptions: [],
+          pagination: { currentPage: 1, totalPages: 0, totalOptions: 0, hasNextPage: false, hasPrevPage: false }
+        }
+      });
+    }
+
     // Fetch full staff details once to have their working hours and info
     const qualifiedStaffList = await User.find({ _id: { $in: Array.from(allQualifiedStaffIds) } });
     const staffMap = new Map(qualifiedStaffList.map(s => [s._id.toString(), s]));
+
+    // Check if any of these staff have working hours for this day
+    const staffWithWH = qualifiedStaffList.filter(s => {
+      const sWH = (s.workingHours as any)?.[dayOfWeek];
+      return sWH && sWH.start && sWH.end;
+    });
+
+    if (staffWithWH.length === 0) {
+      return res.status(200).json({
+        success: true,
+        message: "Qualified staff found, but none have working hours set for the selected date.",
+        data: { 
+          vendorId, 
+          branchId, 
+          date, 
+          services: orderedProducts.map(p => ({ serviceId: p.slug || p._id.toString(), serviceName: p.name })), 
+          scheduleOptions: [],
+          pagination: { currentPage: 1, totalPages: 0, totalOptions: 0, hasNextPage: false, hasPrevPage: false }
+        }
+      });
+    }
 
     // 4. Fetch existing appointments and breaks for all qualified staff on that date
     const startOfDay = new Date(date);
@@ -264,7 +328,7 @@ export const getAvailability = async (req: Request, res: Response, next: NextFun
     });
 
     // 5. Availability Logic Process
-    const scheduleOptions: any[] = [];
+    const allScheduleOptions: any[] = [];
     const searchStep = 15; // Search every 15 minutes for possible start times
 
     const isStaffAvailable = (staffId: string, startMin: number, endMin: number): boolean => {
@@ -310,7 +374,7 @@ export const getAvailability = async (req: Request, res: Response, next: NextFun
         const totalAmount = currentItems.reduce((sum, item) => sum + item.amount, 0);
         const bookingFee = 50; // Standard booking fee example
 
-        scheduleOptions.push({
+        allScheduleOptions.push({
           overallStartTime: minutesToIso(date, currentItems[0].startMin),
           overallEndTime: minutesToIso(date, currentItems[currentItems.length - 1].endMin),
           totalDurationMinutes: totalDuration,
@@ -366,7 +430,7 @@ export const getAvailability = async (req: Request, res: Response, next: NextFun
           ]);
           
           // Safety: If we've found enough variations for this start time, move on
-          if (scheduleOptions.length > 100) return;
+          if (allScheduleOptions.length > 500) return;
         }
       }
     };
@@ -374,9 +438,15 @@ export const getAvailability = async (req: Request, res: Response, next: NextFun
     // Iterate through the day from branch opening to closing
     for (let time = branchStartMin; time <= branchEndMin - searchStep; time += searchStep) {
       findOptions(0, time, []);
-      // Limit total results to keep response size and computation time reasonable
-      if (scheduleOptions.length >= 50) break;
+      if (allScheduleOptions.length >= 500) break;
     }
+
+    // Pagination Logic
+    const optionsPage = parseInt(page as string) || 1;
+    const optionsLimit = parseInt(limit as string) || 10;
+    const totalOptions = allScheduleOptions.length;
+    const totalPages = Math.ceil(totalOptions / optionsLimit);
+    const paginatedOptions = allScheduleOptions.slice((optionsPage - 1) * optionsLimit, optionsPage * optionsLimit);
 
     return res.status(200).json({
       success: true,
@@ -389,7 +459,14 @@ export const getAvailability = async (req: Request, res: Response, next: NextFun
           serviceId: p.slug || p._id.toString(),
           serviceName: p.name
         })),
-        scheduleOptions
+        scheduleOptions: paginatedOptions,
+        pagination: {
+          currentPage: optionsPage,
+          totalPages: totalPages,
+          totalOptions: totalOptions,
+          hasNextPage: optionsPage < totalPages,
+          hasPrevPage: optionsPage > 1
+        }
       }
     });
 
@@ -438,7 +515,9 @@ export default router;
   "items": [
     "service_hair_knotless_medium",
     "service_gel_manicure"
-  ]
+  ],
+  "page": 1,
+  "limit": 10
 }
 ```
 **Response:**
@@ -481,7 +560,14 @@ export default router;
           }
         ]
       }
-    ]
+    ],
+    "pagination": {
+      "currentPage": 1,
+      "totalPages": 5,
+      "totalOptions": 48,
+      "hasNextPage": true,
+      "hasPrevPage": false
+    }
   }
 }
 ```
@@ -515,7 +601,9 @@ curl -X POST http://localhost:3500/api/availability \
     "items": [
       "service_hair_knotless_medium",
       "service_gel_manicure"
-    ]
+    ],
+    "page": 1,
+    "limit": 10
   }'
 ```
 
@@ -569,7 +657,14 @@ curl -X POST http://localhost:3500/api/availability \
           }
         ]
       }
-    ]
+    ],
+    "pagination": {
+      "currentPage": 1,
+      "totalPages": 5,
+      "totalOptions": 48,
+      "hasNextPage": true,
+      "hasPrevPage": false
+    }
   }
 }
 ```

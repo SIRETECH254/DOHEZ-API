@@ -4,6 +4,7 @@ import Branch from "../models/Branch";
 import Vendor from "../models/Vendor";
 import User from "../models/User";
 import Role from "../models/Role";
+import { uploadToCloudinary, deleteFromCloudinary } from "../config/cloudinary";
 
 /**
  * @desc    Create a new branch
@@ -110,9 +111,87 @@ export const getBranchById = async (req: Request, res: Response, next: NextFunct
  */
 export const updateBranch = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
-    const branch = await Branch.findByIdAndUpdate(req.params.branchId, req.body, { new: true });
+    const { name, email, phone, location, workingHours, fulfillmentConfig, gallery, cover } = req.body;
+    const branch = await Branch.findById(req.params.branchId);
+
     if (!branch) return next(errorHandler(404, "Branch not found"));
-    res.status(200).json({ success: true, data: { branch } });
+
+    if (name) branch.name = name;
+    if (email) branch.email = email;
+    if (phone) branch.phone = phone;
+    
+    if (location) {
+      branch.location = typeof location === 'string' ? JSON.parse(location) : location;
+    }
+    
+    if (workingHours) {
+      branch.workingHours = typeof workingHours === 'string' ? JSON.parse(workingHours) : workingHours;
+    }
+
+    if (fulfillmentConfig) {
+      branch.fulfillmentConfig = typeof fulfillmentConfig === 'string' ? JSON.parse(fulfillmentConfig) : fulfillmentConfig;
+    }
+
+    if (gallery) {
+      branch.gallery = typeof gallery === 'string' ? JSON.parse(gallery) : gallery;
+    }
+
+    const files = req.files as { [fieldname: string]: Express.Multer.File[] } | undefined;
+
+    // Handle Cover Image
+    if (files && files['cover']) {
+      const uploadResult = await uploadToCloudinary(files['cover'][0], "dohez/branches/covers");
+
+      if (branch.coverPublicId) {
+        try {
+          await deleteFromCloudinary(branch.coverPublicId);
+        } catch (deleteError) {
+          console.error("Failed to delete previous cover:", deleteError);
+        }
+      }
+
+      branch.cover = uploadResult.url;
+      branch.coverPublicId = uploadResult.public_id;
+    } else if (cover === null || (typeof cover === "string" && cover.trim().length === 0)) {
+      if (branch.coverPublicId) {
+        try {
+          await deleteFromCloudinary(branch.coverPublicId);
+        } catch (deleteError) {
+          console.error("Failed to delete previous cover:", deleteError);
+        }
+      }
+      branch.cover = null;
+      branch.coverPublicId = null;
+    } else if (typeof cover === "string" && cover.trim().length > 0) {
+      if (branch.coverPublicId) {
+        try {
+          await deleteFromCloudinary(branch.coverPublicId);
+        } catch (deleteError) {
+          console.error("Failed to delete previous cover:", deleteError);
+        }
+      }
+      branch.cover = cover.trim();
+      branch.coverPublicId = null;
+    }
+
+    // Handle Gallery Images (Append new uploads)
+    if (files && files['gallery']) {
+      for (const file of files['gallery']) {
+        const uploadResult = await uploadToCloudinary(file, "dohez/branches/gallery");
+        branch.gallery.push({
+          url: uploadResult.url,
+          publicId: uploadResult.public_id
+        });
+      }
+    }
+
+    await branch.save();
+
+    res.status(200).json({ 
+      success: true, 
+      message: "Branch updated successfully",
+      data: { branch } 
+    });
   } catch (error: any) {
     next(error);
   }
