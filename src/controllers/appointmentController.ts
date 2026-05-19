@@ -35,31 +35,23 @@ export const createAppointment = async (req: Request, res: Response, next: NextF
     if (!vendor) return next(errorHandler(404, "Vendor not found"));
 
     // 1. Prepare items for validation and storage
-    // We need to resolve Service IDs from Products if they are not provided
     const processedItems = [];
     const validationItems: OptionItem[] = [];
 
     for (const item of items) {
-      const { productId, serviceId, staffId, startTime, endTime } = item;
+      const { serviceId, staffId, startTime, endTime } = item;
       
       // Resolve Product and verify it belongs to the branch
-      let product;
-      if (productId) {
-        product = await Product.findById(productId);
-      } else if (serviceId) {
-        // If only serviceId is provided, find a product for that service in this branch
-        product = await Product.findOne({ service: serviceId, branch: branchId });
-      }
+      const product = await Product.findById(serviceId);
 
       if (!product) {
-        return next(errorHandler(404, `Product/Service not found for this branch: ${productId || serviceId}`));
+        return next(errorHandler(404, `Product/Service not found: ${serviceId}`));
       }
 
       if (product.branch.toString() !== branchId || product.vendor.toString() !== vendorId) {
         return next(errorHandler(400, `Product ${product.name} does not belong to this branch/vendor`));
       }
 
-      const resolvedServiceId = product.service.toString();
       const amount = item.amount || product.price;
       const durationMinutes = item.durationMinutes;
 
@@ -72,19 +64,19 @@ export const createAppointment = async (req: Request, res: Response, next: NextF
         return next(errorHandler(400, `Staff ${staff.firstName} ${staff.lastName} does not belong to this branch`));
       }
 
-      if (!resolvedServiceId || !staffId || !startTime || !endTime) {
+      if (!serviceId || !staffId || !startTime || !endTime) {
         return res.status(400).json({ success: false, message: "Each item must have service/product, staff, startTime, and endTime." });
       }
 
       validationItems.push({
-        serviceId: resolvedServiceId,
+        serviceId: serviceId,
         staffId,
         startTime: new Date(startTime),
         endTime: new Date(endTime)
       });
 
       processedItems.push({
-        service: resolvedServiceId,
+        service: serviceId,
         staff: staffId,
         startTime: new Date(startTime),
         endTime: new Date(endTime),
@@ -156,12 +148,12 @@ export const createAppointmentByAdmin = async (req: Request, res: Response, next
       const { serviceId, staffId, startTime, endTime, amount, durationMinutes } = item;
       
       // Verify product/service exists for this branch
-      const product = await Product.findOne({ service: serviceId, branch: branchId });
+      const product = await Product.findById(serviceId);
       if (!product) {
-        return next(errorHandler(404, `Service not found for this branch: ${serviceId}`));
+        return next(errorHandler(404, `Product not found: ${serviceId}`));
       }
-      if (product.vendor.toString() !== vendorId) {
-        return next(errorHandler(400, `Service ${product.name} does not belong to this vendor`));
+      if (product.branch.toString() !== branchId || product.vendor.toString() !== vendorId) {
+        return next(errorHandler(400, `Product ${product.name} does not belong to this branch/vendor`));
       }
 
       // Validate Staff

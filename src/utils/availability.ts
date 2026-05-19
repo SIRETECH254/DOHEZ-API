@@ -2,6 +2,7 @@ import Branch from "../models/Branch";
 import User from "../models/User";
 import Appointment from "../models/Appointment";
 import Break from "../models/Break";
+import Role from "../models/Role";
 
 /**
  * Utility: Convert HH:MM time string to minutes since midnight
@@ -67,14 +68,29 @@ export const validateOptionAvailability = async (
     const branch = await Branch.findById(branchId);
     if (!branch) return { ok: false, message: "Branch not found" };
 
-    const staffIds = Array.from(new Set(items.map(i => i.staffId)));
-    const staffs = await User.find({ _id: { $in: staffIds }, branch: branchId });
-    const staffMap = new Map(staffs.map(s => [s._id.toString(), s]));
-
-    // 2. Query existing appointments and breaks once
     const minDate = new Date(Math.min(...items.map(i => i.startTime.getTime())));
     const maxDate = new Date(Math.max(...items.map(i => i.endTime.getTime())));
 
+    // Validation: Date has passed (consistent with controller)
+    const today = new Date();
+    today.setUTCHours(0, 0, 0, 0);
+    if (minDate < today) {
+      return { ok: false, message: "Selected date has already passed." };
+    }
+
+    const staffIds = Array.from(new Set(items.map(i => i.staffId)));
+    const staffRole = await Role.findOne({ name: "staff" });
+
+    const staffs = await User.find({ 
+      _id: { $in: staffIds }, 
+      branch: branchId,
+      vendor: vendorId,
+      isActive: true,
+      ...(staffRole && { roles: staffRole._id })
+    });
+    const staffMap = new Map(staffs.map(s => [s._id.toString(), s]));
+
+    // 2. Query existing appointments and breaks once
     const appointments = await Appointment.find({
       branch: branchId,
       status: { $in: ["PENDING", "CONFIRMED", "COMPLETED"] },

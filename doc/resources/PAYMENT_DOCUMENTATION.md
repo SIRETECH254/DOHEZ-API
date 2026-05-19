@@ -315,6 +315,7 @@ export const payAppointmentInvoice = async (req: Request, res: Response, next: N
 };
 ```
 
+#### `payProductInvoice()`
 **Purpose:** Main payment initiation endpoint. Supports M-Pesa STK Push and creates payment records.  
 **Access:** Private (Authenticated User)  
 **Validation:** `invoiceId` and `method` are required. `payerPhone` is required for `mpesa_stk`.  
@@ -691,6 +692,7 @@ export default router;
 }
 ```
 
+#### `POST /api/payments/pay`
 **Headers:** 
 - `Authorization: Bearer <token>`
 - `Content-Type: application/json`

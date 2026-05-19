@@ -96,11 +96,11 @@ If this condition is true, the generated item is invalid.
     "date": "2026-05-20",
     "services": [
       {
-        "serviceId": "service_hair_knotless_medium",
+        "serviceId": "650af1234567890abcdef001",
         "serviceName": "Medium Knotless Braids"
       },
       {
-        "serviceId": "service_gel_manicure",
+        "serviceId": "650af1234567890abcdef002",
         "serviceName": "Gel Manicure"
       }
     ],
@@ -114,7 +114,7 @@ If this condition is true, the generated item is invalid.
         "remainingAmount": 3150,
         "items": [
           {
-            "serviceId": "service_hair_knotless_medium",
+            "serviceId": "650af1234567890abcdef001",
             "serviceName": "Medium Knotless Braids",
             "staffId": "staff_001",
             "staffName": "Jane",
@@ -124,7 +124,7 @@ If this condition is true, the generated item is invalid.
             "amount": 2500
           },
           {
-            "serviceId": "service_gel_manicure",
+            "serviceId": "650af1234567890abcdef002",
             "serviceName": "Gel Manicure",
             "staffId": "staff_002",
             "staffName": "Mary",
@@ -416,19 +416,18 @@ export const getAvailability = async (req: Request, res: Response, next: NextFun
         // Check if item fits in branch hours and staff is available
         if (endMin <= branchEndMin && isStaffAvailable(staff._id.toString(), currentStartMin, endMin)) {
           findOptions(productIdx + 1, endMin + buffer, [
-            ...currentItems,
-            {
-              serviceId: product.slug || product._id.toString(),
-              serviceName: product.name,
-              staffId: staff._id.toString(),
-              staffName: `${staff.firstName} ${staff.lastName}`,
-              startMin: currentStartMin,
-              endMin: endMin,
-              durationMinutes: duration,
-              amount: product.price
-            }
-          ]);
-          
+          ...currentItems,
+          {
+            serviceId: product._id.toString(),
+            serviceName: product.name,
+            staffId: staff._id.toString(),
+            staffName: `${staff.firstName} ${staff.lastName}`,
+            startMin: currentStartMin,
+            endMin: endMin,
+            durationMinutes: duration,
+            amount: product.price
+          }
+          ]);          
           // Safety: If we've found enough variations for this start time, move on
           if (allScheduleOptions.length > 500) return;
         }
@@ -456,7 +455,7 @@ export const getAvailability = async (req: Request, res: Response, next: NextFun
         branchId,
         date,
         services: orderedProducts.map(p => ({
-          serviceId: p.slug || p._id.toString(),
+          serviceId: p._id.toString(),
           serviceName: p.name
         })),
         scheduleOptions: paginatedOptions,
@@ -618,11 +617,11 @@ curl -X POST http://localhost:3500/api/availability \
     "date": "2026-05-20",
     "services": [
       {
-        "serviceId": "service_hair_knotless_medium",
+        "serviceId": "650af1234567890abcdef001",
         "serviceName": "Medium Knotless Braids"
       },
       {
-        "serviceId": "service_gel_manicure",
+        "serviceId": "650af1234567890abcdef002",
         "serviceName": "Gel Manicure"
       }
     ],
@@ -636,7 +635,7 @@ curl -X POST http://localhost:3500/api/availability \
         "remainingAmount": 3150,
         "items": [
           {
-            "serviceId": "service_hair_knotless_medium",
+            "serviceId": "650af1234567890abcdef001",
             "serviceName": "Medium Knotless Braids",
             "staffId": "staff_001",
             "staffName": "Jane",
@@ -646,7 +645,7 @@ curl -X POST http://localhost:3500/api/availability \
             "amount": 2500
           },
           {
-            "serviceId": "service_gel_manicure",
+            "serviceId": "650af1234567890abcdef002",
             "serviceName": "Gel Manicure",
             "staffId": "staff_002",
             "staffName": "Mary",

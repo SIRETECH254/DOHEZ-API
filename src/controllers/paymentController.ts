@@ -4,6 +4,7 @@ import Invoice from '../models/Invoice';
 import Appointment from '../models/Appointment';
 import Order from '../models/Order';
 import Receipt from '../models/receiptModel';
+import Product from '../models/Product';
 import { 
   createPaymentRecord, 
   initiateMpesaAppointmentPayment, 
@@ -15,6 +16,7 @@ import {
 import { normalizePhoneNumber, parseCallback as parseDarajaCallback, queryStkPushStatus } from '../services/external/darajaService';
 import { errorHandler } from '../middleware/errorHandler';
 import { validateOptionAvailability } from '../utils/availability';
+import mongoose from 'mongoose';
 
 export const confirmAppointment = async (req: Request, res: Response, next: NextFunction) => {
   try {
@@ -39,12 +41,19 @@ export const confirmAppointment = async (req: Request, res: Response, next: Next
     const availability = await validateOptionAvailability(
       String(appointment.branch),
       String(appointment.vendor),
-      appointment.items.map(item => ({
-        serviceId: (item.service as any)._id,
-        staffId: String(item.staff),
-        startTime: item.startTime,
-        endTime: item.endTime
-      })),
+      appointment.items.map(item => {
+        // Robust ID extraction whether populated or not
+        const serviceId = (item.service as any)._id 
+          ? (item.service as any)._id.toString() 
+          : item.service.toString();
+          
+        return {
+          serviceId,
+          staffId: String(item.staff),
+          startTime: item.startTime,
+          endTime: item.endTime
+        };
+      }),
       String(appointment._id)
     );
 

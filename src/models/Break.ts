@@ -31,13 +31,12 @@ const breakSchema = new Schema<IBreak>(
 );
 
 // Validate that startTime < endTime
-breakSchema.pre<IBreak>("save", function (next: any) {
+breakSchema.pre<IBreak>("save", async function () {
   if (this.startTime && this.endTime) {
     if (this.startTime >= this.endTime) {
-      return next(new Error("startTime must be earlier than endTime"));
+      throw new Error("startTime must be earlier than endTime");
     }
   }
-  next();
 });
 
 // Index on staff only

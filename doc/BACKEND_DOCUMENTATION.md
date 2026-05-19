@@ -248,45 +248,83 @@ interface IOrder {
   customer: ObjectId;
   vendor: ObjectId;
   branch: ObjectId;
-  riderId?: ObjectId;
-  items: Array<{
-    product?: ObjectId;
-    serviceId?: ObjectId;
-    quantity: number;
-    price: number;
-    name: string;
-    serviceDetails?: {
-      appointmentTime?: Date;
-      laundryPickUpTime?: Date;
-      ticketHolderName?: string;
-    };
-  }>;
+  createdBy: ObjectId;
+  location: "in_shop" | "away";
+  type: "pickup" | "delivery";
+  items: IOrderItem[];
+  pricing: IPricing;
+  timing: ITiming;
+  address?: ObjectId | null;
+  paymentPreference: {
+    mode: "post_to_bill" | "pay_now" | "cash" | "cod";
+    method?: "mpesa_stk" | "paystack_card" | null;
+  };
+  status: "PLACED" | "CONFIRMED" | "PACKED" | "SHIPPED" | "OUT_FOR_DELIVERY" | "DELIVERED" | "CANCELLED" | "REFUNDED";
+  paymentStatus: "UNPAID" | "PENDING" | "PAID" | "PARTIALLY_REFUNDED" | "REFUNDED";
+  invoice?: ObjectId | null;
+  receipt?: ObjectId | null;
+  metadata?: any;
+  createdAt: Date;
+  updatedAt: Date;
+}
 ```
 
 ---
 
-### 10. Invoice Model
+### 10. Appointment Model
+```typescript
+interface IAppointment {
+  _id: ObjectId;
+  appointmentNumber: string;
+  customer: ObjectId;
+  branch: ObjectId;
+  vendor: ObjectId;
+  staff: ObjectId[];
+  items: Array<{
+    service: ObjectId;
+    staff: ObjectId;
+    startTime: Date;
+    endTime: Date;
+    durationMinutes: number;
+    amount: number;
+  }>;
+  overallStartTime: Date;
+  overallEndTime: Date;
+  status: "PENDING" | "CONFIRMED" | "COMPLETED" | "CANCELLED" | "NO_SHOW";
+  bookingFeeAmount: number;
+  remainingAmount: number;
+  checkedInAt?: Date;
+  actualEndTime?: Date;
+  createdAt: Date;
+  updatedAt: Date;
+}
+```
+
+---
+
+### 11. Invoice Model
 ```typescript
 interface IInvoice {
   _id: ObjectId;
-  order: ObjectId;
-  number: string;
-  lineItems: Array<{
-    label: string;
-    amount: number;
-  }>;
+  order?: ObjectId;
+  appointment?: ObjectId;
+  branch: ObjectId;
+  vendor: ObjectId;
+  invoiceNumber: string;
+  lineItems?: Array<{ label: string; amount: number; }>;
   subtotal: number;
   discounts: number;
   fees: number;
   tax: number;
   total: number;
   balanceDue: number;
-  paymentStatus: "PENDING" | "PAID" | "CANCELLED";
+  paymentStatus: "PENDING" | "PAID" | "PARTIAL" | "CANCELLED";
   metadata: any;
   createdAt: Date;
   updatedAt: Date;
 }
 ```
+
 
 ---
 
@@ -307,33 +345,6 @@ interface IReceipt {
   updatedAt: Date;
 }
 ```
-
-### 12. Payment Model
-```typescript
-interface IPayment {
-  _id: string;
-  invoiceId: string; // Invoice ObjectId
-  method: "mpesa_stk" | "paystack_card" | "cash" | "post_to_bill" | "cod";
-  amount: number;
-  currency: string; // Default: "KES"
-  processorRefs?: {
-    daraja?: {
-      merchantRequestId?: string;
-      checkoutRequestId?: string;
-    };
-    paystack?: {
-      reference?: string;
-    };
-  };
-  status: "INITIATED" | "PENDING" | "SUCCESS" | "FAILED" | "CANCELLED";
-  type?: "BOOKING_FEE" | "FULLPAYMENT";
-  rawPayload?: any; // Raw webhook payload for debugging
-  createdAt: Date;
-  updatedAt: Date;
-}
-```
-
-
 ### 12. Coupon Model
 ```typescript
 interface ICoupon {
@@ -370,50 +381,6 @@ interface ICoupon {
 
 ---
 
-### 13. Audit Log Model
-  orderType: "IMMEDIATE" | "SCHEDULED" | "IN_SHOP";
-  scheduledTime?: Date;
-  status: "PLACED" | "ACCEPTED" | "PREPARING" | "READY" | "OUT_FOR_DELIVERY" | "DELIVERED" | "CANCELLED" | "PICKED_UP";
-  deliveryAddress: string;
-  deliveryCoordinates?: [number, number];
-  subtotal: number;
-  deliveryFee: number;
-  totalAmount: number;
-  paymentId: ObjectId;
-  createdAt: Date;
-  updatedAt: Date;
-}
-```
-
-Index:
-```typescript
-db.orders.createIndex({ vendorId: 1, status: 1, createdAt: -1 })
-```
-
----
-
-### 7. Payment Model
-```typescript
-interface IPayment {
-  _id: ObjectId;
-  orderId?: ObjectId;
-  paymentNumber: string;
-  amount: number;
-  currency: "KES";
-  type: "ORDER_PAYMENT" | "SERVICE_BOOKING";
-  method: "MPESA" | "CARD" | "CASH";
-  status: "PENDING" | "SUCCESS" | "FAILED";
-  transactionRef?: string;
-  processorRefs?: {
-    daraja?: { merchantRequestId?: string; checkoutRequestId?: string };
-    paystack?: { reference?: string };
-  };
-  createdAt: Date;
-  updatedAt: Date;
-}
-```
-
----
 
 ### 8. Rider Availability Model
 ```typescript
@@ -540,7 +507,23 @@ interface IStoreConfiguration {
 
 ---
 
-### 2. Role Controllers
+### 2. Appointment Controllers
+
+#### `appointmentController.ts`
+- `createAppointment()` - Create new appointment (Customer)
+- `createAppointmentByAdmin()` - Create new appointment (Admin)
+- `rescheduleAppointment()` - Reschedule appointment
+- `cancelAppointment()` - Cancel appointment
+- `checkIn()` - Check-in for appointment
+- `completeAppointment()` - Complete appointment
+- `markNoShow()` - Mark as No-Show
+- `getAppointments()` - Get all appointments (Admin/Staff)
+- `getMyAppointments()` - Get customer's appointments
+- `getAppointmentById()` - Get appointment details by ID
+
+---
+
+### 3. Role Controllers
 
 #### `roleController.ts`
 - `getAllRoles()` - List roles (admin)
@@ -730,6 +713,24 @@ POST   /reset-password/:token     // Reset password
 POST   /refresh-token             // Refresh JWT
 POST   /logout                    // Logout
 GET    /me                        // Current user profile
+```
+
+---
+
+### Appointment Routes
+Base: `/api/appointments`
+
+```typescript
+POST   /                  // Create appointment (Customer)
+POST   /admin              // Create appointment (Admin)
+GET    /my                 // Get my appointments
+GET    /                   // Get all appointments (Admin/Staff)
+GET    /:id                // Get appointment details
+PUT    /:id/reschedule     // Reschedule appointment
+PUT    /:id/cancel         // Cancel appointment
+PUT    /:id/check-in       // Record check-in
+PUT    /:id/complete       // Record completion
+PUT    /:id/no-show        // Record no-show
 ```
 
 ---
@@ -1132,18 +1133,145 @@ npm start
 
 ---
 
-### 14. Packaging Model
+### 15. Address Model
 ```typescript
-interface IPackaging {
+interface IAddress {
   _id: ObjectId;
+  userId: ObjectId;
   name: string;
-  price: number;
-  isActive: boolean;
+  coordinates: { lat: number; lng: number };
+  regions: {
+    country: string;
+    locality?: string;
+    sublocality?: string;
+    sublocality_level_1?: string;
+    administrative_area_level_1?: string;
+    plus_code?: string;
+    political?: string;
+  };
+  address: string;
+  details?: string | null;
   isDefault: boolean;
   createdAt: Date;
   updatedAt: Date;
 }
 ```
+
+### 16. Break Model
+```typescript
+interface IBreak {
+  _id: ObjectId;
+  staff: ObjectId;
+  startTime: string; // HH:MM
+  endTime: string;   // HH:MM
+  reason?: string;
+  createdAt: Date;
+}
+```
+
+### 17. Cart Model
+```typescript
+interface ICart {
+  _id: ObjectId;
+  userId: ObjectId;
+  cartGroups: Array<{
+    vendorId: ObjectId;
+    branchId: ObjectId;
+    items: Array<{
+      productId: ObjectId;
+      skuId: ObjectId;
+      quantity: number;
+      priceAtAddition: number;
+      variants?: Array<{ variantId: ObjectId; optionId: ObjectId }>;
+      modifiers?: Array<{ modifierId: ObjectId; optionId: ObjectId }>;
+    }>;
+    groupSubtotal: number;
+  }>;
+  totalCartValue: number;
+  totalItems: number;
+  createdAt: Date;
+  updatedAt: Date;
+}
+```
+
+### 18. Product Modifier Model
+```typescript
+interface IProductModifier {
+  _id: ObjectId;
+  name: string;
+  description?: string;
+  options: Array<{ _id: ObjectId; value: string; isActive: boolean; sortOrder: number }>;
+  price: number;
+  min_selection: number;
+  max_selection: number;
+  is_required: boolean;
+  branchId: ObjectId;
+  sortOrder: number;
+  createdAt: Date;
+  updatedAt: Date;
+}
+```
+
+### 19. Product Type Model
+```typescript
+interface IProductType {
+  _id: ObjectId;
+  service: ObjectId;
+  name: string;
+  details?: string;
+  order: number;
+  slug: string;
+  icon?: string;
+  iconPublicId?: string;
+  createdAt: Date;
+  updatedAt: Date;
+}
+```
+
+### 20. Variant Model
+```typescript
+interface IVariant {
+  _id: ObjectId;
+  name: string;
+  options: Array<{ _id: ObjectId; value: string; isActive: boolean; sortOrder: number }>;
+  branchId: ObjectId;
+  sortOrder: number;
+  createdAt: Date;
+  updatedAt: Date;
+}
+```
+
+### 21. Vendor Category Model
+```typescript
+interface IVendorCategory {
+  _id: ObjectId;
+  vendorType: ObjectId;
+  name: string;
+  description?: string;
+  slug: string;
+  image?: string;
+  imagePublicId?: string;
+  isActive: boolean;
+  createdAt: Date;
+  updatedAt: Date;
+}
+```
+
+### 22. Vendor Type Model
+```typescript
+interface IVendorType {
+  _id: ObjectId;
+  name: string;
+  description?: string;
+  slug: string;
+  image?: string;
+  imagePublicId?: string;
+  isActive: boolean;
+  createdAt: Date;
+  updatedAt: Date;
+}
+```
+
 
 ---
 

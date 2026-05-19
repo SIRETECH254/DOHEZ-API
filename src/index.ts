@@ -180,6 +180,13 @@ app.use("/api/breaks", breakRoutes);
 
 app.use("/api/availability", availabilityRoutes);
 
+app.use("/api/appointments", appointmentRoutes);
+
+
+
+
+
+
 // Socket.io setup for real-time features
 const server = createServer(app);
 

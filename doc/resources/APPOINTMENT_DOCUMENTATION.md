@@ -42,7 +42,7 @@ interface IAppointment extends Document {
 }
 
 interface IAppointmentItem {
-  service: Types.ObjectId | IService;
+  service: Types.ObjectId | IProduct;
   staff: Types.ObjectId | IUser;
   startTime: Date;
   endTime: Date;
@@ -63,7 +63,7 @@ const appointmentItemSchema = new Schema<IAppointmentItem>(
   {
     service: {
       type: Schema.Types.ObjectId,
-      ref: "Service",
+      ref: "Product",
       required: true,
     },
     staff: {
@@ -160,13 +160,12 @@ const appointmentSchema = new Schema<IAppointment>(
 );
 
 // Validate that overallEndTime > overallStartTime
-appointmentSchema.pre<IAppointment>("save", function (next: any) {
+appointmentSchema.pre<IAppointment>("save", async function () {
   if (this.overallStartTime && this.overallEndTime) {
     if (this.overallEndTime <= this.overallStartTime) {
-      return next(new Error("overallEndTime must be later than overallStartTime"));
+      throw new Error("overallEndTime must be later than overallStartTime");
     }
   }
-  next();
 });
 
 const Appointment = mongoose.model<IAppointment>("Appointment", appointmentSchema);
@@ -257,26 +256,19 @@ export const createAppointment = async (req: Request, res: Response, next: NextF
     const validationItems: OptionItem[] = [];
 
     for (const item of items) {
-      const { productId, serviceId, staffId, startTime, endTime } = item;
+      const { serviceId, staffId, startTime, endTime } = item;
       
       // Resolve Product and verify it belongs to the branch
-      let product;
-      if (productId) {
-        product = await Product.findById(productId);
-      } else if (serviceId) {
-        // If only serviceId is provided, find a product for that service in this branch
-        product = await Product.findOne({ service: serviceId, branch: branchId });
-      }
+      const product = await Product.findById(serviceId);
 
       if (!product) {
-        return next(errorHandler(404, `Product/Service not found for this branch: ${productId || serviceId}`));
+        return next(errorHandler(404, `Product/Service not found: ${serviceId}`));
       }
 
       if (product.branch.toString() !== branchId || product.vendor.toString() !== vendorId) {
         return next(errorHandler(400, `Product ${product.name} does not belong to this branch/vendor`));
       }
 
-      const resolvedServiceId = product.service.toString();
       const amount = item.amount || product.price;
       const durationMinutes = item.durationMinutes;
 
@@ -289,19 +281,19 @@ export const createAppointment = async (req: Request, res: Response, next: NextF
         return next(errorHandler(400, `Staff ${staff.firstName} ${staff.lastName} does not belong to this branch`));
       }
 
-      if (!resolvedServiceId || !staffId || !startTime || !endTime) {
+      if (!serviceId || !staffId || !startTime || !endTime) {
         return res.status(400).json({ success: false, message: "Each item must have service/product, staff, startTime, and endTime." });
       }
 
       validationItems.push({
-        serviceId: resolvedServiceId,
+        serviceId: serviceId,
         staffId,
         startTime: new Date(startTime),
         endTime: new Date(endTime)
       });
 
       processedItems.push({
-        service: resolvedServiceId,
+        service: serviceId,
         staff: staffId,
         startTime: new Date(startTime),
         endTime: new Date(endTime),
@@ -381,12 +373,12 @@ export const createAppointmentByAdmin = async (req: Request, res: Response, next
       const { serviceId, staffId, startTime, endTime, amount, durationMinutes } = item;
       
       // Verify product/service exists for this branch
-      const product = await Product.findOne({ service: serviceId, branch: branchId });
+      const product = await Product.findById(serviceId);
       if (!product) {
-        return next(errorHandler(404, `Service not found for this branch: ${serviceId}`));
+        return next(errorHandler(404, `Product not found: ${serviceId}`));
       }
-      if (product.vendor.toString() !== vendorId) {
-        return next(errorHandler(400, `Service ${product.name} does not belong to this vendor`));
+      if (product.branch.toString() !== branchId || product.vendor.toString() !== vendorId) {
+        return next(errorHandler(400, `Product ${product.name} does not belong to this branch/vendor`));
       }
 
       // Validate Staff
@@ -934,7 +926,7 @@ export default router;
   "vendor": "650af4560000000000000001",
   "items": [
     {
-      "productId": "650af7890000000000000001",
+      "serviceId": "650af7890000000000000001",
       "staffId": "650af0120000000000000001",
       "startTime": "2026-05-20T10:00:00Z",
       "endTime": "2026-05-20T11:00:00Z"
@@ -1186,7 +1178,7 @@ curl -X POST http://localhost:3500/api/appointments \
     "vendor": "650af4560000000000000001",
     "items": [
       {
-        "productId": "650af7890000000000000001",
+        "serviceId": "650af7890000000000000001",
         "staffId": "650af0120000000000000001",
         "startTime": "2026-05-20T10:00:00Z",
         "endTime": "2026-05-20T11:00:00Z"

@@ -532,8 +532,8 @@ export interface IBreak extends Document {
 }
 
 export interface IAppointmentItem {
-  service: Types.ObjectId;
-  staff: Types.ObjectId;
+  service: Types.ObjectId | IProduct;
+  staff: Types.ObjectId | IUser;
   startTime: Date;
   endTime: Date;
   durationMinutes: number;
@@ -543,9 +543,9 @@ export interface IAppointmentItem {
 export interface IAppointment extends Document {
   appointmentNumber: string;
   customer: Types.ObjectId | IUser;
-  branch: Types.ObjectId;
-  vendor: Types.ObjectId;
-  staff: Types.ObjectId[];
+  branch: Types.ObjectId | IBranch;
+  vendor: Types.ObjectId | IVendor;
+  staff: Array<Types.ObjectId | IUser>;
   items: IAppointmentItem[];
   overallStartTime: Date;
   overallEndTime: Date;

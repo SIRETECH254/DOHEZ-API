@@ -250,19 +250,18 @@ export const getAvailability = async (req: Request, res: Response, next: NextFun
         // Check if item fits in branch hours and staff is available
         if (endMin <= branchEndMin && isStaffAvailable(staff._id.toString(), currentStartMin, endMin)) {
           findOptions(productIdx + 1, endMin + buffer, [
-            ...currentItems,
-            {
-              serviceId: product.slug || product._id.toString(),
-              serviceName: product.name,
-              staffId: staff._id.toString(),
-              staffName: `${staff.firstName} ${staff.lastName}`,
-              startMin: currentStartMin,
-              endMin: endMin,
-              durationMinutes: duration,
-              amount: product.price
-            }
-          ]);
-          
+          ...currentItems,
+          {
+            serviceId: product._id.toString(),
+            serviceName: product.name,
+            staffId: staff._id.toString(),
+            staffName: `${staff.firstName} ${staff.lastName}`,
+            startMin: currentStartMin,
+            endMin: endMin,
+            durationMinutes: duration,
+            amount: product.price
+          }
+          ]);          
           // Safety: If we've found enough variations for this start time, move on
           if (allScheduleOptions.length > 500) return;
         }
@@ -290,7 +289,7 @@ export const getAvailability = async (req: Request, res: Response, next: NextFun
         branchId,
         date,
         services: orderedProducts.map(p => ({
-          serviceId: p.slug || p._id.toString(),
+          serviceId: p._id.toString(),
           serviceName: p.name
         })),
         scheduleOptions: paginatedOptions,

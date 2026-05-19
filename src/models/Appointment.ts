@@ -5,7 +5,7 @@ const appointmentItemSchema = new Schema<IAppointmentItem>(
   {
     service: {
       type: Schema.Types.ObjectId,
-      ref: "Service",
+      ref: "Product",
       required: true,
     },
     staff: {
@@ -102,13 +102,12 @@ const appointmentSchema = new Schema<IAppointment>(
 );
 
 // Validate that overallEndTime > overallStartTime
-appointmentSchema.pre<IAppointment>("save", function (next: any) {
+appointmentSchema.pre<IAppointment>("save", async function () {
   if (this.overallStartTime && this.overallEndTime) {
     if (this.overallEndTime <= this.overallStartTime) {
-      return next(new Error("overallEndTime must be later than overallStartTime"));
+      throw new Error("overallEndTime must be later than overallStartTime");
     }
   }
-  next();
 });
 
 const Appointment = mongoose.model<IAppointment>("Appointment", appointmentSchema);
