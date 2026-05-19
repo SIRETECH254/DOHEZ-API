@@ -175,11 +175,38 @@ const productSchema = new Schema<IProduct>(
     },
     duration: {
       type: String,
-      default: null,
     },
     buffertime: {
       type: String,
-      default: null,
+    },
+    venue: {
+      type: String,
+    },
+    location: {
+      address: String,
+      coordinates: {
+        lat: Number,
+        lng: Number,
+      },
+      place_id: String,
+    },
+    startDate: {
+      type: Date,
+    },
+    endDate: {
+      type: Date,
+    },
+    openAt: {
+      type: String,
+    },
+    ageLimit: {
+      type: Number,
+    },
+    dresscode: {
+      type: String,
+    },
+    maxTicket: {
+      type: Number,
     },
   },
   {

@@ -1504,16 +1504,21 @@ interface IVendorCategory {
 }
 ```
 
-### 22. Vendor Type Model
+### 23. Ticket Model
 ```typescript
-interface IVendorType {
+interface ITicket {
   _id: ObjectId;
-  name: string;
-  description?: string;
-  slug: string;
-  image?: string;
-  imagePublicId?: string;
-  isActive: boolean;
+  ticketNumber: string;
+  event: ObjectId;
+  details: {
+    name: string;
+    email: string;
+    phone: string;
+  };
+  type: string;
+  qrCodeData?: string;
+  pdfUrl?: string;
+  status: 'PENDING' | 'BOOKED' | 'CANCELLED' | 'USED' | 'EXPIRED';
   createdAt: Date;
   updatedAt: Date;
 }

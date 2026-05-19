@@ -320,6 +320,22 @@ export interface IProduct extends Document {
   trackInventory: boolean;
   duration?: string;
   buffertime?: string;
+  // Event fields
+  venue?: string;
+  location?: {
+    address: string;
+    coordinates: {
+      lat: number;
+      lng: number;
+    };
+    place_id?: string;
+  };
+  startDate?: Date;
+  endDate?: Date;
+  openAt?: string;
+  ageLimit?: number;
+  dresscode?: string;
+  maxTicket?: number;
   createdAt: Date;
   updatedAt: Date;
 
@@ -523,12 +539,23 @@ export interface IOrder extends Document {
   updatedAt: Date;
 }
 
-export interface IBreak extends Document {
-  staff: Types.ObjectId | IUser;
-  startTime: string;
-  endTime: string;
-  reason?: string;
+export interface ITicket extends Document {
+  ticketNumber: string;
+  event: Types.ObjectId | IProduct;
+  details: {
+    name: string;
+    email: string;
+    phone: string;
+    [key: string]: any; // for extra details
+  };
+  type: string;
+  qrCodeData?: string;
+  pdfUrl?: string;
+  vendor: Types.ObjectId | IVendor;
+  branch: Types.ObjectId | IBranch;
+  status: 'PENDING' | 'BOOKED' | 'CANCELLED' | 'USED' | 'EXPIRED';
   createdAt: Date;
+  updatedAt: Date;
 }
 
 export interface IAppointmentItem {
