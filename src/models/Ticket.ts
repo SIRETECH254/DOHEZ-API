@@ -13,6 +13,9 @@ const ticketSchema = new Schema<ITicket>(
       ref: 'Product',
       required: true,
     },
+    variantOptionId: {
+      type: Schema.Types.ObjectId,
+    },
     details: {
       name: { type: String, required: true },
       email: { type: String, required: true },

@@ -223,6 +223,14 @@ export interface IProductType extends Document {
   updatedAt: Date;
 }
 
+export interface IBreak extends Document {
+  staff: Types.ObjectId | IUser;
+  startTime: string; // HH:MM
+  endTime: string;   // HH:MM
+  reason?: string;
+  createdAt: Date;
+}
+
 export interface IProductCategory extends Document {
   name: string;
   details?: string;
@@ -412,6 +420,7 @@ export interface IInvoiceLineItem {
 export interface IReceipt extends Document {
   order?: Types.ObjectId | IOrder;
   appointment?: Types.ObjectId;
+  ticket?: Types.ObjectId | ITicket;
   invoice: Types.ObjectId | IInvoice;
   branch: Types.ObjectId | IBranch;
   vendor: Types.ObjectId | IVendor;
@@ -427,7 +436,7 @@ export interface IReceipt extends Document {
 
 export interface IPayment extends Document {
   paymentNumber: string;
-  invoice?: Types.ObjectId | IInvoice;
+  invoice: (Types.ObjectId | IInvoice)[];
   branch: Types.ObjectId | IBranch;
   vendor: Types.ObjectId | IVendor;
   method: "mpesa" | "paystack" | "cash" | "post_to_bill" | "cod";
@@ -452,6 +461,7 @@ export interface IPayment extends Document {
 export interface IInvoice extends Document {
   order?: Types.ObjectId | IOrder;
   appointment?: Types.ObjectId;
+  ticket?: Types.ObjectId | ITicket;
   branch: Types.ObjectId | IBranch;
   vendor: Types.ObjectId | IVendor;
   invoiceNumber: string;
@@ -542,6 +552,7 @@ export interface IOrder extends Document {
 export interface ITicket extends Document {
   ticketNumber: string;
   event: Types.ObjectId | IProduct;
+  variantOptionId?: Types.ObjectId;
   details: {
     name: string;
     email: string;

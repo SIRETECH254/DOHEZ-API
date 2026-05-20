@@ -8,10 +8,10 @@ const paymentSchema = new Schema<IPayment>(
       required: true,
       unique: true,
     },
-    invoice: {
+    invoice: [{
       type: Schema.Types.ObjectId,
       ref: 'Invoice',
-    },
+    }],
     branch: {
       type: Schema.Types.ObjectId,
       ref: 'Branch',

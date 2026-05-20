@@ -87,6 +87,144 @@ export const createProduct = async (req: Request, res: Response, next: NextFunct
 };
 
 /**
+ * @description Create a new appointment service
+ * @access Admin/Super Admin
+ */
+export const createService = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  try {
+    const { 
+      name, 
+      details, 
+      price, 
+      category, 
+      vendor, 
+      branch, 
+      service, 
+      duration, 
+      buffertime 
+    } = req.body;
+
+    if (!name || !price || !vendor || !branch) {
+      return next(errorHandler(400, "Missing required fields for service"));
+    }
+
+    const files = req.files as Express.Multer.File[];
+    let images: Array<{ url: string; publicId: string }> = [];
+
+    if (files && files.length > 0) {
+      images = await Promise.all(
+        files.map(async (file) => {
+          const result = await uploadToCloudinary(file, "dohez/products");
+          return { url: result.url, publicId: result.public_id };
+        })
+      );
+    }
+
+    const slug = slugify(name, { lower: true, strict: true });
+
+    const product = new Product({
+      name,
+      slug,
+      details,
+      price,
+      images,
+      category,
+      vendor,
+      branch,
+      service,
+      duration,
+      buffertime,
+      trackInventory: false
+    });
+
+    await product.generateSKUs();
+
+    res.status(201).json({
+      success: true,
+      data: { product }
+    });
+  } catch (error: any) {
+    next(error);
+  }
+};
+
+/**
+ * @description Create a new event for ticketing
+ * @access Admin/Super Admin
+ */
+export const createEvent = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  try {
+    const { 
+      name, 
+      details, 
+      price, 
+      category, 
+      vendor, 
+      branch, 
+      startDate, 
+      endDate, 
+      venue, 
+      maxTicket,
+      variants,
+      selectedVariantOptions,
+      location,
+      openAt
+    } = req.body;
+
+    if (!name || !price || !vendor || !branch || !startDate || !endDate || !venue) {
+      return next(errorHandler(400, "Missing required fields for event"));
+    }
+
+    const files = req.files as Express.Multer.File[];
+    let images: Array<{ url: string; publicId: string }> = [];
+
+    if (files && files.length > 0) {
+      images = await Promise.all(
+        files.map(async (file) => {
+          const result = await uploadToCloudinary(file, "dohez/products");
+          return { url: result.url, publicId: result.public_id };
+        })
+      );
+    }
+
+    const slug = slugify(name, { lower: true, strict: true });
+    
+    const parsedVariants = variants ? (typeof variants === 'string' ? JSON.parse(variants) : variants) : [];
+    const parsedSelectedVariantOptions = selectedVariantOptions ? (typeof selectedVariantOptions === 'string' ? JSON.parse(selectedVariantOptions) : selectedVariantOptions) : [];
+    const parsedLocation = location ? (typeof location === 'string' ? JSON.parse(location) : location) : undefined;
+
+    const product = new Product({
+      name,
+      slug,
+      details,
+      price,
+      images,
+      category,
+      vendor,
+      branch,
+      startDate,
+      endDate,
+      venue,
+      maxTicket,
+      variants: parsedVariants,
+      selectedVariantOptions: parsedSelectedVariantOptions,
+      location: parsedLocation,
+      openAt,
+      trackInventory: true
+    });
+
+    await product.generateSKUs();
+
+    res.status(201).json({
+      success: true,
+      data: { product }
+    });
+  } catch (error: any) {
+    next(error);
+  }
+};
+
+/**
  * @description Get all products with pagination, search, and filtering
  * @access Public/Admin
  */

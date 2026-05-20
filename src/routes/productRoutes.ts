@@ -1,6 +1,8 @@
 import express from 'express';
 import {
   createProduct,
+  createService,
+  createEvent,
   getProducts,
   getProductById,
   updateProduct,
@@ -44,6 +46,70 @@ const router = express.Router();
  *       201: { description: Created }
  */
 router.post('/', authenticateToken, authorizeRoles(['admin', 'super_admin']), upload.array('images', 5), createProduct);
+
+/**
+ * @swagger
+ * /api/products/services:
+ *   post:
+ *     summary: Create a new appointment service
+ *     tags: [Products]
+ *     security: [{ bearerAuth: [] }]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [name, price, vendor, branch]
+ *             properties:
+ *               name: { type: string }
+ *               details: { type: string }
+ *               price: { type: number }
+ *               category: { type: string }
+ *               vendor: { type: string }
+ *               branch: { type: string }
+ *               service: { type: string }
+ *               duration: { type: string }
+ *               buffertime: { type: string }
+ *     responses:
+ *       201: { description: Created }
+ */
+router.post('/services', authenticateToken, authorizeRoles(['admin', 'super_admin']), upload.array('images', 5), createService);
+
+/**
+ * @swagger
+ * /api/products/events:
+ *   post:
+ *     summary: Create a new event for ticketing
+ *     tags: [Products]
+ *     security: [{ bearerAuth: [] }]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         multipart/form-data:
+ *           schema:
+ *             type: object
+ *             required: [name, price, vendor, branch, startDate, endDate, venue]
+ *             properties:
+ *               name: { type: string }
+ *               details: { type: string }
+ *               price: { type: number }
+ *               images: { type: array, items: { type: string, format: binary } }
+ *               category: { type: string }
+ *               vendor: { type: string }
+ *               branch: { type: string }
+ *               startDate: { type: string, format: date-time }
+ *               endDate: { type: string, format: date-time }
+ *               venue: { type: string }
+ *               location: { type: string }
+ *               openAt: { type: string }
+ *               maxTicket: { type: number }
+ *               variants: { type: array, items: { type: string } }
+ *               selectedVariantOptions: { type: string }
+ *     responses:
+ *       201: { description: Created }
+ */
+router.post('/events', authenticateToken, authorizeRoles(['admin', 'super_admin']), upload.array('images', 5), createEvent);
 
 /**
  * @swagger

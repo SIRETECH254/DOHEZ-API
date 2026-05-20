@@ -21,6 +21,11 @@ const invoiceSchema = new Schema<IInvoice>(
       ref: 'Appointment',
       required: false,
     },
+    ticket: {
+      type: Schema.Types.ObjectId,
+      ref: 'Ticket',
+      required: false,
+    },
     branch: {
       type: Schema.Types.ObjectId,
       ref: 'Branch',
@@ -89,6 +94,8 @@ const invoiceSchema = new Schema<IInvoice>(
 );
 
 invoiceSchema.index({ order: 1 });
+invoiceSchema.index({ appointment: 1 });
+invoiceSchema.index({ ticket: 1 });
 invoiceSchema.index({ paymentStatus: 1, createdAt: -1 });
 
 const Invoice = mongoose.model<IInvoice>('Invoice', invoiceSchema);

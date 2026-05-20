@@ -33,7 +33,7 @@ Payment Management handles the processing of payments for invoices within the TE
 ```typescript
 export interface IPayment extends Document {
   paymentNumber: string;
-  invoice?: Types.ObjectId | IInvoice;
+  invoice: (Types.ObjectId | IInvoice)[];
   branch: Types.ObjectId | IBranch;
   vendor: Types.ObjectId | IVendor;
   method: "mpesa" | "paystack" | "cash" | "post_to_bill" | "cod";
@@ -71,10 +71,10 @@ const paymentSchema = new Schema<IPayment>(
       required: true,
       unique: true,
     },
-    invoice: {
+    invoice: [{
       type: Schema.Types.ObjectId,
       ref: 'Invoice',
-    },
+    }],
     branch: {
       type: Schema.Types.ObjectId,
       ref: 'Branch',
@@ -138,7 +138,7 @@ export default Payment;
 ### Validation Rules
 ```javascript
 paymentNumber:    { required: true, type: String, unique: true }
-invoice:          { type: ObjectId, ref: 'Invoice' }
+invoice:          [{ type: ObjectId, ref: 'Invoice' }]
 branch:           { required: true, type: ObjectId, ref: 'Branch' }
 vendor:           { required: true, type: ObjectId, ref: 'Vendor' }
 method:           { required: true, type: String, enum: ['mpesa', 'paystack', 'cash', 'post_to_bill', 'cod'] }
@@ -166,9 +166,23 @@ import Payment from '../models/paymentModel';
 import Invoice from '../models/Invoice';
 import Order from '../models/Order';
 import Receipt from '../models/receiptModel';
-import { createPaymentRecord, initiateMpesaProductPayment, applySucceFullProductPayment } from '../services/internal/paymentService';
-import { normalizePhoneNumber, parseCallback as parseDarajaCallback } from '../services/external/darajaService';
+import Product from '../models/Product';
+import Ticket from '../models/Ticket';
+import { 
+  createPaymentRecord, 
+  initiateMpesaAppointmentPayment, 
+  initiateMpesaProductPayment,
+  initiateMpesaTicketPayment,
+  applySucceFullProductPayment, 
+  applySuccessFullAppointmentPayment,
+  applySuccessfulTicketPayment,
+  generateInvoiceNumber,
+  generateTicketNumber
+} from '../services/internal/paymentService';
+import { normalizePhoneNumber, parseCallback as parseDarajaCallback, queryStkPushStatus } from '../services/external/darajaService';
 import { errorHandler } from '../middleware/errorHandler';
+import { validateOptionAvailability } from '../utils/availability';
+import mongoose from 'mongoose';
 ```
 
 ### Functions Overview
@@ -315,6 +329,201 @@ export const payAppointmentInvoice = async (req: Request, res: Response, next: N
 };
 ```
 
+#### `bookTicket()`
+**Purpose:** Reserves multiple tickets, generates invoices, and initiates an aggregate M-Pesa payment.  
+**Access:** Private (Authenticated User)  
+**Validation:** `eventId` and `ticketsRequested` array are required.  
+**Process:** Validates event and inventory. Creates individual `Ticket` and `Invoice` records. Normalizes phone and initiates `initiateMpesaTicketPayment` if method is 'mpesa'.  
+**Response:** Success message, event ID, payment ID, reserved items, and Daraja details.
+
+**Controller Implementation:**
+```typescript
+export const bookTicket = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const { eventId, ticketsRequested, paymentMethod, phoneNumber } = req.body;
+    const userId = (req as any).user?._id;
+
+    const event = await Product.findById(eventId);
+    if (!event) return next(errorHandler(404, 'Event not found'));
+
+    if (paymentMethod === 'mpesa' && !phoneNumber) {
+      return next(errorHandler(400, 'phoneNumber is required for mpesa'));
+    }
+
+    const compiledInvoiceIds: mongoose.Types.ObjectId[] = [];
+    const responseItems = [];
+    let combinedGrandTotal = 0;
+
+    for (const group of ticketsRequested) {
+      const { variantOptionId, quantity, attendees } = group;
+
+      const sku = event.skus.find((s: any) => 
+        s.attributes.some((attr: any) => attr.optionId.toString() === variantOptionId.toString())
+      );
+      
+      if (!sku) return next(errorHandler(400, `Invalid ticket tier specified for variant ${variantOptionId}`));
+
+      if (sku.stock < quantity) {
+        return next(errorHandler(400, `Insufficient ticket inventory for tier. Available: ${sku.stock}`));
+      }
+
+      for (let i = 0; i < quantity; i++) {
+        const attendee = attendees[i] || {};
+        const ticketNumber = await generateTicketNumber();
+
+        const ticket = await Ticket.create({
+          ticketNumber,
+          event: eventId,
+          variantOptionId,
+          vendor: event.vendor,
+          branch: event.branch,
+          details: {
+            name: attendee.name || 'Guest',
+            email: attendee.email || 'guest@example.com',
+            phone: attendee.phone || '0000000000'
+          },
+          type: sku.skuCode || 'REGULAR',
+          status: 'PENDING'
+        });
+
+        const invoice = await Invoice.create({
+          invoiceNumber: await generateInvoiceNumber(),
+          ticket: ticket._id,
+          branch: event.branch,
+          vendor: event.vendor,
+          subtotal: sku.price,
+          total: sku.price,
+          balanceDue: sku.price,
+          paymentStatus: 'PENDING',
+          metadata: {
+            attendeeName: attendee.name || 'Guest'
+          }
+        });
+
+        compiledInvoiceIds.push(invoice._id as mongoose.Types.ObjectId);
+        combinedGrandTotal += sku.price;
+        
+        responseItems.push({
+          ticketId: ticket._id,
+          invoiceId: invoice._id,
+          ticketNumber,
+          invoiceNumber: invoice.invoiceNumber,
+          price: sku.price,
+          attendee: attendee.name || 'Guest'
+        });
+      }
+    }
+
+    if (paymentMethod === 'mpesa') {
+      const msisdn = normalizePhoneNumber(phoneNumber);
+      const baseInvoice = responseItems[0];
+
+      const { payment, res: darajaRes } = await initiateMpesaTicketPayment({
+        invoiceIds: compiledInvoiceIds,
+        branch: event.branch?.toString() || '',
+        vendor: event.vendor.toString(),
+        amount: combinedGrandTotal,
+        phone: msisdn,
+        accountReference: compiledInvoiceIds.length === 1 ? baseInvoice.invoiceNumber : 'DOHEZ TICKETS'
+      });
+
+      return res.status(202).json({
+        success: true,
+        message: 'Tickets reserved and M-Pesa STK Push initiated',
+        data: {
+          eventId: event._id,
+          paymentId: payment._id,
+          status: payment.status,
+          items: responseItems,
+          daraja: {
+            merchantRequestId: darajaRes.merchantRequestId,
+            checkoutRequestId: darajaRes.checkoutRequestId
+          }
+        }
+      });
+    }
+
+    return next(errorHandler(400, 'Unsupported payment method'));
+
+  } catch (error) {
+    next(error);
+  }
+};
+```
+
+#### `payTicketInvoices()`
+**Purpose:** Initiates a single payment for a group of ticket invoices.  
+**Access:** Private (Authenticated User)  
+**Validation:** `invoiceIds` array, `method` ('mpesa'), and `payerPhone` are required.  
+**Process:** Validates all invoices, calculates combined total, and initiates `initiateMpesaTicketPayment`.  
+**Response:** Success message, payment ID, status, and Daraja details.
+
+**Controller Implementation:**
+```typescript
+export const payTicketInvoices = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const { invoiceIds, method, payerPhone } = req.body;
+
+    if (!invoiceIds || !Array.isArray(invoiceIds) || invoiceIds.length === 0) {
+      return next(errorHandler(400, 'An array of invoiceIds is required'));
+    }
+
+    if (method !== 'mpesa') {
+      return next(errorHandler(400, 'Only mpesa method is supported for ticket checkout groups'));
+    }
+
+    if (!payerPhone) {
+      return next(errorHandler(400, 'payerPhone is required for mpesa'));
+    }
+
+    const invoices = await Invoice.find({ _id: { $in: invoiceIds } });
+    if (invoices.length !== invoiceIds.length) {
+      return next(errorHandler(404, 'One or more ticket invoices could not be found'));
+    }
+
+    let combinedGrandTotal = 0;
+
+    for (const inv of invoices) {
+      if (inv.paymentStatus === 'PAID') {
+        return next(errorHandler(409, `Invoice ${inv.invoiceNumber} has already been paid`));
+      }
+      if (inv.paymentStatus === 'CANCELLED') {
+        return next(errorHandler(409, `Invoice ${inv.invoiceNumber} is cancelled`));
+      }
+      combinedGrandTotal += inv.balanceDue;
+    }
+
+    const msisdn = normalizePhoneNumber(payerPhone);
+    const baseInvoice = invoices[0];
+
+    const { payment, res: darajaRes } = await initiateMpesaTicketPayment({
+      invoiceIds,
+      branch: baseInvoice.branch?.toString() || '',
+      vendor: baseInvoice.vendor.toString(),
+      amount: combinedGrandTotal,
+      phone: msisdn,
+      accountReference: invoices.length === 1 ? baseInvoice.invoiceNumber : 'DOHEZ TICKETS'
+    });
+
+    return res.status(202).json({
+      success: true,
+      message: 'M-Pesa STK Push initiated',
+      data: {
+        paymentId: payment._id,
+        status: payment.status,
+        daraja: {
+          merchantRequestId: darajaRes.merchantRequestId,
+          checkoutRequestId: darajaRes.checkoutRequestId
+        }
+      }
+    });
+
+  } catch (error) {
+    next(error);
+  }
+};
+```
+
 #### `payProductInvoice()`
 **Purpose:** Main payment initiation endpoint. Supports M-Pesa STK Push and creates payment records.  
 **Access:** Private (Authenticated User)  
@@ -403,7 +612,7 @@ export const payProductInvoice = async (req: Request, res: Response, next: NextF
 **Purpose:** Handles M-Pesa STK Push callback webhooks from Safaricom.  
 **Access:** Public (no authentication required)  
 **Validation:** Validates the webhook payload structure.  
-**Process:** Parses the payload, finds the payment record, and updates its status. If successful, checks if the linked invoice belongs to an order or an appointment and routes to the appropriate handler (`applySucceFullProductPayment` or `applySuccessFullAppointmentPayment`). Emits real-time updates via Socket.io.  
+**Process:** Parses the payload, finds the payment record, and updates its status. If successful, it iterates through all linked invoices in the `invoice` array, checking if they belong to an order, appointment, or ticket, and routes to the appropriate handler (`applySucceFullProductPayment`, `applySuccessFullAppointmentPayment`, or `applySuccessfulTicketPayment`). Emits real-time updates via Socket.io.  
 **Response:** Success message.
 
 **Controller Implementation:**
@@ -430,14 +639,34 @@ export const mpesaWebhook = async (req: Request, res: Response, next: NextFuncti
     payment.rawPayload = payload;
 
     if (parsed.success) {
-      const invoice = await Invoice.findById(payment.invoice);
-      if (invoice) {
-        if (invoice.order) {
-          await applySucceFullProductPayment({ invoice, payment, io, method: 'mpesa_stk' });
-        } else if (invoice.appointment) {
-          await applySuccessFullAppointmentPayment({ invoice, payment, io, method: 'mpesa_stk' });
+      // 1. Normalize the invoice property into an array
+      const invoiceIds = Array.isArray(payment.invoice) ? payment.invoice : [payment.invoice];
+
+      // 2. Loop through every invoice ID contained in the payment
+      for (const invId of invoiceIds) {
+        const invoice = await Invoice.findById(invId);
+        
+        if (invoice) {
+          if (invoice.order) 
+          {
+            await applySucceFullProductPayment({ invoice, payment, io, method: 'mpesa_stk' });
+          } 
+          else if (invoice.appointment) 
+          {
+            await applySuccessFullAppointmentPayment({ invoice, payment, io, method: 'mpesa_stk' });
+          } 
+          else if (invoice.ticket) 
+          {
+            await applySuccessfulTicketPayment({ invoice, payment, io, method: 'mpesa_stk' });
+          }
         }
       }
+      
+      // Update the parent payment status to SUCCESS after the loop
+      payment.status = 'SUCCESS';
+      await payment.save();
+      io?.emit('payment.updated', { paymentId: payment._id.toString(), status: payment.status });
+
     } else {
       payment.status = 'FAILED';
       await payment.save();
@@ -456,7 +685,7 @@ export const mpesaWebhook = async (req: Request, res: Response, next: NextFuncti
 **Purpose:** Manually queries the status of an M-Pesa STK Push transaction.  
 **Access:** Private (Authenticated User)  
 **Validation:** `checkoutRequestId` is required.  
-**Process:** Queries Safaricom's API for the transaction status. Updates the local payment and invoice records based on the result.  
+**Process:** Queries Safaricom's API for the transaction status. If successful, iterates through all associated invoices and applies the appropriate success logic. Updates the local payment status.  
 **Response:** Current payment status and raw Daraja response.
 
 **Controller Implementation:**
@@ -471,7 +700,7 @@ export const queryMpesaByCheckoutId = async (req: Request, res: Response, next: 
     const payment = await Payment.findOne({ 'processorRefs.daraja.checkoutRequestId': checkoutRequestId });
     if (!payment) return next(errorHandler(404, 'Payment not found for this checkout request'));
 
-    const result = await queryStkPushStatus(checkoutRequestId);
+    const result = await queryStkPushStatus(checkoutRequestId as string);
     if (!result.ok) {
       return next(errorHandler(502, result.error || 'Failed to query Daraja API'));
     }
@@ -479,10 +708,30 @@ export const queryMpesaByCheckoutId = async (req: Request, res: Response, next: 
     const status = result.resultCode === 0 ? 'SUCCESS' : 'FAILED';
     
     if (result.resultCode === 0 && payment.status !== 'SUCCESS') {
-      const invoice = await Invoice.findById(payment.invoiceId);
-      if (invoice) {
-        await applySucceFullProductPayment({ invoice, payment, io, method: 'mpesa_stk' });
+      const invoiceIds = Array.isArray(payment.invoice) ? payment.invoice : [payment.invoice];
+
+      for (const invId of invoiceIds) {
+        const invoice = await Invoice.findById(invId);
+        
+        if (invoice) {
+          if (invoice.order) 
+          {
+            await applySucceFullProductPayment({ invoice, payment, io, method: 'mpesa_stk' });
+          }
+          else if (invoice.appointment) 
+          {
+            await applySuccessFullAppointmentPayment({ invoice, payment, io, method: 'mpesa_stk' });
+          } 
+          else if (invoice.ticket) 
+          {
+            await applySuccessfulTicketPayment({ invoice, payment, io, method: 'mpesa_stk' });
+          }
+        }
       }
+
+      payment.status = 'SUCCESS';
+      await payment.save();
+      io?.emit('payment.updated', { paymentId: payment._id.toString(), status: payment.status });
     } else if (result.resultCode !== 0 && payment.status !== 'FAILED') {
       payment.status = 'FAILED';
       await payment.save();
@@ -496,7 +745,7 @@ export const queryMpesaByCheckoutId = async (req: Request, res: Response, next: 
         resultCode: result.resultCode, 
         resultDesc: result.resultDesc,
         paymentId: payment._id,
-        invoiceId: payment.invoiceId,
+        invoiceId: payment.invoice,
         raw: result.raw
       } 
     });
@@ -601,6 +850,10 @@ import express from 'express';
 import { authenticateToken, requireAdmin } from '../middleware/auth';
 import { 
   payProductInvoice, 
+  confirmAppointment,
+  payAppointmentInvoice,
+  bookTicket,
+  payTicketInvoices,
   mpesaWebhook, 
   queryMpesaByCheckoutId, 
   getPayments, 
@@ -610,6 +863,14 @@ import {
 const router = express.Router();
 
 router.post('/pay', authenticateToken, payProductInvoice);
+
+router.post('/tickets/book', authenticateToken, bookTicket);
+
+router.post('/tickets/pay', authenticateToken, payTicketInvoices);
+
+router.post('/appointments/confirm/:appointmentId', authenticateToken, confirmAppointment);
+
+router.post('/appointments/pay', authenticateToken, payAppointmentInvoice);
 
 router.post('/webhooks/mpesa', mpesaWebhook);
 
@@ -623,6 +884,97 @@ export default router;
 ```
 
 ### Route Details
+
+#### `POST /api/payments/tickets/book`
+**Headers:** 
+- `Authorization: Bearer <token>`
+- `Content-Type: application/json`
+
+**Request Body (JSON):**
+```json
+{
+  "eventId": "65e26b1c09b068c201383812",
+  "ticketsRequested": [
+    {
+      "variantOptionId": "65e26b1c09b068c201383815",
+      "quantity": 2,
+      "attendees": [
+        { "name": "John Doe", "email": "john@example.com", "phone": "254700000001" },
+        { "name": "Jane Doe", "email": "jane@example.com", "phone": "254700000002" }
+      ]
+    }
+  ],
+  "paymentMethod": "mpesa",
+  "phoneNumber": "254712345678"
+}
+```
+
+**Purpose:** Reserve tickets across tiers and initiate an aggregate M-Pesa payment.
+**Access:** Private (Authenticated User)
+**Response (202 Accepted):**
+```json
+{
+  "success": true,
+  "message": "Tickets reserved and M-Pesa STK Push initiated",
+  "data": {
+    "eventId": "65e26b1c09b068c201383812",
+    "paymentId": "66389f4b52e2a1b4e8d1a2c3",
+    "status": "INITIATED",
+    "items": [
+      { 
+        "ticketId": "65e26b1c09b068c201383850", 
+        "invoiceId": "66389f4b52e2a1b4e8d1a2c1", 
+        "ticketNumber": "TKT-2026-0001", 
+        "price": 1000, 
+        "attendee": "John Doe" 
+      },
+      { 
+        "ticketId": "65e26b1c09b068c201383851", 
+        "invoiceId": "66389f4b52e2a1b4e8d1a2c2", 
+        "ticketNumber": "TKT-2026-0002", 
+        "price": 1000, 
+        "attendee": "Jane Doe" 
+      }
+    ],
+    "daraja": {
+      "merchantRequestId": "29115-1234567-1",
+      "checkoutRequestId": "ws_CO_06052026123456789"
+    }
+  }
+}
+```
+
+#### `POST /api/payments/tickets/pay`
+**Headers:** 
+- `Authorization: Bearer <token>`
+- `Content-Type: application/json`
+
+**Request Body (JSON):**
+```json
+{
+  "invoiceIds": ["66389f4b52e2a1b4e8d1a2c1", "66389f4b52e2a1b4e8d1a2c2"],
+  "method": "mpesa",
+  "payerPhone": "254712345678"
+}
+```
+
+**Purpose:** Initiate payment for a group of pending ticket invoices.
+**Access:** Private (Authenticated User)
+**Response (202 Accepted):**
+```json
+{
+  "success": true,
+  "message": "M-Pesa STK Push initiated",
+  "data": {
+    "paymentId": "66389f4b52e2a1b4e8d1a2c3",
+    "status": "INITIATED",
+    "daraja": {
+      "merchantRequestId": "29115-1234567-1",
+      "checkoutRequestId": "ws_CO_06052026123456789"
+    }
+  }
+}
+```
 
 #### `POST /api/payments/appointments/confirm/:appointmentId`
 **Headers:** 

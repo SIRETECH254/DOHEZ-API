@@ -321,16 +321,14 @@ export const generatePaymentNumber = async (): Promise<string> => {
 ```
 
 #### `generateInvoiceNumber()`
-**Purpose:** Generate a sequential invoice number: INV-YYYY-XXXX.
+**Purpose:** Generate a random invoice number: INV-YYYY-XXXX.
 
 **Implementation:**
 ```typescript
 export const generateInvoiceNumber = async (): Promise<string> => {
   const year = new Date().getFullYear();
-  const count = await Invoice.countDocuments({
-    createdAt: { $gte: new Date(year, 0, 1) }
-  });
-  return `INV-${year}-${String(count + 1).padStart(4, "0")}`;
+  const randomSuffix = Math.random().toString(36).substring(2, 6).toUpperCase();
+  return `INV-${year}-${randomSuffix}`;
 };
 ```
 
@@ -345,6 +343,20 @@ export const generateReceiptNumber = async (): Promise<string> => {
     createdAt: { $gte: new Date(year, 0, 1) }
   });
   return `RCP-${year}-${String(count + 1).padStart(4, "0")}`;
+};
+```
+
+#### `generateTicketNumber()`
+**Purpose:** Generate a sequential ticket number: TKT-YYYY-XXXX.
+
+**Implementation:**
+```typescript
+export const generateTicketNumber = async (): Promise<string> => {
+  const year = new Date().getFullYear();
+  const count = await Ticket.countDocuments({
+    createdAt: { $gte: new Date(year, 0, 1) }
+  });
+  return `TKT-${year}-${String(count + 1).padStart(4, "0")}`;
 };
 ```
 
@@ -415,6 +427,31 @@ const updateInventoryForOrder = async (order: any): Promise<void> => {
   }
 
   console.log(`Completed inventory update for order ${order._id}`);
+};
+```
+
+#### `updateInventoryForTicket(ticket)`
+**Purpose:** Deducts purchased ticket from product SKU stock levels.
+
+**Implementation:**
+```typescript
+const updateInventoryForTicket = async (ticket: any): Promise<void> => {
+  try {
+    const event = await Product.findById(ticket.event);
+    if (event && event.trackInventory) {
+      const sku = event.skus.find((s: any) => 
+        s.attributes.some((attr: any) => attr.optionId.toString() === ticket.variantOptionId?.toString())
+      );
+
+      if (sku) {
+        sku.stock = Math.max(0, sku.stock - 1);
+        await event.save();
+        console.log(`Updated Ticket Event SKU stock for ticket ${ticket._id}: ${sku.stock}`);
+      }
+    }
+  } catch (error) {
+    console.error(`Failed to update inventory for ticket ${ticket._id}:`, error);
+  }
 };
 ```
 
@@ -538,6 +575,51 @@ export const applySuccessFullAppointmentPayment = async ({ invoice, payment, io,
 };
 ```
 
+#### `applySuccessfulTicketPayment(params)`
+**Purpose:** Apply a successful payment to a ticket, updates invoice and ticket status, updates inventory, and generates a receipt.
+
+**Implementation:**
+```typescript
+export const applySuccessfulTicketPayment = async ({ invoice, payment, io, method }: any): Promise<{ receipt: any }> => {
+  payment.status = 'SUCCESS';
+  await payment.save();
+
+  invoice.paymentStatus = 'PAID';
+  invoice.balanceDue = 0;
+  await invoice.save();
+
+  const ticket = await Ticket.findById(invoice.ticket);
+  if (!ticket) {
+    throw new Error('Ticket not found for successful payment');
+  }
+
+  // Update inventory
+  await updateInventoryForTicket(ticket);
+
+  ticket.status = 'BOOKED';
+  ticket.qrCodeData = `DOHEZ-TICK-${ticket.ticketNumber}-${invoice._id}`;
+  ticket.pdfUrl = `https://cdn.dohez.com/tickets/${ticket.ticketNumber}.pdf`; 
+  await ticket.save();
+
+  const receipt: any = await Receipt.create({
+    ticket: ticket._id,
+    invoice: invoice._id,
+    branch: invoice.branch,
+    vendor: invoice.vendor,
+    receiptNumber: await generateReceiptNumber(),
+    amountPaid: payment.amount,
+    paymentMethod: method === 'mpesa_stk' ? 'mpesa' : (method === 'paystack_card' ? 'paystack' : method),
+    issuedAt: new Date(),
+  });
+
+  io?.emit('payment.updated', { paymentId: payment._id.toString(), status: payment.status });
+  io?.emit('ticket.activated', { ticketId: ticket._id.toString(), status: 'BOOKED' });
+  io?.emit('receipt.created', { receiptId: receipt._id.toString(), ticketId: String(ticket._id) });
+
+  return { receipt };
+};
+```
+
 #### `initiateMpesaProductPayment(params)`
 **Purpose:** Orchestrate M-Pesa STK Push payment for products and create an INITIATED payment record.
 
@@ -561,7 +643,7 @@ export const initiateMpesaProductPayment = async (params: {
 
   const payment = await Payment.create({
     paymentNumber: await generatePaymentNumber(),
-    invoice: invoiceId,
+    invoice: [invoiceId],
     branch,
     vendor,
     method: 'mpesa',
@@ -603,12 +685,53 @@ export const initiateMpesaAppointmentPayment = async (params: {
 
   const payment = await Payment.create({
     paymentNumber: await generatePaymentNumber(),
-    invoice: invoiceId,
+    invoice: [invoiceId],
     branch,
     vendor,
     method: 'mpesa',
     amount,
     type,
+    status: 'INITIATED',
+    processorRefs: {
+      daraja: {
+        merchantRequestId: res.merchantRequestId,
+        checkoutRequestId: res.checkoutRequestId
+      }
+    }
+  });
+
+  return { payment, res };
+};
+```
+
+#### `initiateMpesaTicketPayment(params)`
+**Purpose:** Orchestrate M-Pesa STK Push payment for tickets (batch) and create an INITIATED payment record.
+
+**Implementation:**
+```typescript
+export const initiateMpesaTicketPayment = async (params: {
+  invoiceIds: any[];
+  branch: any;
+  vendor: any;
+  amount: number;
+  phone: string;
+  accountReference: string;
+}): Promise<any> => {
+  const { invoiceIds, amount, phone, accountReference, branch, vendor } = params;
+
+  const res = await initiateStkPush({
+    amount,
+    phone,
+    accountReference
+  });
+
+  const payment = await Payment.create({
+    paymentNumber: await generatePaymentNumber(),
+    invoice: invoiceIds,
+    branch,
+    vendor,
+    method: 'mpesa',
+    amount,
     status: 'INITIATED',
     processorRefs: {
       daraja: {

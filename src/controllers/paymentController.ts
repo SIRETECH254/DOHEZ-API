@@ -5,18 +5,98 @@ import Appointment from '../models/Appointment';
 import Order from '../models/Order';
 import Receipt from '../models/receiptModel';
 import Product from '../models/Product';
+import Ticket from '../models/Ticket';
 import { 
   createPaymentRecord, 
   initiateMpesaAppointmentPayment, 
   initiateMpesaProductPayment,
+  initiateMpesaTicketPayment,
   applySucceFullProductPayment, 
   applySuccessFullAppointmentPayment,
-  generateInvoiceNumber 
+  applySuccessfulTicketPayment,
+  generateInvoiceNumber,
+  generateTicketNumber
 } from '../services/internal/paymentService';
 import { normalizePhoneNumber, parseCallback as parseDarajaCallback, queryStkPushStatus } from '../services/external/darajaService';
 import { errorHandler } from '../middleware/errorHandler';
 import { validateOptionAvailability } from '../utils/availability';
 import mongoose from 'mongoose';
+
+
+
+export const payProductInvoice = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const io = req.app.get('io');
+    const {
+      invoiceId,
+      method,
+      amount: clientAmount,
+      payerPhone,
+    } = req.body || {};
+
+    if (!invoiceId || !method) {
+      return next(errorHandler(400, 'invoiceId and method are required'));
+    }
+
+    const invoice = await Invoice.findById(invoiceId);
+    if (!invoice) return next(errorHandler(404, 'Invoice not found'));
+
+    if (invoice.paymentStatus === 'PAID') {
+      return next(errorHandler(409, 'Invoice already paid'));
+    }
+    if (invoice.paymentStatus === 'CANCELLED') {
+      return next(errorHandler(409, 'Invoice is cancelled'));
+    }
+
+    const amount = typeof clientAmount === 'number' ? clientAmount : invoice.balanceDue;
+    if (!amount || amount <= 0) {
+      return next(errorHandler(400, 'Invalid amount to charge'));
+    }
+
+    const payment = await createPaymentRecord({
+      invoice: String(invoice._id),
+      branch: String(invoice.branch),
+      vendor: String(invoice.vendor),
+      amount,
+      method: method === 'mpesa_stk' ? 'mpesa' : 'paystack'
+    });
+
+    if (method === 'mpesa_stk') {
+      if (!payerPhone) return next(errorHandler(400, 'payerPhone is required for mpesa_stk'));
+
+      const msisdn = normalizePhoneNumber(payerPhone);
+
+      const { payment: updatedPayment, res: darajaRes } = await initiateMpesaProductPayment({
+        invoiceId: String(invoice._id),
+        branch: String(invoice.branch),
+        vendor: String(invoice.vendor),
+        amount,
+        phone: msisdn,
+        invoiceNumber: invoice.invoiceNumber
+      });
+
+      return res.status(202).json({ 
+        success: true, 
+        data: { 
+          paymentId: updatedPayment._id, 
+          status: updatedPayment.status, 
+          daraja: { 
+            merchantRequestId: darajaRes.merchantRequestId, 
+            checkoutRequestId: darajaRes.checkoutRequestId 
+          } 
+        } 
+      });
+    }
+
+    if (method === 'paystack_card') {
+      return next(errorHandler(501, 'paystack_card method not yet implemented'));
+    }
+
+    return next(errorHandler(400, 'Unsupported payment method'));
+  } catch (err) {
+    next(err);
+  }
+};
 
 export const confirmAppointment = async (req: Request, res: Response, next: NextFunction) => {
   try {
@@ -98,80 +178,6 @@ export const confirmAppointment = async (req: Request, res: Response, next: Next
   }
 };
 
-export const payProductInvoice = async (req: Request, res: Response, next: NextFunction) => {
-  try {
-    const io = req.app.get('io');
-    const {
-      invoiceId,
-      method,
-      amount: clientAmount,
-      payerPhone,
-    } = req.body || {};
-
-    if (!invoiceId || !method) {
-      return next(errorHandler(400, 'invoiceId and method are required'));
-    }
-
-    const invoice = await Invoice.findById(invoiceId);
-    if (!invoice) return next(errorHandler(404, 'Invoice not found'));
-
-    if (invoice.paymentStatus === 'PAID') {
-      return next(errorHandler(409, 'Invoice already paid'));
-    }
-    if (invoice.paymentStatus === 'CANCELLED') {
-      return next(errorHandler(409, 'Invoice is cancelled'));
-    }
-
-    const amount = typeof clientAmount === 'number' ? clientAmount : invoice.balanceDue;
-    if (!amount || amount <= 0) {
-      return next(errorHandler(400, 'Invalid amount to charge'));
-    }
-
-    const payment = await createPaymentRecord({
-      invoice: String(invoice._id),
-      branch: String(invoice.branch),
-      vendor: String(invoice.vendor),
-      amount,
-      method: method === 'mpesa_stk' ? 'mpesa' : 'paystack'
-    });
-
-    if (method === 'mpesa_stk') {
-      if (!payerPhone) return next(errorHandler(400, 'payerPhone is required for mpesa_stk'));
-
-      const msisdn = normalizePhoneNumber(payerPhone);
-
-      const { payment: updatedPayment, res: darajaRes } = await initiateMpesaProductPayment({
-        invoiceId: String(invoice._id),
-        branch: String(invoice.branch),
-        vendor: String(invoice.vendor),
-        amount,
-        phone: msisdn,
-        invoiceNumber: invoice.invoiceNumber
-      });
-
-      return res.status(202).json({ 
-        success: true, 
-        data: { 
-          paymentId: updatedPayment._id, 
-          status: updatedPayment.status, 
-          daraja: { 
-            merchantRequestId: darajaRes.merchantRequestId, 
-            checkoutRequestId: darajaRes.checkoutRequestId 
-          } 
-        } 
-      });
-    }
-
-    if (method === 'paystack_card') {
-      return next(errorHandler(501, 'paystack_card method not yet implemented'));
-    }
-
-    return next(errorHandler(400, 'Unsupported payment method'));
-  } catch (err) {
-    next(err);
-  }
-};
-
 export const payAppointmentInvoice = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { payerPhone, method, appointmentId } = req.body || {};
@@ -221,6 +227,181 @@ export const payAppointmentInvoice = async (req: Request, res: Response, next: N
   }
 };
 
+export const bookTicket = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const { eventId, ticketsRequested, paymentMethod, phoneNumber } = req.body;
+    const userId = (req as any).user?._id;
+
+    const event = await Product.findById(eventId);
+    if (!event) return next(errorHandler(404, 'Event not found'));
+
+    if (paymentMethod === 'mpesa' && !phoneNumber) {
+      return next(errorHandler(400, 'phoneNumber is required for mpesa'));
+    }
+
+    const compiledInvoiceIds: mongoose.Types.ObjectId[] = [];
+    const responseItems = [];
+    let combinedGrandTotal = 0;
+
+    for (const group of ticketsRequested) {
+      const { variantOptionId, quantity, attendees } = group;
+
+      const sku = event.skus.find((s: any) => 
+        s.attributes.some((attr: any) => attr.optionId.toString() === variantOptionId.toString())
+      );
+      
+      if (!sku) return next(errorHandler(400, `Invalid ticket tier specified for variant ${variantOptionId}`));
+
+      if (sku.stock < quantity) {
+        return next(errorHandler(400, `Insufficient ticket inventory for tier. Available: ${sku.stock}`));
+      }
+
+      for (let i = 0; i < quantity; i++) {
+        const attendee = attendees[i] || {};
+        const ticketNumber = await generateTicketNumber();
+
+        const ticket = await Ticket.create({
+          ticketNumber,
+          event: eventId,
+          variantOptionId,
+          vendor: event.vendor,
+          branch: event.branch,
+          details: {
+            name: attendee.name || 'Guest',
+            email: attendee.email || 'guest@example.com',
+            phone: attendee.phone || '0000000000'
+          },
+          type: sku.skuCode || 'REGULAR',
+          status: 'PENDING'
+        });
+
+        const invoice = await Invoice.create({
+          invoiceNumber: await generateInvoiceNumber(),
+          ticket: ticket._id,
+          branch: event.branch,
+          vendor: event.vendor,
+          subtotal: sku.price,
+          total: sku.price,
+          balanceDue: sku.price,
+          paymentStatus: 'PENDING',
+          metadata: {
+            attendeeName: attendee.name || 'Guest'
+          }
+        });
+
+        compiledInvoiceIds.push(invoice._id as mongoose.Types.ObjectId);
+        combinedGrandTotal += sku.price;
+        
+        responseItems.push({
+          ticketId: ticket._id,
+          invoiceId: invoice._id,
+          ticketNumber,
+          invoiceNumber: invoice.invoiceNumber,
+          price: sku.price,
+          attendee: attendee.name || 'Guest'
+        });
+      }
+    }
+
+    if (paymentMethod === 'mpesa') {
+      const msisdn = normalizePhoneNumber(phoneNumber);
+      const baseInvoice = responseItems[0];
+
+      const { payment, res: darajaRes } = await initiateMpesaTicketPayment({
+        invoiceIds: compiledInvoiceIds,
+        branch: event.branch?.toString() || '',
+        vendor: event.vendor.toString(),
+        amount: combinedGrandTotal,
+        phone: msisdn,
+        accountReference: compiledInvoiceIds.length === 1 ? baseInvoice.invoiceNumber : 'DOHEZ TICKETS'
+      });
+
+      return res.status(202).json({
+        success: true,
+        message: 'Tickets reserved and M-Pesa STK Push initiated',
+        data: {
+          eventId: event._id,
+          paymentId: payment._id,
+          status: payment.status,
+          items: responseItems,
+          daraja: {
+            merchantRequestId: darajaRes.merchantRequestId,
+            checkoutRequestId: darajaRes.checkoutRequestId
+          }
+        }
+      });
+    }
+
+    return next(errorHandler(400, 'Unsupported payment method'));
+
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const payTicketInvoices = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const { invoiceIds, method, payerPhone } = req.body;
+
+    if (!invoiceIds || !Array.isArray(invoiceIds) || invoiceIds.length === 0) {
+      return next(errorHandler(400, 'An array of invoiceIds is required'));
+    }
+
+    if (method !== 'mpesa') {
+      return next(errorHandler(400, 'Only mpesa method is supported for ticket checkout groups'));
+    }
+
+    if (!payerPhone) {
+      return next(errorHandler(400, 'payerPhone is required for mpesa'));
+    }
+
+    const invoices = await Invoice.find({ _id: { $in: invoiceIds } });
+    if (invoices.length !== invoiceIds.length) {
+      return next(errorHandler(404, 'One or more ticket invoices could not be found'));
+    }
+
+    let combinedGrandTotal = 0;
+
+    for (const inv of invoices) {
+      if (inv.paymentStatus === 'PAID') {
+        return next(errorHandler(409, `Invoice ${inv.invoiceNumber} has already been paid`));
+      }
+      if (inv.paymentStatus === 'CANCELLED') {
+        return next(errorHandler(409, `Invoice ${inv.invoiceNumber} is cancelled`));
+      }
+      combinedGrandTotal += inv.balanceDue;
+    }
+
+    const msisdn = normalizePhoneNumber(payerPhone);
+    const baseInvoice = invoices[0];
+
+    const { payment, res: darajaRes } = await initiateMpesaTicketPayment({
+      invoiceIds,
+      branch: baseInvoice.branch?.toString() || '',
+      vendor: baseInvoice.vendor.toString(),
+      amount: combinedGrandTotal,
+      phone: msisdn,
+      accountReference: invoices.length === 1 ? baseInvoice.invoiceNumber : 'DOHEZ TICKETS'
+    });
+
+    return res.status(202).json({
+      success: true,
+      message: 'M-Pesa STK Push initiated',
+      data: {
+        paymentId: payment._id,
+        status: payment.status,
+        daraja: {
+          merchantRequestId: darajaRes.merchantRequestId,
+          checkoutRequestId: darajaRes.checkoutRequestId
+        }
+      }
+    });
+
+  } catch (error) {
+    next(error);
+  }
+};
+
 export const mpesaWebhook = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const io = req.app.get('io');
@@ -246,14 +427,34 @@ export const mpesaWebhook = async (req: Request, res: Response, next: NextFuncti
     payment.rawPayload = payload;
 
     if (parsed.success) {
-      const invoice = await Invoice.findById(payment.invoice);
-      if (invoice) {
-        if (invoice.order) {
-          await applySucceFullProductPayment({ invoice, payment, io, method: 'mpesa_stk' });
-        } else if (invoice.appointment) {
-          await applySuccessFullAppointmentPayment({ invoice, payment, io, method: 'mpesa_stk' });
+      // 1. Normalize the invoice property into an array
+      const invoiceIds = Array.isArray(payment.invoice) ? payment.invoice : [payment.invoice];
+
+      // 2. Loop through every invoice ID contained in the payment
+      for (const invId of invoiceIds) {
+        const invoice = await Invoice.findById(invId);
+        
+        if (invoice) {
+          if (invoice.order) 
+          {
+            await applySucceFullProductPayment({ invoice, payment, io, method: 'mpesa_stk' });
+          } 
+          else if (invoice.appointment) 
+          {
+            await applySuccessFullAppointmentPayment({ invoice, payment, io, method: 'mpesa_stk' });
+          } 
+          else if (invoice.ticket) 
+          {
+            await applySuccessfulTicketPayment({ invoice, payment, io, method: 'mpesa_stk' });
+          }
         }
       }
+      
+      // Update the parent payment status to SUCCESS after the loop
+      payment.status = 'SUCCESS';
+      await payment.save();
+      io?.emit('payment.updated', { paymentId: payment._id.toString(), status: payment.status });
+
     } else {
       payment.status = 'FAILED';
       await payment.save();
@@ -290,14 +491,30 @@ export const queryMpesaByCheckoutId = async (req: Request, res: Response, next: 
     const status = result.resultCode === 0 ? 'SUCCESS' : 'FAILED';
     
     if (result.resultCode === 0 && payment.status !== 'SUCCESS') {
-      const invoice = await Invoice.findById(payment.invoice);
-      if (invoice) {
-        if (invoice.order) {
-          await applySucceFullProductPayment({ invoice, payment, io, method: 'mpesa_stk' });
-        } else if (invoice.appointment) {
-          await applySuccessFullAppointmentPayment({ invoice, payment, io, method: 'mpesa_stk' });
+      const invoiceIds = Array.isArray(payment.invoice) ? payment.invoice : [payment.invoice];
+
+      for (const invId of invoiceIds) {
+        const invoice = await Invoice.findById(invId);
+        
+        if (invoice) {
+          if (invoice.order) 
+          {
+            await applySucceFullProductPayment({ invoice, payment, io, method: 'mpesa_stk' });
+          }
+          else if (invoice.appointment) 
+          {
+            await applySuccessFullAppointmentPayment({ invoice, payment, io, method: 'mpesa_stk' });
+          } 
+          else if (invoice.ticket) 
+          {
+            await applySuccessfulTicketPayment({ invoice, payment, io, method: 'mpesa_stk' });
+          }
         }
       }
+
+      payment.status = 'SUCCESS';
+      await payment.save();
+      io?.emit('payment.updated', { paymentId: payment._id.toString(), status: payment.status });
     } else if (result.resultCode !== 0 && payment.status !== 'FAILED') {
       payment.status = 'FAILED';
       await payment.save();
@@ -368,9 +585,6 @@ export const getPayments = async (req: Request, res: Response, next: NextFunctio
     next(error);
   }
 };
-
-
-
 
 export const getPaymentById = async (req: Request, res: Response, next: NextFunction) => {
   try {

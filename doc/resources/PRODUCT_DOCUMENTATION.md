@@ -551,6 +551,156 @@ export const createProduct = async (req: Request, res: Response, next: NextFunct
 };
 ```
 
+#### `createService()`
+**Purpose:** Create a new appointment service.
+**Access:** Admin/Super Admin
+**Validation:** `name`, `price`, `vendor`, `branch` are required.
+**Process:** Slugify name, upload images, create service product instance, and generate SKUs.
+**Response:** Created service product details.
+
+**Controller Implementation:**
+```typescript
+export const createService = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  try {
+    const { 
+      name, 
+      details, 
+      price, 
+      category, 
+      vendor, 
+      branch, 
+      service, 
+      duration, 
+      buffertime 
+    } = req.body;
+
+    if (!name || !price || !vendor || !branch) {
+      return next(errorHandler(400, "Missing required fields for service"));
+    }
+
+    const files = req.files as Express.Multer.File[];
+    let images: Array<{ url: string; publicId: string }> = [];
+
+    if (files && files.length > 0) {
+      images = await Promise.all(
+        files.map(async (file) => {
+          const result = await uploadToCloudinary(file, "dohez/products");
+          return { url: result.url, publicId: result.public_id };
+        })
+      );
+    }
+
+    const slug = slugify(name, { lower: true, strict: true });
+
+    const product = new Product({
+      name,
+      slug,
+      details,
+      price,
+      images,
+      category,
+      vendor,
+      branch,
+      service,
+      duration,
+      buffertime,
+      trackInventory: false
+    });
+
+    await product.generateSKUs();
+
+    res.status(201).json({
+      success: true,
+      data: { product }
+    });
+  } catch (error: any) {
+    next(error);
+  }
+};
+```
+
+#### `createEvent()`
+**Purpose:** Create a new event for ticketing.
+**Access:** Admin/Super Admin
+**Validation:** `name`, `price`, `vendor`, `branch`, `startDate`, `endDate`, `venue` are required.
+**Process:** Slugify name, upload images, create event product instance (with `trackInventory: true`), parse variants/options, and generate SKUs.
+**Response:** Created event product details.
+
+**Controller Implementation:**
+```typescript
+export const createEvent = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  try {
+    const { 
+      name, 
+      details, 
+      price, 
+      category, 
+      vendor, 
+      branch, 
+      startDate, 
+      endDate, 
+      venue, 
+      maxTicket,
+      variants,
+      selectedVariantOptions,
+      location,
+      openAt
+    } = req.body;
+
+    if (!name || !price || !vendor || !branch || !startDate || !endDate || !venue) {
+      return next(errorHandler(400, "Missing required fields for event"));
+    }
+
+    const files = req.files as Express.Multer.File[];
+    let images: Array<{ url: string; publicId: string }> = [];
+
+    if (files && files.length > 0) {
+      images = await Promise.all(
+        files.map(async (file) => {
+          const result = await uploadToCloudinary(file, "dohez/products");
+          return { url: result.url, publicId: result.public_id };
+        })
+      );
+    }
+
+    const slug = slugify(name, { lower: true, strict: true });
+    
+    const parsedVariants = variants ? (typeof variants === 'string' ? JSON.parse(variants) : variants) : [];
+    const parsedSelectedVariantOptions = selectedVariantOptions ? (typeof selectedVariantOptions === 'string' ? JSON.parse(selectedVariantOptions) : selectedVariantOptions) : [];
+    const parsedLocation = location ? (typeof location === 'string' ? JSON.parse(location) : location) : undefined;
+
+    const product = new Product({
+      name,
+      slug,
+      details,
+      price,
+      images,
+      category,
+      vendor,
+      branch,
+      startDate,
+      endDate,
+      venue,
+      maxTicket,
+      variants: parsedVariants,
+      selectedVariantOptions: parsedSelectedVariantOptions,
+      location: parsedLocation,
+      openAt,
+      trackInventory: true
+    });
+
+    await product.generateSKUs();
+
+    res.status(201).json({
+      success: true,
+      data: { product }
+    });
+  } catch (error: any) {
+    next(error);
+  }
+};
+```
+
 #### `getProducts()`
 **Purpose:** List products with search, pagination, and advanced filtering  
 **Access:** Public/Admin  
@@ -1030,6 +1180,76 @@ export default router;
       "id": "650af9994444444444444444",
       "name": "Luxury Pizza V2",
       "updatedAt": "2026-04-30T12:00:00.000Z"
+    }
+  }
+}
+```
+
+#### 7. Create Service
+- **Route:** `POST /services`
+- **Auth:** Admin/Super Admin
+- **Request Body (JSON):**
+```json
+{
+  "name": "Haircut",
+  "details": "Professional haircut service",
+  "price": 500,
+  "category": "650af1238888888888888888",
+  "vendor": "650af4569999999999999999",
+  "branch": "650af7890000000000000000",
+  "service": "650af0001111111111111111",
+  "duration": "30min",
+  "buffertime": "10min"
+}
+```
+- **Response:**
+```json
+{
+  "success": true,
+  "data": {
+    "product": {
+      "id": "650af9994444444444444445",
+      "name": "Haircut",
+      "price": 500,
+      "trackInventory": false
+    }
+  }
+}
+```
+
+#### 8. Create Event
+- **Route:** `POST /events`
+- **Auth:** Admin/Super Admin
+- **Request Body (JSON):**
+```json
+{
+  "name": "Summer Concert",
+  "details": "Live music concert",
+  "price": 2000,
+  "category": "650af1238888888888888888",
+  "vendor": "650af4569999999999999999",
+  "branch": "650af7890000000000000000",
+  "startDate": "2026-06-01T10:00:00Z",
+  "endDate": "2026-06-01T22:00:00Z",
+  "venue": "City Park",
+  "maxTicket": 500,
+  "location": {
+    "address": "City Park Avenue",
+    "coordinates": { "lat": -1.29, "lng": 36.82 }
+  },
+  "openAt": "09:00"
+}
+```
+- **Response:**
+```json
+{
+  "success": true,
+  "data": {
+    "product": {
+      "id": "650af9994444444444444446",
+      "name": "Summer Concert",
+      "venue": "City Park",
+      "trackInventory": true
     }
   }
 }

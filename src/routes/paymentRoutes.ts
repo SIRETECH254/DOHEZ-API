@@ -4,6 +4,8 @@ import {
   payProductInvoice, 
   confirmAppointment,
   payAppointmentInvoice,
+  bookTicket,
+  payTicketInvoices,
   mpesaWebhook, 
   queryMpesaByCheckoutId, 
   getPayments, 
@@ -21,6 +23,26 @@ const router = express.Router();
  *     security: [{ bearerAuth: [] }]
  */
 router.post('/pay', authenticateToken, payProductInvoice);
+
+/**
+ * @swagger
+ * /api/payments/tickets/book:
+ *   post:
+ *     summary: Reserve tickets and initiate payment
+ *     tags: [Payments]
+ *     security: [{ bearerAuth: [] }]
+ */
+router.post('/tickets/book', authenticateToken, bookTicket);
+
+/**
+ * @swagger
+ * /api/payments/tickets/pay:
+ *   post:
+ *     summary: Pay ticket invoices group
+ *     tags: [Payments]
+ *     security: [{ bearerAuth: [] }]
+ */
+router.post('/tickets/pay', authenticateToken, payTicketInvoices);
 
 /**
  * @swagger
