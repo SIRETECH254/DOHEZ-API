@@ -514,6 +514,18 @@ export const applySucceFullProductPayment = async ({ invoice, payment, io, metho
     }
   });
 
+  // Generate and upload Receipt PDF
+  try {
+    const populatedReceipt = await Receipt.findById(receipt._id).populate('vendor branch');
+    if (populatedReceipt) {
+      const receiptPdfUrl = await uploadReceiptPDF(populatedReceipt);
+      receipt.pdfUrl = receiptPdfUrl;
+      await receipt.save();
+    }
+  } catch (pdfError) {
+    console.error(`Failed to generate/upload receipt PDF for order ${invoice.order}:`, pdfError);
+  }
+
   order.receipt = receipt._id as any;
   await order.save();
 
@@ -568,6 +580,18 @@ export const applySuccessFullAppointmentPayment = async ({ invoice, payment, io,
       paymentMethod: method === 'mpesa_stk' ? 'mpesa' : (method === 'paystack_card' ? 'paystack' : method),
       issuedAt: new Date(),
     });
+
+    // Generate and upload Receipt PDF
+    try {
+      const populatedReceipt = await Receipt.findById(receipt._id).populate('vendor branch');
+      if (populatedReceipt) {
+        const receiptPdfUrl = await uploadReceiptPDF(populatedReceipt);
+        receipt.pdfUrl = receiptPdfUrl;
+        await receipt.save();
+      }
+    } catch (pdfError) {
+      console.error(`Failed to generate/upload receipt PDF for appointment ${invoice.appointment}:`, pdfError);
+    }
   }
 
   io?.emit('payment.updated', { paymentId: payment._id.toString(), status: payment.status });
@@ -648,6 +672,18 @@ export const applySuccessfulTicketPayment = async ({ invoice, payment, io, metho
     paymentMethod: method === 'mpesa_stk' ? 'mpesa' : (method === 'paystack_card' ? 'paystack' : method),
     issuedAt: new Date(),
   });
+
+  // Generate and upload Receipt PDF
+  try {
+    const populatedReceipt = await Receipt.findById(receipt._id).populate('vendor branch');
+    if (populatedReceipt) {
+      const receiptPdfUrl = await uploadReceiptPDF(populatedReceipt);
+      receipt.pdfUrl = receiptPdfUrl;
+      await receipt.save();
+    }
+  } catch (pdfError) {
+    console.error(`Failed to generate/upload receipt PDF for ticket ${ticket._id}:`, pdfError);
+  }
 
   io?.emit('payment.updated', { paymentId: payment._id.toString(), status: payment.status });
   io?.emit('ticket.activated', { ticketId: ticket._id.toString(), status: 'BOOKED' });
@@ -797,7 +833,7 @@ import Payment from '../models/paymentModel';
 import Invoice from '../models/Invoice';
 import Order from '../models/Order';
 import Receipt from '../models/receiptModel';
-import { createPaymentRecord, initiateMpesaProductPayment, applySucceFullProductPayment } from '../services/internal/paymentService';
+import { createPaymentRecord, initiateMpesaProductPayment, applySucceFullProductPayment, uploadTicketPDF, uploadReceiptPDF } from '../services/internal/paymentService';
 import { normalizePhoneNumber, parseCallback as parseDarajaCallback } from '../services/external/darajaService';
 import { errorHandler } from '../middleware/errorHandler';
 ```
