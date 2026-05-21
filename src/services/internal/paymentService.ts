@@ -8,6 +8,7 @@ import Appointment from '../../models/Appointment';
 import Ticket from '../../models/Ticket';
 import { initiateStkPush } from '../external/darajaService';
 import QRCode from 'qrcode';
+import { uploadTicketPDF } from '../../utils/pdfUpload';
 import type { IPayment } from '../../types';
 
 export const generatePaymentNumber = async (): Promise<string> => {
@@ -276,8 +277,14 @@ export const applySuccessfulTicketPayment = async ({ invoice, payment, io, metho
   await ticket.save();
 
   // Post-save logic: Handling pdfUrl
-  ticket.pdfUrl = `https://cdn.dohez.com/tickets/${ticket.ticketNumber}.pdf`; 
-  await ticket.save();
+  try {
+    const pdfUrl = await uploadTicketPDF(ticket);
+    ticket.pdfUrl = pdfUrl;
+    await ticket.save();
+  } catch (pdfError) {
+    console.error(`Failed to generate/upload PDF for ticket ${ticket._id}:`, pdfError);
+    // Continue even if PDF fails, as the payment and QR are successful
+  }
 
   const receipt: any = await Receipt.create({
     ticket: ticket._id,
