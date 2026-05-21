@@ -1,6 +1,11 @@
 import type { Request, Response, NextFunction } from "express";
 import { errorHandler } from "../middleware/errorHandler";
 import Product from "../models/Product";
+import Category from "../models/ProductCategory";
+import Vendor from "../models/Vendor";
+import Branch from "../models/Branch";
+import Service from "../models/Service";
+import Variant from "../models/Variant";
 import slugify from "slugify";
 import { uploadToCloudinary, deleteFromCloudinary } from "../config/cloudinary";
 
@@ -27,14 +32,61 @@ export const createProduct = async (req: Request, res: Response, next: NextFunct
       trackInventory 
     } = req.body;
 
-    // 1. Validation to prevent slugify error
+    // 1. Validation
     if (!name || typeof name !== 'string') {
       return next(errorHandler(400, "Product name is required"));
     }
 
-    // 2. Parse JSON strings (common in multipart/form-data)
+    if (!category || !vendor || !branch || !service) {
+      return next(errorHandler(400, "Category, vendor, branch, and service are required"));
+    }
+
+    // Check existence individually
+    const categoryExists = await Category.findById(category);
+    if (!categoryExists) return next(errorHandler(400, "Category not found"));
+
+    const vendorExists = await Vendor.findById(vendor);
+    if (!vendorExists) return next(errorHandler(400, "Vendor not found"));
+
+    const branchExists = await Branch.findById(branch);
+    if (!branchExists) return next(errorHandler(400, "Branch not found"));
+
+    const serviceExists = await Service.findById(service);
+    if (!serviceExists) return next(errorHandler(400, "Service not found"));
+
+    // Parse JSON strings
     const parsedVariants = variants ? (typeof variants === 'string' ? JSON.parse(variants) : variants) : [];
     const parsedSelectedVariantOptions = selectedVariantOptions ? (typeof selectedVariantOptions === 'string' ? JSON.parse(selectedVariantOptions) : selectedVariantOptions) : [];
+
+    // Validate Variants independently
+    if (parsedVariants && Array.isArray(parsedVariants)) {
+      for (const variantId of parsedVariants) {
+        const variantExists = await Variant.findById(variantId);
+        if (!variantExists) {
+          return next(errorHandler(400, `Variant ${variantId} not found`));
+        }
+      }
+    }
+    
+    // Validate Selected Variant Options independently
+    if (parsedSelectedVariantOptions && Array.isArray(parsedSelectedVariantOptions)) {
+      for (const sel of parsedSelectedVariantOptions) {
+        if (!sel.variantId || !Array.isArray(sel.optionIds)) {
+          return next(errorHandler(400, "Invalid format for selected variant options"));
+        }
+
+        const variant = await Variant.findById(sel.variantId);
+        if (!variant) return next(errorHandler(400, `Variant ${sel.variantId} not found for options`));
+        
+        const validOptionIds = variant.options.map((opt: any) => opt._id.toString());
+        for (const optId of sel.optionIds) {
+          if (!validOptionIds.includes(optId.toString())) {
+            return next(errorHandler(400, `Option ${optId} not valid for variant ${sel.variantId}`));
+          }
+        }
+      }
+    }
+
     const parsedModifiers = modifiers ? (typeof modifiers === 'string' ? JSON.parse(modifiers) : modifiers) : [];
     const parsedSelectedModifierOptions = selectedModifierOptions ? (typeof selectedModifierOptions === 'string' ? JSON.parse(selectedModifierOptions) : selectedModifierOptions) : [];
 
@@ -104,9 +156,18 @@ export const createService = async (req: Request, res: Response, next: NextFunct
       buffertime 
     } = req.body;
 
-    if (!name || !price || !vendor || !branch) {
-      return next(errorHandler(400, "Missing required fields for service"));
-    }
+    // 2. Existence Validation individually
+    const categoryExists = await Category.findById(category);
+    if (!categoryExists) return next(errorHandler(400, "Category not found"));
+
+    const vendorExists = await Vendor.findById(vendor);
+    if (!vendorExists) return next(errorHandler(400, "Vendor not found"));
+
+    const branchExists = await Branch.findById(branch);
+    if (!branchExists) return next(errorHandler(400, "Branch not found"));
+
+    const serviceExists = await Service.findById(service);
+    if (!serviceExists) return next(errorHandler(400, "Service not found"));
 
     const files = req.files as Express.Multer.File[];
     let images: Array<{ url: string; publicId: string }> = [];
@@ -161,6 +222,7 @@ export const createEvent = async (req: Request, res: Response, next: NextFunctio
       category, 
       vendor, 
       branch, 
+      service, 
       startDate, 
       endDate, 
       venue, 
@@ -171,9 +233,18 @@ export const createEvent = async (req: Request, res: Response, next: NextFunctio
       openAt
     } = req.body;
 
-    if (!name || !price || !vendor || !branch || !startDate || !endDate || !venue) {
-      return next(errorHandler(400, "Missing required fields for event"));
-    }
+    // 2. Existence Validation individually
+    const categoryExists = await Category.findById(category);
+    if (!categoryExists) return next(errorHandler(400, "Category not found"));
+
+    const vendorExists = await Vendor.findById(vendor);
+    if (!vendorExists) return next(errorHandler(400, "Vendor not found"));
+
+    const branchExists = await Branch.findById(branch);
+    if (!branchExists) return next(errorHandler(400, "Branch not found"));
+
+    const serviceExists = await Service.findById(service);
+    if (!serviceExists) return next(errorHandler(400, "Service not found"));
 
     const files = req.files as Express.Multer.File[];
     let images: Array<{ url: string; publicId: string }> = [];
@@ -202,6 +273,7 @@ export const createEvent = async (req: Request, res: Response, next: NextFunctio
       category,
       vendor,
       branch,
+      service,
       startDate,
       endDate,
       venue,

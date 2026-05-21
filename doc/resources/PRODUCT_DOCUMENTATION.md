@@ -453,6 +453,8 @@ duration:       { optional, type: String }
 buffertime:     { optional, type: String }
 ```
 
+**Note:** For `createProduct`, `createService`, and `createEvent`, the system validates the existence of referenced `category`, `vendor`, `branch`, and `service` IDs sequentially. Additionally, `createProduct` performs independent validation for `variants` and their nested `selectedVariantOptions`.
+
 ---
 
 ## 🎮 Product Controller
@@ -495,66 +497,69 @@ export const createProduct = async (req: Request, res: Response, next: NextFunct
       trackInventory 
     } = req.body;
 
-    // 1. Validation to prevent slugify error
     if (!name || typeof name !== 'string') {
       return next(errorHandler(400, "Product name is required"));
     }
 
-    // 2. Parse JSON strings (common in multipart/form-data)
+    if (!category || !vendor || !branch || !service) {
+      return next(errorHandler(400, "Category, vendor, branch, and service are required"));
+    }
+
+    // Check existence individually
+    const categoryExists = await Category.findById(category);
+    if (!categoryExists) return next(errorHandler(400, "Category not found"));
+
+    const vendorExists = await Vendor.findById(vendor);
+    if (!vendorExists) return next(errorHandler(400, "Vendor not found"));
+
+    const branchExists = await Branch.findById(branch);
+    if (!branchExists) return next(errorHandler(400, "Branch not found"));
+
+    const serviceExists = await Service.findById(service);
+    if (!serviceExists) return next(errorHandler(400, "Service not found"));
+
+    // Parse JSON strings
     const parsedVariants = variants ? (typeof variants === 'string' ? JSON.parse(variants) : variants) : [];
     const parsedSelectedVariantOptions = selectedVariantOptions ? (typeof selectedVariantOptions === 'string' ? JSON.parse(selectedVariantOptions) : selectedVariantOptions) : [];
 
-    const files = req.files as Express.Multer.File[];
-    let images: Array<{ url: string; publicId: string }> = [];
+    // Validate Variants independently
+    if (parsedVariants && Array.isArray(parsedVariants)) {
+      for (const variantId of parsedVariants) {
+        const variantExists = await Variant.findById(variantId);
+        if (!variantExists) {
+          return next(errorHandler(400, `Variant ${variantId} not found`));
+        }
+      }
+    }
+    
+    // Validate Selected Variant Options independently
+    if (parsedSelectedVariantOptions && Array.isArray(parsedSelectedVariantOptions)) {
+      for (const sel of parsedSelectedVariantOptions) {
+        if (!sel.variantId || !Array.isArray(sel.optionIds)) {
+          return next(errorHandler(400, "Invalid format for selected variant options"));
+        }
 
-    if (files && files.length > 0) {
-      images = await Promise.all(
-        files.map(async (file) => {
-          const result = await uploadToCloudinary(file, "dohez/products");
-          return { url: result.url, publicId: result.public_id };
-        })
-      );
+        const variant = await Variant.findById(sel.variantId);
+        if (!variant) return next(errorHandler(400, `Variant ${sel.variantId} not found`));
+        
+        const validOptionIds = variant.options.map((opt: any) => opt._id.toString());
+        for (const optId of sel.optionIds) {
+          if (!validOptionIds.includes(optId.toString())) {
+            return next(errorHandler(400, `Option ${optId} not valid for variant ${sel.variantId}`));
+          }
+        }
+      }
     }
 
-    // Generate lowercased slug from name
-    const slug = slugify(name, { lower: true, strict: true });
-
-    // 3. Create instance without saving yet to prevent unique index conflicts on null SKU codes
-    const product = new Product({
-      name,
-      slug,
-      details,
-      price,
-      offerPrice,
-      images,
-      category,
-      vendor,
-      branch,
-      service,
-      variants: parsedVariants,
-      selectedVariantOptions: parsedSelectedVariantOptions,
-      status,
-      trackInventory
-    });
-
-    // 4. Always generate SKUs (handles both default and variant cases)
-    // This method calls product.save() internally
-    await product.generateSKUs();
-
-    res.status(201).json({
-      success: true,
-      data: { product }
-    });
-  } catch (error: any) {
-    next(error);
-  }
-};
+    const files = req.files as Express.Multer.File[];
+    let images: Array<{ url: string; publicId: string }> = [];
+    // ... upload logic
 ```
 
 #### `createService()`
 **Purpose:** Create a new appointment service.
 **Access:** Admin/Super Admin
-**Validation:** `name`, `price`, `vendor`, `branch` are required.
+**Validation:** `name`, `price`, `vendor`, `branch`, and `service` fields are required; existence of referenced `category`, `vendor`, `branch`, and `service` records is verified.
 **Process:** Slugify name, upload images, create service product instance, and generate SKUs.
 **Response:** Created service product details.
 
@@ -622,7 +627,7 @@ export const createService = async (req: Request, res: Response, next: NextFunct
 #### `createEvent()`
 **Purpose:** Create a new event for ticketing.
 **Access:** Admin/Super Admin
-**Validation:** `name`, `price`, `vendor`, `branch`, `startDate`, `endDate`, `venue` are required.
+**Validation:** `name`, `price`, `vendor`, `branch`, `startDate`, `endDate`, `venue` fields are required; existence of referenced `category`, `vendor`, and `branch` records is verified.
 **Process:** Slugify name, upload images, create event product instance (with `trackInventory: true`), parse variants/options, and generate SKUs.
 **Response:** Created event product details.
 
@@ -956,8 +961,16 @@ export const updateProductSKU = async (req: Request, res: Response, next: NextFu
 
 ## 🛣️ Product Routes
 
-### Base Path
-`/api/products`
+### Base Path: `/api/products`
+
+```typescript
+POST   /                         // Create new product
+GET    /                         // Get all products
+GET    /:id                      // Get single product
+PUT    /:id                      // Update product
+DELETE /:id                      // Delete product
+PUT    /:id/skus/:skuId          // Update product SKU
+```
 
 ### Router Implementation
 **File:** `src/routes/productRoutes.ts`
@@ -978,15 +991,10 @@ import upload from '../middleware/upload';
 const router = express.Router();
 
 router.post('/', authenticateToken, authorizeRoles(['admin', 'super_admin']), upload.array('images', 5), createProduct);
-
 router.get('/', getProducts);
-
 router.get('/:id', getProductById);
-
 router.put('/:id', authenticateToken, authorizeRoles(['admin', 'super_admin']), upload.array('images', 5), updateProduct);
-
 router.delete('/:id', authenticateToken, authorizeRoles(['admin', 'super_admin']), deleteProduct);
-
 router.put('/:id/skus/:skuId', authenticateToken, authorizeRoles(['admin', 'super_admin']), updateProductSKU);
 
 export default router;
@@ -994,24 +1002,10 @@ export default router;
 
 ### Route Details
 
-#### 1. Create Product
-- **Route:** `POST /`
-- **Auth:** Admin/Super Admin
-- **Request Body (Multipart):**
-  - `name`: "Luxury Pizza"
-  - `details`: "Delicious wood-fired pizza"
-  - `price`: 1500
-  - `offerPrice`: 1200
-  - `images`: file[]
-  - `category`: "650af1238888888888888888"
-  - `vendor`: "650af4569999999999999999"
-  - `branch`: "650af7890000000000000000"
-  - `service`: "650af0001111111111111111"
-  - `variants`: ["650af1112222222222222222"]
-  - `selectedVariantOptions`: "[{\"variantId\": \"650af1112222222222222222\", \"optionIds\": [\"650af2223333333333333333\"]}]"
-  - `status`: true
-  - `trackInventory`: true
-- **Response:**
+#### `POST /api/products`
+**Headers:** `Authorization: Bearer <token>`, `Content-Type: multipart/form-data`
+**Body:** (name, details, price, images, category, vendor, branch, service, variants, selectedVariantOptions, status, trackInventory)
+**Response:**
 ```json
 {
   "success": true,
@@ -1026,7 +1020,8 @@ export default router;
       "images": [
         {
           "url": "https://cloudinary.com/dohez/products/pizza.jpg",
-          "publicId": "dohez/products/pizza123"
+          "publicId": "dohez/products/pizza123",
+          "_id": "650af9995555555555555555"
         }
       ],
       "category": "650af1238888888888888888",
@@ -1037,23 +1032,24 @@ export default router;
       "selectedVariantOptions": [
         {
           "variantId": "650af1112222222222222222",
-          "optionIds": ["650af2223333333333333333"]
+          "optionIds": ["650af2223333333333333333"],
+          "_id": "650af3334444444444444444"
         }
       ],
       "skus": [],
       "status": true,
       "trackInventory": true,
-      "createdAt": "2026-04-30T10:00:00.000Z",
-      "updatedAt": "2026-04-30T10:00:00.000Z"
+      "createdAt": "2026-05-20T10:00:00.000Z",
+      "updatedAt": "2026-05-20T10:00:00.000Z",
+      "__v": 0
     }
   }
 }
 ```
 
-#### 2. Get All Products
-- **Route:** `GET /`
-- **Query Params:** `page=1`, `limit=10`
-- **Response:**
+#### `GET /api/products`
+**Query:** `page=1`, `limit=10`, `search=...`, `category=...`, `vendor=...`, `branch=...`, `service=...`
+**Response:**
 ```json
 {
   "success": true,
@@ -1063,24 +1059,10 @@ export default router;
         "id": "650af9994444444444444444",
         "name": "Luxury Pizza",
         "slug": "luxury-pizza",
-        "details": "Delicious wood-fired pizza",
         "price": 1500,
-        "offerPrice": 1200,
-        "images": [
-          {
-            "url": "https://cloudinary.com/dohez/products/pizza.jpg",
-            "publicId": "dohez/products/pizza123"
-          }
-        ],
-        "category": "650af1238888888888888888",
-        "vendor": "650af4569999999999999999",
-        "branch": "650af7890000000000000000",
-        "service": "650af0001111111111111111",
-        "variants": ["650af1112222222222222222"],
-        "status": true,
-        "trackInventory": true,
-        "createdAt": "2026-04-30T10:00:00.000Z",
-        "updatedAt": "2026-04-30T10:00:00.000Z"
+        "createdAt": "2026-05-20T10:00:00.000Z",
+        "updatedAt": "2026-05-20T10:00:00.000Z",
+        "__v": 0
       }
     ],
     "pagination": {
@@ -1094,9 +1076,8 @@ export default router;
 }
 ```
 
-#### 3. Get Product By ID
-- **Route:** `GET /:id`
-- **Response:**
+#### `GET /api/products/:id`
+**Response:**
 ```json
 {
   "success": true,
@@ -1108,28 +1089,23 @@ export default router;
       "details": "Delicious wood-fired pizza",
       "price": 1500,
       "offerPrice": 1200,
-      "images": [
-        {
-          "url": "https://cloudinary.com/dohez/products/pizza.jpg",
-          "publicId": "dohez/products/pizza123"
-        }
-      ],
       "category": "650af1238888888888888888",
       "vendor": "650af4569999999999999999",
       "branch": "650af7890000000000000000",
       "service": "650af0001111111111111111",
-      "createdAt": "2026-04-30T10:00:00.000Z",
-      "updatedAt": "2026-04-30T10:00:00.000Z"
+      "status": true,
+      "trackInventory": true,
+      "createdAt": "2026-05-20T10:00:00.000Z",
+      "updatedAt": "2026-05-20T10:00:00.000Z",
+      "__v": 0
     }
   }
 }
 ```
 
-#### 4. Update Product
-- **Route:** `PUT /:id`
-- **Auth:** Admin/Super Admin
-- **Request Body (Multipart):** Same fields as Create Product (partial update).
-- **Response:**
+#### `PUT /api/products/:id`
+**Headers:** `Authorization: Bearer <token>`, `Content-Type: multipart/form-data`
+**Response:**
 ```json
 {
   "success": true,
@@ -1139,19 +1115,17 @@ export default router;
       "id": "650af9994444444444444444",
       "name": "Luxury Pizza V2",
       "slug": "luxury-pizza-v2",
-      "details": "Improved wood-fired pizza",
       "price": 1600,
-      "offerPrice": 1300,
-      "updatedAt": "2026-04-30T11:00:00.000Z"
+      "updatedAt": "2026-05-20T11:00:00.000Z",
+      "__v": 0
     }
   }
 }
 ```
 
-#### 5. Delete Product
-- **Route:** `DELETE /:id`
-- **Auth:** Admin/Super Admin
-- **Response:**
+#### `DELETE /api/products/:id`
+**Headers:** `Authorization: Bearer <token>`
+**Response:**
 ```json
 {
   "success": true,
@@ -1159,18 +1133,10 @@ export default router;
 }
 ```
 
-#### 6. Update Product SKU
-- **Route:** `PUT /:id/skus/:skuId`
-- **Auth:** Admin/Super Admin
-- **Request Body (JSON):**
-```json
-{
-  "price": 1400,
-  "stock": 50,
-  "isActive": true
-}
-```
-- **Response:**
+#### `PUT /api/products/:id/skus/:skuId`
+**Headers:** `Authorization: Bearer <token>`, `Content-Type: application/json`
+**Body:** `{"price": 1400, "stock": 50}`
+**Response:**
 ```json
 {
   "success": true,
@@ -1179,16 +1145,16 @@ export default router;
     "product": {
       "id": "650af9994444444444444444",
       "name": "Luxury Pizza V2",
-      "updatedAt": "2026-04-30T12:00:00.000Z"
+      "updatedAt": "2026-05-20T12:00:00.000Z",
+      "__v": 0
     }
   }
 }
 ```
 
-#### 7. Create Service
-- **Route:** `POST /services`
-- **Auth:** Admin/Super Admin
-- **Request Body (JSON):**
+#### `POST /api/products/services`
+**Headers:** `Authorization: Bearer <token>`, `Content-Type: application/json`
+**Body:**
 ```json
 {
   "name": "Haircut",
@@ -1202,7 +1168,7 @@ export default router;
   "buffertime": "10min"
 }
 ```
-- **Response:**
+**Response:**
 ```json
 {
   "success": true,
@@ -1211,16 +1177,18 @@ export default router;
       "id": "650af9994444444444444445",
       "name": "Haircut",
       "price": 500,
-      "trackInventory": false
+      "trackInventory": false,
+      "createdAt": "2026-05-20T10:00:00.000Z",
+      "updatedAt": "2026-05-20T10:00:00.000Z",
+      "__v": 0
     }
   }
 }
 ```
 
-#### 8. Create Event
-- **Route:** `POST /events`
-- **Auth:** Admin/Super Admin
-- **Request Body (JSON):**
+#### `POST /api/products/events`
+**Headers:** `Authorization: Bearer <token>`, `Content-Type: application/json`
+**Body:**
 ```json
 {
   "name": "Summer Concert",
@@ -1240,7 +1208,7 @@ export default router;
   "openAt": "09:00"
 }
 ```
-- **Response:**
+**Response:**
 ```json
 {
   "success": true,
@@ -1249,7 +1217,10 @@ export default router;
       "id": "650af9994444444444444446",
       "name": "Summer Concert",
       "venue": "City Park",
-      "trackInventory": true
+      "trackInventory": true,
+      "createdAt": "2026-05-20T10:00:00.000Z",
+      "updatedAt": "2026-05-20T10:00:00.000Z",
+      "__v": 0
     }
   }
 }

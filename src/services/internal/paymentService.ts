@@ -85,16 +85,15 @@ const updateInventoryForTicket = async (ticket: any): Promise<void> => {
   try {
     const event = await Product.findById(ticket.event);
     if (event && event.trackInventory) {
-      const sku = event.skus.find((s: any) => 
-        s.attributes.some((attr: any) => attr.optionId.toString() === ticket.variantOptionId?.toString())
-      );
+      // Find the SKU using the skuId stored on the ticket
+      const sku = (event.skus as any).id(ticket.skuId);
 
       if (sku) {
         sku.stock = Math.max(0, sku.stock - 1);
         await event.save();
         console.log(`Updated Ticket Event SKU stock for ticket ${ticket._id}: ${sku.stock}`);
       } else {
-        console.warn(`SKU not found for ticket ${ticket._id} and variant ${ticket.variantOptionId}`);
+        console.warn(`SKU not found for ticket ${ticket._id} and SKU ID ${ticket.skuId}`);
       }
     }
   } catch (error) {

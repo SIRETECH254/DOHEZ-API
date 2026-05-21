@@ -244,13 +244,11 @@ export const bookTicket = async (req: Request, res: Response, next: NextFunction
     let combinedGrandTotal = 0;
 
     for (const group of ticketsRequested) {
-      const { variantOptionId, quantity, attendees } = group;
+      const { skuId, quantity, attendees } = group;
 
-      const sku = event.skus.find((s: any) => 
-        s.attributes.some((attr: any) => attr.optionId.toString() === variantOptionId.toString())
-      );
+      const sku = event.skus.id(skuId);
       
-      if (!sku) return next(errorHandler(400, `Invalid ticket tier specified for variant ${variantOptionId}`));
+      if (!sku) return next(errorHandler(400, `Invalid ticket tier specified: ${skuId}`));
 
       if (sku.stock < quantity) {
         return next(errorHandler(400, `Insufficient ticket inventory for tier. Available: ${sku.stock}`));
@@ -263,7 +261,7 @@ export const bookTicket = async (req: Request, res: Response, next: NextFunction
         const ticket = await Ticket.create({
           ticketNumber,
           event: eventId,
-          variantOptionId,
+          skuId: sku._id,
           vendor: event.vendor,
           branch: event.branch,
           details: {

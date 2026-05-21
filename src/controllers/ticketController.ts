@@ -24,7 +24,12 @@ export const getTickets = async (req: Request, res: Response, next: NextFunction
     };
 
     const tickets = await Ticket.find(query)
-      .populate("event")
+      .populate({
+        path: "event",
+        populate: {
+          path: "variants"
+        }
+      })
       .populate("vendor")
       .populate("branch")
       .sort({ createdAt: -1 })
@@ -59,7 +64,12 @@ export const getTickets = async (req: Request, res: Response, next: NextFunction
 export const getTicket = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
     const ticket = await Ticket.findById(req.params.id)
-      .populate("event")
+      .populate({
+        path: "event",
+        populate: {
+          path: "variants"
+        }
+      })
       .populate("vendor")
       .populate("branch");
 

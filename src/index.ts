@@ -33,6 +33,7 @@ import locationRoutes from "./routes/locationRoutes";
 import breakRoutes from "./routes/breakRoutes";
 import availabilityRoutes from "./routes/availabilityRoutes";
 import appointmentRoutes from "./routes/appointmentRoutes";
+import ticketRoutes from "./routes/ticketRoutes";
 
 // Initialize application
 const app = express();
@@ -181,6 +182,8 @@ app.use("/api/breaks", breakRoutes);
 app.use("/api/availability", availabilityRoutes);
 
 app.use("/api/appointments", appointmentRoutes);
+
+app.use("/api/tickets", ticketRoutes);
 
 
 

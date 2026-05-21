@@ -552,7 +552,7 @@ export interface IOrder extends Document {
 export interface ITicket extends Document {
   ticketNumber: string;
   event: Types.ObjectId | IProduct;
-  variantOptionId?: Types.ObjectId;
+  skuId: Types.ObjectId;
   details: {
     name: string;
     email: string;

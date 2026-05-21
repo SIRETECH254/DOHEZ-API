@@ -13,8 +13,9 @@ const ticketSchema = new Schema<ITicket>(
       ref: 'Product',
       required: true,
     },
-    variantOptionId: {
+    skuId: {
       type: Schema.Types.ObjectId,
+      required: true,
     },
     details: {
       name: { type: String, required: true },

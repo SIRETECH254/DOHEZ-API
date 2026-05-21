@@ -896,7 +896,7 @@ export default router;
   "eventId": "65e26b1c09b068c201383812",
   "ticketsRequested": [
     {
-      "variantOptionId": "65e26b1c09b068c201383815",
+      "skuId": "65e26b1c09b068c201383815",
       "quantity": 2,
       "attendees": [
         { "name": "John Doe", "email": "john@example.com", "phone": "254700000001" },
