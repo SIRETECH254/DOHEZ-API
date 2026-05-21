@@ -7,6 +7,7 @@ import Product from '../../models/Product';
 import Appointment from '../../models/Appointment';
 import Ticket from '../../models/Ticket';
 import { initiateStkPush } from '../external/darajaService';
+import QRCode from 'qrcode';
 import type { IPayment } from '../../types';
 
 export const generatePaymentNumber = async (): Promise<string> => {
@@ -232,7 +233,7 @@ export const applySuccessfulTicketPayment = async ({ invoice, payment, io, metho
   invoice.balanceDue = 0;
   await invoice.save();
 
-  const ticket = await Ticket.findById(invoice.ticket);
+  const ticket = await Ticket.findById(invoice.ticket).populate('event');
   if (!ticket) {
     throw new Error('Ticket not found for successful payment');
   }
@@ -240,8 +241,41 @@ export const applySuccessfulTicketPayment = async ({ invoice, payment, io, metho
   // Update inventory
   await updateInventoryForTicket(ticket);
 
+  // QR Code generation payload
+  const qrDataPayload = {
+    ticketId: ticket._id.toString(),
+    ticketNumber: ticket.ticketNumber,
+    status: 'BOOKED',
+    event: {
+      id: (ticket.event as any)._id.toString(),
+      name: (ticket.event as any).name,
+      venue: (ticket.event as any).venue,
+      startDate: (ticket.event as any).startDate
+    },
+    attendee: {
+      name: ticket.details.name,
+      email: ticket.details.email,
+      phone: ticket.details.phone
+    },
+    tier: ticket.type,
+    generationTimestamp: new Date().toISOString()
+  };
+
+  const stringifiedData = JSON.stringify(qrDataPayload);
+
+  // Generate QR Code as Base64 Data URL
+  const qrCodeBase64String = await QRCode.toDataURL(stringifiedData, {
+    errorCorrectionLevel: 'H',
+    margin: 2,
+    width: 400
+  });
+
+  // Immediate save after QR generation
   ticket.status = 'BOOKED';
-  ticket.qrCodeData = `DOHEZ-TICK-${ticket.ticketNumber}-${invoice._id}`;
+  ticket.qrCodeData = qrCodeBase64String;
+  await ticket.save();
+
+  // Post-save logic: Handling pdfUrl
   ticket.pdfUrl = `https://cdn.dohez.com/tickets/${ticket.ticketNumber}.pdf`; 
   await ticket.save();
 
