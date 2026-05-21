@@ -422,6 +422,7 @@ export interface IReceipt extends Document {
   appointment?: Types.ObjectId;
   ticket?: Types.ObjectId | ITicket;
   invoice: Types.ObjectId | IInvoice;
+  customer: Types.ObjectId | IUser;
   branch: Types.ObjectId | IBranch;
   vendor: Types.ObjectId | IVendor;
   receiptNumber: string;
@@ -437,6 +438,7 @@ export interface IReceipt extends Document {
 export interface IPayment extends Document {
   paymentNumber: string;
   invoice: (Types.ObjectId | IInvoice)[];
+  customer: Types.ObjectId | IUser;
   branch: Types.ObjectId | IBranch;
   vendor: Types.ObjectId | IVendor;
   method: "mpesa" | "paystack" | "cash" | "post_to_bill" | "cod";

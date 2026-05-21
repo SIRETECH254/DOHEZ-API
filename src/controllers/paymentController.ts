@@ -53,8 +53,11 @@ export const payProductInvoice = async (req: Request, res: Response, next: NextF
       return next(errorHandler(400, 'Invalid amount to charge'));
     }
 
+    const userId = (req as any).user?._id;
+
     const payment = await createPaymentRecord({
       invoice: String(invoice._id),
+      customer: userId,
       branch: String(invoice.branch),
       vendor: String(invoice.vendor),
       amount,
@@ -68,6 +71,7 @@ export const payProductInvoice = async (req: Request, res: Response, next: NextF
 
       const { payment: updatedPayment, res: darajaRes } = await initiateMpesaProductPayment({
         invoiceId: String(invoice._id),
+        customer: userId,
         branch: String(invoice.branch),
         vendor: String(invoice.vendor),
         amount,
@@ -152,6 +156,8 @@ export const confirmAppointment = async (req: Request, res: Response, next: Next
       invoiceNumber: await generateInvoiceNumber()
     });
 
+    const userId = (req as any).user?._id;
+
     if (method === 'mpesa') {
       if (!payerPhone) return next(errorHandler(400, 'payerPhone is required for mpesa'));
 
@@ -159,6 +165,7 @@ export const confirmAppointment = async (req: Request, res: Response, next: Next
 
       await initiateMpesaAppointmentPayment({
         invoiceId: invoice._id,
+        customer: userId,
         branch: appointment.branch,
         vendor: appointment.vendor,
         amount: appointment.bookingFeeAmount,
@@ -200,6 +207,7 @@ export const payAppointmentInvoice = async (req: Request, res: Response, next: N
     if (appointment.status === 'NO_SHOW') return next(errorHandler(409, 'Appointment was a no-show'));
 
     const amount = invoice.balanceDue;
+    const userId = (req as any).user?._id;
 
     if (method === 'mpesa') {
       if (!payerPhone) return next(errorHandler(400, 'payerPhone is required for mpesa'));
@@ -208,6 +216,7 @@ export const payAppointmentInvoice = async (req: Request, res: Response, next: N
 
       await initiateMpesaAppointmentPayment({
         invoiceId: invoice._id,
+        customer: userId,
         branch: appointment.branch,
         vendor: appointment.vendor,
         amount,
@@ -307,6 +316,7 @@ export const bookTicket = async (req: Request, res: Response, next: NextFunction
 
       const { payment, res: darajaRes } = await initiateMpesaTicketPayment({
         invoiceIds: compiledInvoiceIds,
+        customer: userId,
         branch: event.branch?.toString() || '',
         vendor: event.vendor.toString(),
         amount: combinedGrandTotal,
@@ -372,9 +382,11 @@ export const payTicketInvoices = async (req: Request, res: Response, next: NextF
 
     const msisdn = normalizePhoneNumber(payerPhone);
     const baseInvoice = invoices[0];
+    const userId = (req as any).user?._id;
 
     const { payment, res: darajaRes } = await initiateMpesaTicketPayment({
       invoiceIds,
+      customer: userId,
       branch: baseInvoice.branch?.toString() || '',
       vendor: baseInvoice.vendor.toString(),
       amount: combinedGrandTotal,

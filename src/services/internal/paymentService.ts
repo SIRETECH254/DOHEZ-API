@@ -9,6 +9,7 @@ import Ticket from '../../models/Ticket';
 import { initiateStkPush } from '../external/darajaService';
 import QRCode from 'qrcode';
 import { uploadTicketPDF, uploadReceiptPDF } from '../../utils/pdfUpload';
+import { sendReceiptNotification, sendTicketNotification } from './notificationService';
 import type { IPayment } from '../../types';
 
 export const generatePaymentNumber = async (): Promise<string> => {
@@ -105,6 +106,7 @@ const updateInventoryForTicket = async (ticket: any): Promise<void> => {
 
 export const createPaymentRecord = async (params: {
   invoice?: any;
+  customer: any;
   branch: any;
   vendor: any;
   amount: number;
@@ -156,6 +158,7 @@ export const applySucceFullProductPayment = async ({ invoice, payment, io, metho
   const receipt: any = await Receipt.create({
     order: invoice.order,
     invoice: invoice._id,
+    customer: payment.customer,
     branch: invoice.branch,
     vendor: invoice.vendor,
     receiptNumber: await generateReceiptNumber(),
@@ -169,11 +172,22 @@ export const applySucceFullProductPayment = async ({ invoice, payment, io, metho
 
   // Generate and upload Receipt PDF
   try {
-    const populatedReceipt = await Receipt.findById(receipt._id).populate('vendor branch');
+    const populatedReceipt = await Receipt.findById(receipt._id).populate('vendor branch customer');
     if (populatedReceipt) {
       const receiptPdfUrl = await uploadReceiptPDF(populatedReceipt);
       receipt.pdfUrl = receiptPdfUrl;
       await receipt.save();
+
+      // Send Receipt Email
+      const customer = populatedReceipt.customer as any;
+      if (customer && customer.email) {
+        await sendReceiptNotification(
+          customer.email,
+          `${customer.firstName} ${customer.lastName}`,
+          receiptPdfUrl,
+          receipt.receiptNumber
+        );
+      }
     }
   } catch (pdfError) {
     console.error(`Failed to generate/upload receipt PDF for order ${invoice.order}:`, pdfError);
@@ -220,6 +234,7 @@ export const applySuccessFullAppointmentPayment = async ({ invoice, payment, io,
     receipt = await Receipt.create({
       appointment: invoice.appointment,
       invoice: invoice._id,
+      customer: payment.customer,
       branch: invoice.branch,
       vendor: invoice.vendor,
       receiptNumber: await generateReceiptNumber(),
@@ -230,11 +245,22 @@ export const applySuccessFullAppointmentPayment = async ({ invoice, payment, io,
 
     // Generate and upload Receipt PDF
     try {
-      const populatedReceipt = await Receipt.findById(receipt._id).populate('vendor branch');
+      const populatedReceipt = await Receipt.findById(receipt._id).populate('vendor branch customer');
       if (populatedReceipt) {
         const receiptPdfUrl = await uploadReceiptPDF(populatedReceipt);
         receipt.pdfUrl = receiptPdfUrl;
         await receipt.save();
+
+        // Send Receipt Email
+        const customer = populatedReceipt.customer as any;
+        if (customer && customer.email) {
+          await sendReceiptNotification(
+            customer.email,
+            `${customer.firstName} ${customer.lastName}`,
+            receiptPdfUrl,
+            receipt.receiptNumber
+          );
+        }
       }
     } catch (pdfError) {
       console.error(`Failed to generate/upload receipt PDF for appointment ${invoice.appointment}:`, pdfError);
@@ -313,6 +339,7 @@ export const applySuccessfulTicketPayment = async ({ invoice, payment, io, metho
   const receipt: any = await Receipt.create({
     ticket: ticket._id,
     invoice: invoice._id,
+    customer: payment.customer,
     branch: invoice.branch,
     vendor: invoice.vendor,
     receiptNumber: await generateReceiptNumber(),
@@ -321,16 +348,39 @@ export const applySuccessfulTicketPayment = async ({ invoice, payment, io, metho
     issuedAt: new Date(),
   });
 
-  // Generate and upload Receipt PDF
+  // Generate and upload Receipt PDF & Send Emails
   try {
-    const populatedReceipt = await Receipt.findById(receipt._id).populate('vendor branch');
+    const populatedReceipt = await Receipt.findById(receipt._id).populate('vendor branch customer');
     if (populatedReceipt) {
       const receiptPdfUrl = await uploadReceiptPDF(populatedReceipt);
       receipt.pdfUrl = receiptPdfUrl;
       await receipt.save();
+
+      // Send Receipt Email to Customer (Payer)
+      const customer = populatedReceipt.customer as any;
+      if (customer && customer.email) {
+        await sendReceiptNotification(
+          customer.email,
+          `${customer.firstName} ${customer.lastName}`,
+          receiptPdfUrl,
+          receipt.receiptNumber
+        );
+      }
+    }
+
+    // Send Ticket Email to Attendee
+    const populatedTicket = await Ticket.findById(ticket._id).populate('event');
+    if (populatedTicket && populatedTicket.pdfUrl && populatedTicket.details.email) {
+      await sendTicketNotification(
+        populatedTicket.details.email,
+        populatedTicket.details.name,
+        populatedTicket.pdfUrl,
+        populatedTicket.ticketNumber,
+        (populatedTicket.event as any).name
+      );
     }
   } catch (pdfError) {
-    console.error(`Failed to generate/upload receipt PDF for ticket ${ticket._id}:`, pdfError);
+    console.error(`Failed to generate/upload receipt or send emails for ticket ${ticket._id}:`, pdfError);
   }
 
   io?.emit('payment.updated', { paymentId: payment._id.toString(), status: payment.status });
@@ -342,13 +392,14 @@ export const applySuccessfulTicketPayment = async ({ invoice, payment, io, metho
 
 export const initiateMpesaProductPayment = async (params: {
   invoiceId?: any;
+  customer: any;
   branch: any;
   vendor: any;
   amount: number;
   phone: string;
   invoiceNumber: string;
 }): Promise<any> => {
-  const { invoiceId, amount, phone, invoiceNumber, branch, vendor } = params;
+  const { invoiceId, amount, phone, invoiceNumber, branch, vendor, customer } = params;
 
   const res = await initiateStkPush({
     amount,
@@ -359,6 +410,7 @@ export const initiateMpesaProductPayment = async (params: {
   const payment = await Payment.create({
     paymentNumber: await generatePaymentNumber(),
     invoice: [invoiceId],
+    customer,
     branch,
     vendor,
     method: 'mpesa',
@@ -377,6 +429,7 @@ export const initiateMpesaProductPayment = async (params: {
 
 export const initiateMpesaAppointmentPayment = async (params: {
   invoiceId?: any;
+  customer: any;
   branch: any;
   vendor: any;
   amount: number;
@@ -384,7 +437,7 @@ export const initiateMpesaAppointmentPayment = async (params: {
   invoiceNumber: string;
   type: 'BOOKING_FEE' | 'FULLPAYMENT';
 }): Promise<any> => {
-  const { invoiceId, amount, phone, invoiceNumber, branch, vendor, type } = params;
+  const { invoiceId, amount, phone, invoiceNumber, branch, vendor, type, customer } = params;
 
   const res = await initiateStkPush({
     amount,
@@ -395,6 +448,7 @@ export const initiateMpesaAppointmentPayment = async (params: {
   const payment = await Payment.create({
     paymentNumber: await generatePaymentNumber(),
     invoice: [invoiceId],
+    customer,
     branch,
     vendor,
     method: 'mpesa',
@@ -414,13 +468,14 @@ export const initiateMpesaAppointmentPayment = async (params: {
 
 export const initiateMpesaTicketPayment = async (params: {
   invoiceIds: any[];
+  customer: any;
   branch: any;
   vendor: any;
   amount: number;
   phone: string;
   accountReference: string;
 }): Promise<any> => {
-  const { invoiceIds, amount, phone, accountReference, branch, vendor } = params;
+  const { invoiceIds, amount, phone, accountReference, branch, vendor, customer } = params;
 
   const res = await initiateStkPush({
     amount,
@@ -431,6 +486,7 @@ export const initiateMpesaTicketPayment = async (params: {
   const payment = await Payment.create({
     paymentNumber: await generatePaymentNumber(),
     invoice: invoiceIds,
+    customer,
     branch,
     vendor,
     method: 'mpesa',

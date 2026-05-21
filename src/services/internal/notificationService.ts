@@ -1,7 +1,8 @@
 import { 
   sendOTPEmail, 
   sendPasswordResetEmail, 
-  sendWelcomeEmail 
+  sendWelcomeEmail,
+  sendEmailWithAttachment
 } from "../external/emailService";
 import { 
   sendOTPSMS, 
@@ -9,6 +10,63 @@ import {
   sendWelcomeSMS 
 } from "../external/smsService";
 import { MultiChannelNotificationResponse } from "../../types";
+
+/**
+ * Sends a receipt notification via email with PDF attachment.
+ * @param email - Recipient email
+ * @param name - Recipient name
+ * @param pdfUrl - URL of the receipt PDF
+ * @param receiptNumber - Receipt identifier
+ */
+export const sendReceiptNotification = async (
+  email: string,
+  name: string,
+  pdfUrl: string,
+  receiptNumber: string
+): Promise<void> => {
+  try {
+    const subject = `Receipt for Your Payment - ${receiptNumber}`;
+    const html = `
+      <p>Hello ${name},</p>
+      <p>Thank you for your payment. Please find your receipt attached to this email.</p>
+      <p>Receipt Number: <strong>${receiptNumber}</strong></p>
+      <p>Best regards,<br/>The DOHEZ Team</p>
+    `;
+    await sendEmailWithAttachment(email, subject, html, pdfUrl, `receipt-${receiptNumber}.pdf`);
+  } catch (error) {
+    console.error("Error in sendReceiptNotification:", error);
+  }
+};
+
+/**
+ * Sends a ticket notification via email with PDF attachment.
+ * @param email - Recipient email
+ * @param name - Recipient name
+ * @param pdfUrl - URL of the ticket PDF
+ * @param ticketNumber - Ticket identifier
+ * @param eventName - Name of the event
+ */
+export const sendTicketNotification = async (
+  email: string,
+  name: string,
+  pdfUrl: string,
+  ticketNumber: string,
+  eventName: string
+): Promise<void> => {
+  try {
+    const subject = `Your Ticket for ${eventName} - ${ticketNumber}`;
+    const html = `
+      <p>Hello ${name},</p>
+      <p>Your ticket for <strong>${eventName}</strong> has been successfully booked!</p>
+      <p>Please find your ticket attached. You will need to present it at the entrance.</p>
+      <p>Ticket Number: <strong>${ticketNumber}</strong></p>
+      <p>Enjoy the event!<br/>The DOHEZ Team</p>
+    `;
+    await sendEmailWithAttachment(email, subject, html, pdfUrl, `ticket-${ticketNumber}.pdf`);
+  } catch (error) {
+    console.error("Error in sendTicketNotification:", error);
+  }
+};
 
 /**
  * Sends an OTP notification via both email and SMS.

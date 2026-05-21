@@ -20,6 +20,11 @@ const receiptSchema = new Schema<IReceipt>(
       ref: 'Invoice',
       required: true,
     },
+    customer: {
+      type: Schema.Types.ObjectId,
+      ref: 'User',
+      required: true,
+    },
     branch: {
       type: Schema.Types.ObjectId,
       ref: 'Branch',

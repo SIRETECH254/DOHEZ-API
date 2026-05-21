@@ -1,4 +1,5 @@
 import sgMail from "@sendgrid/mail";
+import axios from "axios";
 import { errorHandler } from "../../middleware/errorHandler";
 import { NotificationResponse } from "../../types";
 
@@ -17,7 +18,64 @@ const initializeSendGrid = () => {
 initializeSendGrid();
 
 // SendGrid requires a verified sender. We'll use SMTP_USER or FROM_EMAIL if available.
-const fromEmail = process.env.SMTP_FROM || "noreply@dohez.com";
+const fromEmail = process.env.SMTP_FROM || process.env.FROM_EMAIL || process.env.SMTP_USER || "noreply@dohez.com";
+
+/**
+ * Sends an email with a PDF attachment.
+ * @param email - Recipient email
+ * @param subject - Email subject
+ * @param html - Email HTML content
+ * @param attachmentUrl - URL of the PDF to attach
+ * @param filename - Name of the attached file
+ */
+export const sendEmailWithAttachment = async (
+  email: string,
+  subject: string,
+  html: string,
+  attachmentUrl: string,
+  filename: string
+): Promise<NotificationResponse> => {
+  if (!email || !subject || !html || !attachmentUrl) {
+    throw errorHandler(400, "Missing required fields for sending email with attachment");
+  }
+
+  if (!isSendGridInitialized) {
+    console.log(`Email to ${email} NOT successful: SendGrid not initialized`);
+    return { success: false, error: "SendGrid not initialized" };
+  }
+
+  try {
+    // Fetch PDF from URL and convert to base64
+    const response = await axios.get(attachmentUrl, { responseType: 'arraybuffer' });
+    const attachmentBase64 = Buffer.from(response.data).toString('base64');
+
+    const msg = {
+      to: email,
+      from: `DOHEZ <${fromEmail}>`,
+      subject,
+      html,
+      attachments: [
+        {
+          content: attachmentBase64,
+          filename,
+          type: 'application/pdf',
+          disposition: 'attachment',
+        },
+      ],
+    };
+
+    await sgMail.send(msg);
+    console.log(`Email with attachment to ${email} successful`);
+    return { success: true };
+  } catch (error: any) {
+    const reason = error.message;
+    console.log(`Email with attachment to ${email} NOT successful: ${reason}`);
+    if (error.response) {
+      console.error(JSON.stringify(error.response.body, null, 2));
+    }
+    throw errorHandler(500, `Failed to send email with attachment: ${reason}`);
+  }
+};
 
 /**
  * Sends an email containing a One-Time Password to a user.
