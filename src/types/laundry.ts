@@ -7,7 +7,7 @@ export interface ILaundry extends Document {
     day: Date;
     hour: string;
   };
-  dropDate: Date;
+  dropDate?: Date;
   services: Types.ObjectId[] | IProduct[];
   customer: Types.ObjectId | IUser;
   vendor: Types.ObjectId | IVendor;

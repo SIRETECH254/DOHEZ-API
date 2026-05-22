@@ -365,6 +365,20 @@ export const generateTicketNumber = async (): Promise<string> => {
 };
 ```
 
+#### `generateLaundryNumber()`
+**Purpose:** Generate a sequential laundry number: LND-YYYY-XXXX.
+
+**Implementation:**
+```typescript
+export const generateLaundryNumber = async (): Promise<string> => {
+  const year = new Date().getFullYear();
+  const count = await Laundry.countDocuments({
+    createdAt: { $gte: new Date(year, 0, 1) }
+  });
+  return `LND-${year}-${String(count + 1).padStart(4, "0")}`;
+};
+```
+
 #### `createPaymentRecord()`
 **Purpose:** Create a PENDING payment record.
 
@@ -837,36 +851,114 @@ export const initiateMpesaAppointmentPayment = async (params: {
 };
 ```
 
-#### `initiateMpesaTicketPayment(params)`
-**Purpose:** Orchestrate M-Pesa STK Push payment for tickets (batch) and create an INITIATED payment record.
+#### `applySuccessFullLaundryPayment(params)`
+**Purpose:** Apply a successful payment to a laundry request, updates invoice and laundry status, and generates a receipt for full payments.
 
 **Implementation:**
 ```typescript
-export const initiateMpesaTicketPayment = async (params: {
-  invoiceIds: any[];
+export const applySuccessFullLaundryPayment = async ({ invoice, payment, io, method }: any): Promise<{ receipt?: any }> => {
+  payment.status = 'SUCCESS';
+  await payment.save();
+
+  const laundry = await Laundry.findById(invoice.laundry);
+  if (!laundry) {
+    throw new Error('Laundry not found for successful payment');
+  }
+
+  let receipt = null;
+
+  if (payment.type === 'BOOKING_FEE' && laundry.status === 'PENDING') {
+    invoice.paymentStatus = 'PARTIAL';
+    invoice.balanceDue = laundry.remainingAmount;
+    await invoice.save();
+
+    laundry.status = 'CONFIRMED';
+    await laundry.save();
+  } else if (payment.type === 'FULLPAYMENT') {
+    invoice.paymentStatus = 'PAID';
+    invoice.balanceDue = 0;
+    await invoice.save();
+
+    laundry.status = 'DELIVERED';
+    await laundry.save();
+
+    receipt = await Receipt.create({
+      laundry: invoice.laundry,
+      invoice: invoice._id,
+      customer: payment.customer,
+      branch: invoice.branch,
+      vendor: invoice.vendor,
+      receiptNumber: await generateReceiptNumber(),
+      amountPaid: payment.amount,
+      paymentMethod: method === 'mpesa_stk' ? 'mpesa' : (method === 'paystack_card' ? 'paystack' : method),
+      issuedAt: new Date(),
+    });
+
+    // Generate and upload Receipt PDF
+    try {
+      const populatedReceipt = await Receipt.findById(receipt._id).populate('vendor branch customer');
+      if (populatedReceipt) {
+        const receiptPdfUrl = await uploadReceiptPDF(populatedReceipt);
+        receipt.pdfUrl = receiptPdfUrl;
+        await receipt.save();
+
+        // Send Receipt Email
+        const customer = populatedReceipt.customer as any;
+        if (customer && customer.email) {
+          await sendReceiptNotification(
+            customer.email,
+            `${customer.firstName} ${customer.lastName}`,
+            receiptPdfUrl,
+            receipt.receiptNumber
+          );
+        }
+      }
+    } catch (pdfError) {
+      console.error(`Failed to generate/upload receipt PDF for laundry ${invoice.laundry}:`, pdfError);
+    }
+  }
+
+  io?.emit('payment.updated', { paymentId: payment._id.toString(), status: payment.status });
+  if (receipt) {
+    io?.emit('receipt.created', { receiptId: receipt._id.toString(), laundryId: String(invoice.laundry) });
+  }
+
+  return { receipt };
+};
+```
+
+#### `initiateMpesaLaundryPayment(params)`
+**Purpose:** Orchestrate M-Pesa STK Push payment for laundry and create an INITIATED payment record with type.
+
+**Implementation:**
+```typescript
+export const initiateMpesaLaundryPayment = async (params: {
+  invoiceId?: any;
   customer: any;
   branch: any;
   vendor: any;
   amount: number;
   phone: string;
-  accountReference: string;
+  invoiceNumber: string;
+  type: 'BOOKING_FEE' | 'FULLPAYMENT';
 }): Promise<any> => {
-  const { invoiceIds, amount, phone, accountReference, branch, vendor, customer } = params;
+  const { invoiceId, amount, phone, invoiceNumber, branch, vendor, type, customer } = params;
 
   const res = await initiateStkPush({
     amount,
     phone,
-    accountReference
+    accountReference: invoiceNumber
   });
 
   const payment = await Payment.create({
     paymentNumber: await generatePaymentNumber(),
-    invoice: invoiceIds,
+    invoice: [invoiceId],
     customer,
     branch,
     vendor,
     method: 'mpesa',
     amount,
+    type,
     status: 'INITIATED',
     processorRefs: {
       daraja: {

@@ -6,16 +6,22 @@ import Order from '../models/Order';
 import Receipt from '../models/receiptModel';
 import Product from '../models/Product';
 import Ticket from '../models/Ticket';
+import Laundry from '../models/Laundry';
+import Vendor from '../models/Vendor';
+import Branch from '../models/Branch';
 import { 
   createPaymentRecord, 
   initiateMpesaAppointmentPayment, 
   initiateMpesaProductPayment,
   initiateMpesaTicketPayment,
+  initiateMpesaLaundryPayment,
   applySucceFullProductPayment, 
   applySuccessFullAppointmentPayment,
   applySuccessfulTicketPayment,
+  applySuccessFullLaundryPayment,
   generateInvoiceNumber,
-  generateTicketNumber
+  generateTicketNumber,
+  generateLaundryNumber
 } from '../services/internal/paymentService';
 import { normalizePhoneNumber, parseCallback as parseDarajaCallback, queryStkPushStatus } from '../services/external/darajaService';
 import { errorHandler } from '../middleware/errorHandler';
@@ -102,6 +108,7 @@ export const payProductInvoice = async (req: Request, res: Response, next: NextF
   }
 };
 
+
 export const confirmAppointment = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { appointmentId } = req.params;
@@ -185,6 +192,7 @@ export const confirmAppointment = async (req: Request, res: Response, next: Next
   }
 };
 
+
 export const payAppointmentInvoice = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { payerPhone, method, appointmentId } = req.body || {};
@@ -235,6 +243,7 @@ export const payAppointmentInvoice = async (req: Request, res: Response, next: N
     next(err);
   }
 };
+
 
 export const bookTicket = async (req: Request, res: Response, next: NextFunction) => {
   try {
@@ -347,6 +356,7 @@ export const bookTicket = async (req: Request, res: Response, next: NextFunction
   }
 };
 
+
 export const payTicketInvoices = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { invoiceIds, method, payerPhone } = req.body;
@@ -412,6 +422,156 @@ export const payTicketInvoices = async (req: Request, res: Response, next: NextF
   }
 };
 
+
+export const bookLaundry = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const { 
+      vendorId, 
+      branchId, 
+      location, 
+      services, 
+      pickUpDate, 
+      paymentMethod, 
+      phoneNumber 
+    } = req.body;
+    
+    const userId = (req as any).user?._id;
+
+    // 1. Validation
+    const vendor = await Vendor.findById(vendorId);
+    if (!vendor) return next(errorHandler(404, 'Vendor not found'));
+
+    const branch = await Branch.findById(branchId);
+    if (!branch) return next(errorHandler(404, 'Branch not found'));
+
+    const serviceProducts = await Product.find({ _id: { $in: services } });
+    if (serviceProducts.length !== services.length) {
+      return next(errorHandler(404, 'One or more services not found'));
+    }
+
+    const totalAmount = serviceProducts.reduce((sum, p) => sum + (p.offerPrice || p.price), 0);
+
+    // 2. Laundry creation
+    const laundry = await Laundry.create({
+      laundryNumber: await generateLaundryNumber(),
+      customer: userId,
+      vendor: vendorId,
+      branch: branchId,
+      location,
+      services,
+      pickUpDate,
+      status: 'PENDING',
+      remainingAmount: totalAmount
+    });
+
+    // 3. Invoice creation
+    const invoice = await Invoice.create({
+      laundry: laundry._id,
+      branch: branchId,
+      vendor: vendorId,
+      invoiceNumber: await generateInvoiceNumber(),
+      subtotal: totalAmount,
+      total: totalAmount,
+      balanceDue: totalAmount,
+      paymentStatus: 'PENDING'
+    });
+
+    // 4. Payment Initiation
+    if (paymentMethod === 'mpesa') {
+      if (!phoneNumber) return next(errorHandler(400, 'phoneNumber is required for mpesa'));
+      const msisdn = normalizePhoneNumber(phoneNumber);
+
+      const { payment, res: darajaRes } = await initiateMpesaLaundryPayment({
+        invoiceId: invoice._id,
+        customer: userId,
+        branch: branchId,
+        vendor: vendorId,
+        amount: totalAmount,
+        phone: msisdn,
+        invoiceNumber: invoice.invoiceNumber,
+        type: 'FULLPAYMENT'
+      });
+
+      return res.status(202).json({
+        success: true,
+        message: 'Laundry booked and M-Pesa STK Push initiated',
+        data: {
+          laundryId: laundry._id,
+          paymentId: payment._id,
+          status: payment.status,
+          daraja: {
+            merchantRequestId: darajaRes.merchantRequestId,
+            checkoutRequestId: darajaRes.checkoutRequestId
+          }
+        }
+      });
+    }
+
+    return next(errorHandler(400, 'Unsupported payment method'));
+  } catch (error) {
+    next(error);
+  }
+};
+
+
+export const payLaundryInvoice = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const { invoiceId, method, payerPhone } = req.body;
+
+    if (!invoiceId || !method) {
+      return next(errorHandler(400, 'invoiceId and method are required'));
+    }
+
+    const invoice = await Invoice.findById(invoiceId);
+    if (!invoice) return next(errorHandler(404, 'Invoice not found'));
+    
+    if (!invoice.laundry) return next(errorHandler(400, 'Invoice is not associated with a laundry request'));
+
+    const laundry = await Laundry.findById(invoice.laundry);
+    if (!laundry) return next(errorHandler(404, 'Laundry request not found'));
+
+    if (invoice.paymentStatus === 'PAID') return next(errorHandler(409, 'Invoice already paid'));
+    if (invoice.paymentStatus === 'CANCELLED') return next(errorHandler(409, 'Invoice is cancelled'));
+
+    const amount = invoice.balanceDue;
+    const userId = (req as any).user?._id;
+
+    if (method === 'mpesa') {
+      if (!payerPhone) return next(errorHandler(400, 'payerPhone is required for mpesa'));
+      const msisdn = normalizePhoneNumber(payerPhone);
+
+      const { payment, res: darajaRes } = await initiateMpesaLaundryPayment({
+        invoiceId: invoice._id,
+        customer: userId,
+        branch: invoice.branch as any,
+        vendor: invoice.vendor as any,
+        amount,
+        phone: msisdn,
+        invoiceNumber: invoice.invoiceNumber,
+        type: 'FULLPAYMENT'
+      });
+
+      return res.status(202).json({
+        success: true,
+        message: 'Payment initiated for laundry',
+        data: {
+          paymentId: payment._id,
+          status: payment.status,
+          daraja: {
+            merchantRequestId: darajaRes.merchantRequestId,
+            checkoutRequestId: darajaRes.checkoutRequestId
+          }
+        }
+      });
+    }
+
+    return next(errorHandler(400, 'Unsupported payment method'));
+  } catch (error) {
+    next(error);
+  }
+};
+
+
 export const mpesaWebhook = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const io = req.app.get('io');
@@ -457,6 +617,10 @@ export const mpesaWebhook = async (req: Request, res: Response, next: NextFuncti
           {
             await applySuccessfulTicketPayment({ invoice, payment, io, method: 'mpesa_stk' });
           }
+          else if (invoice.laundry) 
+          {
+            await applySuccessFullLaundryPayment({ invoice, payment, io, method: 'mpesa_stk' });
+          }
         }
       }
       
@@ -476,6 +640,7 @@ export const mpesaWebhook = async (req: Request, res: Response, next: NextFuncti
     next(err);
   }
 };
+
 
 export const queryMpesaByCheckoutId = async (req: Request, res: Response, next: NextFunction) => {
   try {
@@ -547,6 +712,7 @@ export const queryMpesaByCheckoutId = async (req: Request, res: Response, next: 
   }
 };
 
+
 export const getPayments = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { page = 1, limit = 10, search, branch, vendor } = req.query;
@@ -595,6 +761,7 @@ export const getPayments = async (req: Request, res: Response, next: NextFunctio
     next(error);
   }
 };
+
 
 export const getPaymentById = async (req: Request, res: Response, next: NextFunction) => {
   try {

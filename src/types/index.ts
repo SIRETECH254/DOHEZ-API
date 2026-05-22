@@ -421,6 +421,7 @@ export interface IReceipt extends Document {
   order?: Types.ObjectId | IOrder;
   appointment?: Types.ObjectId;
   ticket?: Types.ObjectId | ITicket;
+  laundry?: Types.ObjectId;
   invoice: Types.ObjectId | IInvoice;
   customer: Types.ObjectId | IUser;
   branch: Types.ObjectId | IBranch;
@@ -464,6 +465,7 @@ export interface IInvoice extends Document {
   order?: Types.ObjectId | IOrder;
   appointment?: Types.ObjectId;
   ticket?: Types.ObjectId | ITicket;
+  laundry?: Types.ObjectId;
   branch: Types.ObjectId | IBranch;
   vendor: Types.ObjectId | IVendor;
   invoiceNumber: string;

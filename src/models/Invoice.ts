@@ -26,6 +26,11 @@ const invoiceSchema = new Schema<IInvoice>(
       ref: 'Ticket',
       required: false,
     },
+    laundry: {
+      type: Schema.Types.ObjectId,
+      ref: 'Laundry',
+      required: false,
+    },
     branch: {
       type: Schema.Types.ObjectId,
       ref: 'Branch',
@@ -96,6 +101,7 @@ const invoiceSchema = new Schema<IInvoice>(
 invoiceSchema.index({ order: 1 });
 invoiceSchema.index({ appointment: 1 });
 invoiceSchema.index({ ticket: 1 });
+invoiceSchema.index({ laundry: 1 });
 invoiceSchema.index({ paymentStatus: 1, createdAt: -1 });
 
 const Invoice = mongoose.model<IInvoice>('Invoice', invoiceSchema);

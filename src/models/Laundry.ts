@@ -15,7 +15,7 @@ const laundrySchema = new Schema<ILaundry>(
     },
     dropDate: {
       type: Date,
-      required: true,
+      required: false,
     },
     services: [
       {

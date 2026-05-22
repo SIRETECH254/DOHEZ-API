@@ -5,6 +5,7 @@ import Receipt from '../../models/receiptModel';
 import Coupon from '../../models/Coupon';
 import Product from '../../models/Product';
 import Appointment from '../../models/Appointment';
+import Laundry from '../../models/Laundry';
 import Ticket from '../../models/Ticket';
 import { initiateStkPush } from '../external/darajaService';
 import QRCode from 'qrcode';
@@ -40,6 +41,14 @@ export const generateTicketNumber = async (): Promise<string> => {
     createdAt: { $gte: new Date(year, 0, 1) }
   });
   return `TKT-${year}-${String(count + 1).padStart(4, "0")}`;
+};
+
+export const generateLaundryNumber = async (): Promise<string> => {
+  const year = new Date().getFullYear();
+  const count = await Laundry.countDocuments({
+    createdAt: { $gte: new Date(year, 0, 1) }
+  });
+  return `LND-${year}-${String(count + 1).padStart(4, "0")}`;
 };
 
 const updateInventoryForOrder = async (order: any): Promise<void> => {
@@ -390,6 +399,76 @@ export const applySuccessfulTicketPayment = async ({ invoice, payment, io, metho
   return { receipt };
 };
 
+export const applySuccessFullLaundryPayment = async ({ invoice, payment, io, method }: any): Promise<{ receipt?: any }> => {
+  payment.status = 'SUCCESS';
+  await payment.save();
+
+  const laundry = await Laundry.findById(invoice.laundry);
+  if (!laundry) {
+    throw new Error('Laundry not found for successful payment');
+  }
+
+  let receipt = null;
+
+  if (payment.type === 'BOOKING_FEE' && laundry.status === 'PENDING') {
+    invoice.paymentStatus = 'PARTIAL';
+    invoice.balanceDue = laundry.remainingAmount;
+    await invoice.save();
+
+    laundry.status = 'CONFIRMED';
+    await laundry.save();
+  } else if (payment.type === 'FULLPAYMENT') {
+    invoice.paymentStatus = 'PAID';
+    invoice.balanceDue = 0;
+    await invoice.save();
+
+    laundry.status = 'DELIVERED';
+    await laundry.save();
+
+    receipt = await Receipt.create({
+      laundry: invoice.laundry,
+      invoice: invoice._id,
+      customer: payment.customer,
+      branch: invoice.branch,
+      vendor: invoice.vendor,
+      receiptNumber: await generateReceiptNumber(),
+      amountPaid: payment.amount,
+      paymentMethod: method === 'mpesa_stk' ? 'mpesa' : (method === 'paystack_card' ? 'paystack' : method),
+      issuedAt: new Date(),
+    });
+
+    // Generate and upload Receipt PDF
+    try {
+      const populatedReceipt = await Receipt.findById(receipt._id).populate('vendor branch customer');
+      if (populatedReceipt) {
+        const receiptPdfUrl = await uploadReceiptPDF(populatedReceipt);
+        receipt.pdfUrl = receiptPdfUrl;
+        await receipt.save();
+
+        // Send Receipt Email
+        const customer = populatedReceipt.customer as any;
+        if (customer && customer.email) {
+          await sendReceiptNotification(
+            customer.email,
+            `${customer.firstName} ${customer.lastName}`,
+            receiptPdfUrl,
+            receipt.receiptNumber
+          );
+        }
+      }
+    } catch (pdfError) {
+      console.error(`Failed to generate/upload receipt PDF for laundry ${invoice.laundry}:`, pdfError);
+    }
+  }
+
+  io?.emit('payment.updated', { paymentId: payment._id.toString(), status: payment.status });
+  if (receipt) {
+    io?.emit('receipt.created', { receiptId: receipt._id.toString(), laundryId: String(invoice.laundry) });
+  }
+
+  return { receipt };
+};
+
 export const initiateMpesaProductPayment = async (params: {
   invoiceId?: any;
   customer: any;
@@ -502,4 +581,45 @@ export const initiateMpesaTicketPayment = async (params: {
 
   return { payment, res };
 };
+
+export const initiateMpesaLaundryPayment = async (params: {
+  invoiceId?: any;
+  customer: any;
+  branch: any;
+  vendor: any;
+  amount: number;
+  phone: string;
+  invoiceNumber: string;
+  type: 'BOOKING_FEE' | 'FULLPAYMENT';
+}): Promise<any> => {
+  const { invoiceId, amount, phone, invoiceNumber, branch, vendor, type, customer } = params;
+
+  const res = await initiateStkPush({
+    amount,
+    phone,
+    accountReference: invoiceNumber
+  });
+
+  const payment = await Payment.create({
+    paymentNumber: await generatePaymentNumber(),
+    invoice: [invoiceId],
+    customer,
+    branch,
+    vendor,
+    method: 'mpesa',
+    amount,
+    type,
+    status: 'INITIATED',
+    processorRefs: {
+      daraja: {
+        merchantRequestId: res.merchantRequestId,
+        checkoutRequestId: res.checkoutRequestId
+      }
+    }
+  });
+
+  return { payment, res };
+};
+
+
 
