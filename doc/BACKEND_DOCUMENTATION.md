@@ -124,14 +124,34 @@ interface IRole {
 ```typescript
 interface IVendor {
   _id: ObjectId;
-  ownerId: ObjectId; // User ID with role vendor
+  userId: ObjectId;
+  service?: ObjectId;
   name: string;
-  description?: string;
-  logo?: string;
-  banner?: string;
-  categoryId: ObjectId;
+  phone: string;
+  email: string;
   isActive: boolean;
-  isVerified: boolean;
+  isFeatured: boolean;
+  logo?: string;
+  logoPublicId?: string;
+  cover?: string;
+  coverPublicId?: string;
+  location: {
+    name?: string;
+    address?: string;
+    regions?: {
+      administrative_area_level_3?: string;
+      administrative_area_level_1?: string;
+      country?: string;
+    };
+    coordinates?: { lat: number; lng: number };
+    place_id?: string;
+  };
+  branches?: ObjectId[];
+  slug: string;
+  details?: string;
+  kraPin?: string;
+  regNo?: string;
+  vendorCategory: ObjectId;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -145,26 +165,26 @@ interface IBranch {
   _id: ObjectId;
   vendorId: ObjectId;
   name: string;
-  description?: string;
+  email: string;
+  phone: string;
   location: {
-    address: string;
-    coordinates: [number, number]; // [longitude, latitude]
+    address?: string;
+    coordinates?: { lat: number; lng: number };
+    place_id?: string;
   };
-  contact: {
-    phone: string;
-    email: string;
+  cover?: string;
+  coverPublicId?: string;
+  fulfillmentConfig?: Record<string, any>;
+  workingHours: {
+    monday?: { start: string; end: string };
+    tuesday?: { start: string; end: string };
+    wednesday?: { start: string; end: string };
+    thursday?: { start: string; end: string };
+    friday?: { start: string; end: string };
+    saturday?: { start: string; end: string };
+    sunday?: { start: string; end: string };
   };
-  operatingHours: {
-    monday: Array<{ start: string; end: string }>;
-    tuesday: Array<{ start: string; end: string }>;
-    wednesday: Array<{ start: string; end: string }>;
-    thursday: Array<{ start: string; end: string }>;
-    friday: Array<{ start: string; end: string }>;
-    saturday: Array<{ start: string; end: string }>;
-    sunday: Array<{ start: string; end: string }>;
-  };
-  isMainBranch: boolean;
-  isActive: boolean;
+  gallery?: Array<{ url: string; publicId: string }>;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -172,16 +192,17 @@ interface IBranch {
 
 ---
 
-### 5. Category Model
+### 5. Category Model (Product Category)
 ```typescript
-interface ICategory {
+interface IProductCategory {
   _id: ObjectId;
   name: string;
-  slug: string; // URL-friendly name
-  description?: string;
-  image?: string;
-  parentCategory?: ObjectId; // For sub-categories
-  isActive: boolean;
+  details?: string;
+  icon?: string;
+  iconPublicId?: string;
+  sort: number;
+  slug: string;
+  productType: ObjectId;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -193,17 +214,25 @@ interface ICategory {
 ```typescript
 interface IProduct {
   _id: ObjectId;
-  vendorId: ObjectId;
-  branchId: ObjectId;
-  categoryId: ObjectId;
   name: string;
-  description?: string;
+  slug: string;
+  details?: string;
   price: number;
-  stockLevel: number;
-  images: string[];
-  attributes?: Record<string, any>;
-  isAvailable: boolean;
-  sortOrder: number;
+  offerPrice?: number;
+  images: Array<{ url: string; publicId: string }>;
+  category: ObjectId;
+  vendor: ObjectId;
+  branch: ObjectId;
+  service: ObjectId;
+  variants?: ObjectId[];
+  selectedVariantOptions?: Array<{ variantId: ObjectId; optionIds: ObjectId[] }>;
+  modifiers?: ObjectId[];
+  selectedModifierOptions?: Array<{ modifierId: ObjectId; optionIds: ObjectId[] }>;
+  skus: Array<ISKU>;
+  status: boolean;
+  trackInventory: boolean;
+  duration?: string;
+  buffertime?: string;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -215,10 +244,10 @@ interface IProduct {
 ```typescript
 interface ITask {
   _id: ObjectId;
-  vendorId: ObjectId;
-  name: string; // e.g., "Laundry", "Cleaning", "Event", "Appointment"
+  name: string;
   description?: string;
   image?: string;
+  imagePublicId?: string;
   isActive: boolean;
   createdAt: Date;
   updatedAt: Date;
@@ -231,13 +260,11 @@ interface ITask {
 ```typescript
 interface IService {
   _id: ObjectId;
-  taskId: ObjectId; // Parent Task relationship
-  vendorId: ObjectId;
-  branchId?: ObjectId;
-  name: string; // e.g., "Shirt Wash", "VIP Ticket", "Consultation"
+  task: ObjectId;
+  name: string;
   description?: string;
-  price: number;
-  durationMinutes?: number;
+  image?: string;
+  imagePublicId?: string;
   isActive: boolean;
   createdAt: Date;
   updatedAt: Date;
@@ -250,65 +277,325 @@ interface IService {
 ```typescript
 interface IOrder {
   _id: ObjectId;
-  customerId: ObjectId;
-  vendorId: ObjectId;
-  branchId: ObjectId;
-  riderId?: ObjectId;
-  items: Array<{
-    productId?: ObjectId;
-    serviceId?: ObjectId;
-    quantity: number;
-    price: number;
-    name: string;
-    serviceDetails?: {
-      appointmentTime?: Date;
-      laundryPickUpTime?: Date;
-      ticketHolderName?: string;
-    };
-  }>;
-  orderType: "IMMEDIATE" | "SCHEDULED" | "IN_SHOP";
-  scheduledTime?: Date;
-  status: "PLACED" | "ACCEPTED" | "PREPARING" | "READY" | "OUT_FOR_DELIVERY" | "DELIVERED" | "CANCELLED" | "PICKED_UP";
-  deliveryAddress: string;
-  deliveryCoordinates?: [number, number];
-  subtotal: number;
-  deliveryFee: number;
-  totalAmount: number;
-  paymentId: ObjectId;
+  customer: ObjectId;
+  vendor: ObjectId;
+  branch: ObjectId;
+  createdBy: ObjectId;
+  location: "in_shop" | "away";
+  type: "pickup" | "delivery";
+  items: Array<IOrderItem>;
+  pricing: IPricing;
+  timing: ITiming;
+  address?: ObjectId | null;
+  paymentPreference: {
+    mode: "post_to_bill" | "pay_now" | "cash" | "cod";
+    method?: "mpesa_stk" | "paystack_card" | null;
+  };
+  status: "PLACED" | "CONFIRMED" | "PACKED" | "SHIPPED" | "OUT_FOR_DELIVERY" | "DELIVERED" | "CANCELLED" | "REFUNDED";
+  paymentStatus: "UNPAID" | "PENDING" | "PAID" | "PARTIALLY_REFUNDED" | "REFUNDED";
+  invoice?: ObjectId | null;
+  receipt?: ObjectId | null;
   createdAt: Date;
   updatedAt: Date;
 }
 ```
 
-Index:
+---
+
+### 10. Appointment Model
 ```typescript
-db.orders.createIndex({ vendorId: 1, status: 1, createdAt: -1 })
+interface IAppointment {
+  _id: ObjectId;
+  appointmentNumber: string;
+  customer: ObjectId;
+  branch: ObjectId;
+  vendor: ObjectId;
+  staff: ObjectId[];
+  items: Array<{
+    service: ObjectId;
+    staff: ObjectId;
+    startTime: Date;
+    endTime: Date;
+    durationMinutes: number;
+    amount: number;
+  }>;
+  overallStartTime: Date;
+  overallEndTime: Date;
+  status: "PENDING" | "CONFIRMED" | "COMPLETED" | "CANCELLED" | "NO_SHOW";
+  bookingFeeAmount: number;
+  remainingAmount: number;
+  checkedInAt?: Date;
+  actualEndTime?: Date;
+  createdAt: Date;
+  updatedAt: Date;
+}
 ```
 
 ---
 
-### 7. Payment Model
+### 11. Invoice Model
+```typescript
+interface IInvoice {
+  _id: ObjectId;
+  order?: ObjectId;
+  appointment?: ObjectId;
+  branch: ObjectId;
+  vendor: ObjectId;
+  invoiceNumber: string;
+  lineItems?: Array<{ label: string; amount: number; }>;
+  subtotal: number;
+  discounts: number;
+  fees: number;
+  tax: number;
+  total: number;
+  balanceDue: number;
+  paymentStatus: "PENDING" | "PAID" | "PARTIAL" | "CANCELLED";
+  metadata: any;
+  createdAt: Date;
+  updatedAt: Date;
+}
+```
+
+---
+
+### 12. Address Model
+```typescript
+interface IAddress {
+  _id: ObjectId;
+  userId: ObjectId;
+  name: string;
+  coordinates: { lat: number; lng: number };
+  regions: {
+    country: string;
+    locality?: string;
+    sublocality?: string;
+    sublocality_level_1?: string;
+    administrative_area_level_1?: string;
+    plus_code?: string;
+    political?: string;
+  };
+  address: string;
+  details?: string | null;
+  isDefault: boolean;
+  createdAt: Date;
+  updatedAt: Date;
+}
+```
+
+---
+
+### 13. Break Model
+```typescript
+interface IBreak {
+  _id: ObjectId;
+  staff: ObjectId;
+  startTime: string; // HH:MM
+  endTime: string;   // HH:MM
+  reason?: string;
+  createdAt: Date;
+}
+```
+
+---
+
+### 14. Cart Model
+```typescript
+interface ICart {
+  _id: ObjectId;
+  userId: ObjectId;
+  cartGroups: Array<{
+    vendorId: ObjectId;
+    branchId: ObjectId;
+    items: Array<{
+      productId: ObjectId;
+      skuId: ObjectId;
+      quantity: number;
+      priceAtAddition: number;
+      variants?: Array<{ variantId: ObjectId; optionId: ObjectId }>;
+      modifiers?: Array<{ modifierId: ObjectId; optionId: ObjectId }>;
+    }>;
+    groupSubtotal: number;
+  }>;
+  totalCartValue: number;
+  totalItems: number;
+  createdAt: Date;
+  updatedAt: Date;
+}
+```
+
+---
+
+### 15. Product Modifier Model
+```typescript
+interface IProductModifier {
+  _id: ObjectId;
+  name: string;
+  description?: string;
+  options: Array<{ _id: ObjectId; value: string; isActive: boolean; sortOrder: number }>;
+  price: number;
+  min_selection: number;
+  max_selection: number;
+  is_required: boolean;
+  branchId: ObjectId;
+  sortOrder: number;
+  createdAt: Date;
+  updatedAt: Date;
+}
+```
+
+---
+
+### 16. Product Type Model
+```typescript
+interface IProductType {
+  _id: ObjectId;
+  service: ObjectId;
+  name: string;
+  details?: string;
+  order: number;
+  slug: string;
+  icon?: string;
+  iconPublicId?: string;
+  createdAt: Date;
+  updatedAt: Date;
+}
+```
+
+---
+
+### 17. Variant Model
+```typescript
+interface IVariant {
+  _id: ObjectId;
+  name: string;
+  options: Array<{ _id: ObjectId; value: string; isActive: boolean; sortOrder: number }>;
+  branchId: ObjectId;
+  sortOrder: number;
+  createdAt: Date;
+  updatedAt: Date;
+}
+```
+
+---
+
+### 18. Vendor Category Model
+```typescript
+interface IVendorCategory {
+  _id: ObjectId;
+  vendorType: ObjectId;
+  name: string;
+  description?: string;
+  slug: string;
+  image?: string;
+  imagePublicId?: string;
+  isActive: boolean;
+  createdAt: Date;
+  updatedAt: Date;
+}
+```
+
+---
+
+### 19. Vendor Type Model
+```typescript
+interface IVendorType {
+  _id: ObjectId;
+  name: string;
+  description?: string;
+  slug: string;
+  image?: string;
+  imagePublicId?: string;
+  isActive: boolean;
+  createdAt: Date;
+  updatedAt: Date;
+}
+```
+
+---
+
+### 20. Payment Model
 ```typescript
 interface IPayment {
   _id: ObjectId;
-  orderId?: ObjectId;
   paymentNumber: string;
+  invoice: ObjectId;
+  branch: ObjectId;
+  vendor: ObjectId;
+  method: "mpesa" | "paystack" | "cash" | "post_to_bill" | "cod";
   amount: number;
-  currency: "KES";
-  type: "ORDER_PAYMENT" | "SERVICE_BOOKING";
-  method: "MPESA" | "CARD" | "CASH";
-  status: "PENDING" | "SUCCESS" | "FAILED";
-  transactionRef?: string;
+  currency: string;
   processorRefs?: {
-    daraja?: { merchantRequestId?: string; checkoutRequestId?: string };
-    paystack?: { reference?: string };
+    daraja?: { merchantRequestId: string; checkoutRequestId: string };
+    paystack?: { reference: string };
   };
+  status: "INITIATED" | "PENDING" | "SUCCESS" | "FAILED" | "CANCELLED";
+  type: "BOOKING_FEE" | "FULLPAYMENT";
+  rawPayload?: any;
   createdAt: Date;
   updatedAt: Date;
 }
 ```
 
 ---
+
+### 21. Receipt Model
+```typescript
+interface IReceipt {
+  _id: ObjectId;
+  order?: ObjectId;
+  appointment?: ObjectId;
+  invoice: ObjectId;
+  branch: ObjectId;
+  vendor: ObjectId;
+  receiptNumber: string;
+  amountPaid: number;
+  paymentMethod: "mpesa" | "paystack" | "cash";
+  issuedAt: Date;
+  pdfUrl?: string;
+  metadata?: any;
+  createdAt: Date;
+  updatedAt: Date;
+}
+```
+
+---
+
+### 22. Coupon Model
+```typescript
+interface ICoupon {
+  _id: ObjectId;
+  code: string;
+  name: string;
+  description?: string;
+  discountType: 'percentage' | 'fixed';
+  discountValue: number;
+  minimumOrderAmount: number;
+  maximumDiscountAmount?: number;
+  isActive: boolean;
+  hasExpiry: boolean;
+  expiryDate?: Date;
+  hasUsageLimit: boolean;
+  usageLimit?: number;
+  usedCount: number;
+  isFirstTimeOnly: boolean;
+  applicableProducts: ObjectId[];
+  applicableCategories: ObjectId[];
+  excludedProducts: ObjectId[];
+  excludedCategories: ObjectId[];
+  vendor?: ObjectId;
+  branch?: ObjectId;
+  createdBy: ObjectId;
+  lastUsedBy: Array<{
+    user: ObjectId;
+    usedAt: Date;
+  }>;
+  createdAt: Date;
+  updatedAt: Date;
+}
+```
+
+---
+
 
 ### 8. Rider Availability Model
 ```typescript
@@ -432,10 +719,34 @@ interface IStoreConfiguration {
 - `refreshToken()` - Renew JWT access token
 - `logout()` - Invalidate session
 - `getMe()` - Get current user profile
+- `googleAuthCallback()` - Handle Google OAuth callback
 
 ---
 
-### 2. Role Controllers
+### 2. User Controllers
+
+#### `userController.ts`
+- `getUserProfile()` - Get authenticated user's profile
+- `updateUserProfile()` - Update own profile details
+- `changePassword()` - Change password
+- `getNotificationPreferences()` - Get user notification settings
+- `updateNotificationPreferences()` - Update user notification settings
+- `getAllUsers()` - Admin list of users
+- `getUserById()` - Get user by ID (admin)
+- `updateUser()` - Update user details (admin)
+- `updateUserStatus()` - Activate/deactivate user (admin)
+- `setUserAdmin()` - Promote user to admin (admin)
+- `getUserRoles()` - Get user roles (admin)
+- `deleteUser()` - Delete user (admin)
+- `adminCreateCustomer()` - Create customer as admin
+- `assignRole()` - Assign role to user (admin)
+- `removeRole()` - Remove role from user (admin)
+- `getCustomers()` - List all customers (admin)
+- `getStaff()` - List all staff (admin)
+
+---
+
+### 3. Role Controllers
 
 #### `roleController.ts`
 - `getAllRoles()` - List roles (admin)
@@ -443,20 +754,8 @@ interface IStoreConfiguration {
 - `createRole()` - Create role (admin)
 - `updateRole()` - Update role (admin)
 - `deleteRole()` - Delete role (admin)
-
----
-
-### 3. User Controllers
-
-#### `userController.ts`
-- `getUserProfile()` - Get authenticated user's profile
-- `updateUserProfile()` - Update own profile details
-- `changePassword()` - Change password
-- `getSavedLocations()` - Get user's saved delivery locations
-- `addSavedLocation()` - Add a new delivery location
-- `getAllUsers()` - Admin list of users
-- `getUserById()` - Get user by ID (admin)
-- `updateUserStatus()` - Activate/deactivate user (admin)
+- `getUsersByRole()` - Get users by specific role (admin)
+- `getCustomers()` - List customers (admin)
 
 ---
 
@@ -478,14 +777,35 @@ interface IStoreConfiguration {
 
 ---
 
-### 5. Category Controllers
+### 5. Category & Type Controllers
 
-#### `categoryController.ts`
-- `createCategory()` - Create a new category (admin)
-- `getCategories()` - List all categories
-- `getCategory()` - Get category details
-- `updateCategory()` - Update category (admin)
-- `deleteCategory()` - Delete category (admin)
+#### `categoryController.ts` (Product Category)
+- `createProductCategory()` - Create a new category (admin)
+- `getProductCategories()` - List all categories
+- `getProductCategoryById()` - Get category details
+- `updateProductCategory()` - Update category (admin)
+- `deleteProductCategory()` - Delete category (admin)
+
+#### `vendorCategoryController.ts`
+- `createVendorCategory()` - Create category (admin)
+- `getVendorCategories()` - List categories
+- `getVendorCategoryById()` - Get category details
+- `updateVendorCategory()` - Update category (admin)
+- `deleteVendorCategory()` - Delete category (admin)
+
+#### `vendorTypeController.ts`
+- `createVendorType()` - Create type (admin)
+- `getVendorTypes()` - List types
+- `getVendorTypeById()` - Get type details
+- `updateVendorType()` - Update type (admin)
+- `deleteVendorType()` - Delete type (admin)
+
+#### `productTypeController.ts`
+- `createProductType()` - Create product type (admin)
+- `getProductTypes()` - List product types
+- `getProductTypeById()` - Get product type details
+- `updateProductType()` - Update product type (admin)
+- `deleteProductType()` - Delete product type (admin)
 
 ---
 
@@ -497,103 +817,133 @@ interface IStoreConfiguration {
 - `getProductById()` - Get product details
 - `updateProduct()` - Update product details
 - `deleteProduct()` - Delete product
-- `updateStock()` - Update stock levels
+- `updateProductSKU()` - Update SKU details
+
+#### `variantController.ts`
+- `createVariant()` - Create variant option (admin)
+- `getVariants()` - List variants
+- `getVariantById()` - Get variant details
+- `updateVariant()` - Update variant
+- `deleteVariant()` - Delete variant
+- `attachVariant()` - Attach variant to product
+- `detachVariant()` - Detach variant from product
+
+#### `productModifierController.ts`
+- `createProductModifier()` - Create modifier (admin)
+- `getProductModifiers()` - List modifiers
+- `getProductModifierById()` - Get modifier details
+- `updateProductModifier()` - Update modifier
+- `deleteProductModifier()` - Delete modifier
+- `attachModifier()` - Attach modifier to product
+- `detachModifier()` - Detach modifier from product
 
 ---
 
 ### 7. Task & Service Controllers
 
 #### `taskController.ts`
-- `createTask()` - Define a new task category (e.g., Laundry)
+- `createTask()` - Define a new task category
 - `getTasks()` - List tasks offered by a vendor
-- `updateTask()` - Update task description/image
-- `deleteTask()` - Remove task and its services
+- `getTaskById()` - Get task details
+- `updateTask()` - Update task
+- `deleteTask()` - Remove task
 
 #### `serviceController.ts`
-- `createService()` - Add a service to a task (e.g., Shirt Wash under Laundry)
-- `getServices()` - List services for a specific task
+- `createService()` - Add a service to a task
+- `getServices()` - List services for a task
 - `getServiceById()` - Get service details
-- `updateService()` - Update service price/duration
+- `updateService()` - Update service
 - `deleteService()` - Remove service
 
 ---
 
-### 8. Order Controllers
+### 8. Order & Appointment Controllers
+
+#### `appointmentController.ts`
+- `createAppointment()` - Create new appointment (Customer)
+- `createAppointmentByAdmin()` - Create new appointment (Admin)
+- `rescheduleAppointment()` - Reschedule appointment
+- `cancelAppointment()` - Cancel appointment
+- `checkIn()` - Check-in for appointment
+- `completeAppointment()` - Complete appointment
+- `markNoShow()` - Mark as No-Show
+- `getAppointments()` - Get all appointments (Admin/Staff)
+- `getMyAppointments()` - Get customer's appointments
+- `getAppointmentById()` - Get appointment details by ID
 
 #### `orderController.ts`
-- `createOrder()` - Place a new order (products or task-services)
-- `confirmOrder()` - Confirm order after payment
-- `updateOrderStatus()` - Update status
-- `assignRider()` - Assign a rider
-- `cancelOrder()` - Cancel order
-- `getOrders()` - List orders
-- `getMyOrders()` - Customer's order history
-- `getOrderById()` - Get single order details
+- `createOrder()` - Place a new order
+- `adminCreateOrder()` - Place order as admin
+- `getOrderById()` - Get order details
+- `updateOrderStatus()` - Update order status
+- `assignRider()` - Assign rider (admin)
+- `getUserOrders()` - Customer order history
+- `getOrders()` - Admin/Vendor order list
+- `deleteOrder()` - Delete order (admin)
+
+#### `availabilityController.ts`
+- `getAvailability()` - Fetch available schedule options based on services and preferences
 
 ---
 
-### 8. Payment Controllers
+### 9. Payment & Invoice Controllers
 
 #### `paymentController.ts`
-- `initiatePayment()` - Start M-Pesa or Card payment
-- `mpesaWebhook()` - M-Pesa callback handler
-- `paystackWebhook()` - Paystack callback handler
-- `getPayments()` - List payments (admin)
-- `getMyPayments()` - Get authenticated user's payment history
+- `confirmAppointment()` - Confirm appointment payment
+- `payProductInvoice()` - Pay product invoice
+- `payAppointmentInvoice()` - Pay appointment invoice
+- `mpesaWebhook()` - Handle M-Pesa callbacks
+- `queryMpesaByCheckoutId()` - Query M-Pesa status
+- `getPayments()` - List payments
+- `getPaymentById()` - Get payment details
+
+#### `invoiceController.ts`
+- `createInvoice()` - Generate invoice for order
+- `getInvoices()` - List invoices
+- `getInvoiceById()` - Get invoice details
 
 ---
 
-### 9. Rider Controllers
+### 10. Utility & Support Controllers
 
-#### `riderController.ts`
-- `updateAvailability()` - Set status (ONLINE, BUSY, OFFLINE)
-- `updateLocation()` - Update rider's current coordinates
-- `getAvailableRiders()` - List riders for assignment (admin/vendor)
-- `getRiderDeliveries()` - Get current deliveries assigned to rider
+#### `addressController.ts`
+- `createAddress()` - Create user address
+- `updateAddress()` - Update address
+- `deleteAddress()` - Delete address
+- `setDefaultAddress()` - Set default address
+- `getUserAddresses()` - Get user addresses
+- `getAddressById()` - Get address by ID
 
----
+#### `cartController.ts`
+- `getCart()` - Get user cart
+- `addToCart()` - Add item to cart
+- `updateQuantity()` - Update item quantity
+- `removeItem()` - Remove item from cart
+- `clearCart()` - Clear cart
 
-### 10. Notification Controllers
+#### `couponController.ts`
+- `createCoupon()` - Create coupon (admin)
+- `getAllCoupons()` - List coupons (admin)
+- `getCouponById()` - Get coupon details
+- `updateCoupon()` - Update coupon
+- `deleteCoupon()` - Delete coupon
+- `validateCoupon()` - Validate coupon
+- `applyCoupon()` - Apply coupon to order
+- `getCouponStats()` - Get coupon statistics
+- `generateNewCode()` - Generate unique coupon code
 
-#### `notificationController.ts`
-- `sendNotification()` - Send notification to user
-- `getUserNotifications()` - List current user's notifications
-- `markAsRead()` - Mark notification as read
-- `sendBulkNotification()` - Send to all or specific roles (admin)
+#### `locationController.ts`
+- `searchLocation()` - Search for locations using Google Maps textSearch API
 
----
+#### `packagingController.ts`
+- `createPackaging()` - Create packaging option
+- `getPackagingList()` - List packaging options
+- `getPackagingById()` - Get packaging details
+- `updatePackaging()` - Update packaging option
+- `deletePackaging()` - Delete packaging option
+- `setDefaultPackaging()` - Set default packaging option
 
-### 11. Store Configuration Controllers
 
-#### `storeConfigurationController.ts`
-- `getStoreConfiguration()` - Get platform settings
-- `updateStoreConfiguration()` - Update platform settings (admin)
-
----
-
-### 12. Support & Marketing Controllers
-
-#### `contactController.ts`
-- `submitContact()` - Submit contact message
-- `getContacts()` - List submissions (admin)
-
-#### `newsletterController.ts`
-- `subscribeNewsletter()` - Subscribe to newsletter
-- `unsubscribeNewsletter()` - Unsubscribe from newsletter
-- `sendNewsletter()` - Send newsletter (admin)
-
----
-
-### 13. Review Controllers
-
-#### `reviewController.ts`
-- `createReview()` - Create review for a product or vendor
-- `getReviews()` - List reviews (public)
-- `updateReviewStatus()` - Approve/Reject review (admin)
-
----
-
-## Routes
 
 ## Routes
 
@@ -610,6 +960,24 @@ POST   /reset-password/:token     // Reset password
 POST   /refresh-token             // Refresh JWT
 POST   /logout                    // Logout
 GET    /me                        // Current user profile
+```
+
+---
+
+### Appointment Routes
+Base: `/api/appointments`
+
+```typescript
+POST   /                  // Create appointment (Customer)
+POST   /admin              // Create appointment (Admin)
+GET    /my                 // Get my appointments
+GET    /                   // Get all appointments (Admin/Staff)
+GET    /:id                // Get appointment details
+PUT    /:id/reschedule     // Reschedule appointment
+PUT    /:id/cancel         // Cancel appointment
+PUT    /:id/check-in       // Record check-in
+PUT    /:id/complete       // Record completion
+PUT    /:id/no-show        // Record no-show
 ```
 
 ---
@@ -732,6 +1100,23 @@ POST   /webhooks/mpesa            // M-Pesa webhook
 POST   /webhooks/paystack         // Paystack webhook
 GET    /my                        // My payment history
 GET    /                          // List payments (admin)
+```
+
+---
+
+### Coupon Routes
+Base: `/api/coupons`
+
+```typescript
+POST   /                          // Create a new coupon
+GET    /                          // List all coupons (admin)
+GET    /:couponId                 // Get coupon details
+PUT    /:couponId                 // Update coupon
+DELETE /:couponId                 // Delete coupon
+POST   /validate                  // Validate coupon code
+POST   /apply                     // Apply coupon to order
+GET    /:couponId/stats           // Get coupon statistics
+POST   /generate-code             // Generate unique code
 ```
 
 ---
@@ -995,6 +1380,153 @@ npm start
 
 ---
 
+### 15. Address Model
+```typescript
+interface IAddress {
+  _id: ObjectId;
+  userId: ObjectId;
+  name: string;
+  coordinates: { lat: number; lng: number };
+  regions: {
+    country: string;
+    locality?: string;
+    sublocality?: string;
+    sublocality_level_1?: string;
+    administrative_area_level_1?: string;
+    plus_code?: string;
+    political?: string;
+  };
+  address: string;
+  details?: string | null;
+  isDefault: boolean;
+  createdAt: Date;
+  updatedAt: Date;
+}
+```
+
+### 16. Break Model
+```typescript
+interface IBreak {
+  _id: ObjectId;
+  staff: ObjectId;
+  startTime: string; // HH:MM
+  endTime: string;   // HH:MM
+  reason?: string;
+  createdAt: Date;
+}
+```
+
+### 17. Cart Model
+```typescript
+interface ICart {
+  _id: ObjectId;
+  userId: ObjectId;
+  cartGroups: Array<{
+    vendorId: ObjectId;
+    branchId: ObjectId;
+    items: Array<{
+      productId: ObjectId;
+      skuId: ObjectId;
+      quantity: number;
+      priceAtAddition: number;
+      variants?: Array<{ variantId: ObjectId; optionId: ObjectId }>;
+      modifiers?: Array<{ modifierId: ObjectId; optionId: ObjectId }>;
+    }>;
+    groupSubtotal: number;
+  }>;
+  totalCartValue: number;
+  totalItems: number;
+  createdAt: Date;
+  updatedAt: Date;
+}
+```
+
+### 18. Product Modifier Model
+```typescript
+interface IProductModifier {
+  _id: ObjectId;
+  name: string;
+  description?: string;
+  options: Array<{ _id: ObjectId; value: string; isActive: boolean; sortOrder: number }>;
+  price: number;
+  min_selection: number;
+  max_selection: number;
+  is_required: boolean;
+  branchId: ObjectId;
+  sortOrder: number;
+  createdAt: Date;
+  updatedAt: Date;
+}
+```
+
+### 19. Product Type Model
+```typescript
+interface IProductType {
+  _id: ObjectId;
+  service: ObjectId;
+  name: string;
+  details?: string;
+  order: number;
+  slug: string;
+  icon?: string;
+  iconPublicId?: string;
+  createdAt: Date;
+  updatedAt: Date;
+}
+```
+
+### 20. Variant Model
+```typescript
+interface IVariant {
+  _id: ObjectId;
+  name: string;
+  options: Array<{ _id: ObjectId; value: string; isActive: boolean; sortOrder: number }>;
+  branchId: ObjectId;
+  sortOrder: number;
+  createdAt: Date;
+  updatedAt: Date;
+}
+```
+
+### 21. Vendor Category Model
+```typescript
+interface IVendorCategory {
+  _id: ObjectId;
+  vendorType: ObjectId;
+  name: string;
+  description?: string;
+  slug: string;
+  image?: string;
+  imagePublicId?: string;
+  isActive: boolean;
+  createdAt: Date;
+  updatedAt: Date;
+}
+```
+
+### 23. Ticket Model
+```typescript
+interface ITicket {
+  _id: ObjectId;
+  ticketNumber: string;
+  event: ObjectId;
+  details: {
+    name: string;
+    email: string;
+    phone: string;
+  };
+  type: string;
+  qrCodeData?: string;
+  pdfUrl?: string;
+  status: 'PENDING' | 'BOOKED' | 'CANCELLED' | 'USED' | 'EXPIRED';
+  createdAt: Date;
+  updatedAt: Date;
+}
+```
+
+
+---
+
 ## API Response Format
 
 ### Success Response
@@ -1009,9 +1541,9 @@ npm start
 ### ObjectId Population
 All GET endpoints automatically populate ObjectId references with their related documents. This ensures complete data is returned in API responses:
 
-- **User references** (`userId`, `customerId`, `riderId`, `vendorId`) are populated with `firstName`, `lastName`, `email`, and `phone`
-- **Order references** (`orderId`) are populated with order details including nested `customerId`, `branchId`, and `items`
-- **Product/Service references** (`productId`, `categoryId`) are populated with product and category details
+- **User references** (`userId`, `customer`, `riderId`, `vendorId`) are populated with `firstName`, `lastName`, `email`, and `phone`
+- **Order references** (`orderId`) are populated with order details including nested `customer`, `vendor`, `branch`, and `items`
+- **Product/Service references** (`product`, `categoryId`) are populated with product and category details
 - **Branch references** (`branchId`) are populated with branch location and contact info
 - **Role references** (`roles`) are populated with role information
 

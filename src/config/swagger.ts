@@ -15,7 +15,7 @@ const options = {
       {
         url: process.env.NODE_ENV === "production"
             ? process.env.API_BASE_URL || "https://api.dohez.com"
-            : `http://localhost:${process.env.PORT || 4500}`,
+            : `http://localhost:${process.env.PORT || 3500}`,
         description: process.env.NODE_ENV === "production" ? "Production server" : "Development server"
       }
     ],
