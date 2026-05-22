@@ -432,7 +432,8 @@ export const bookLaundry = async (req: Request, res: Response, next: NextFunctio
       services, 
       pickUpDate, 
       paymentMethod, 
-      phoneNumber 
+      phoneNumber,
+      bookingFee = 50
     } = req.body;
     
     const userId = (req as any).user?._id;
@@ -450,6 +451,8 @@ export const bookLaundry = async (req: Request, res: Response, next: NextFunctio
     }
 
     const totalAmount = serviceProducts.reduce((sum, p) => sum + (p.offerPrice || p.price), 0);
+    const bFee = Number(bookingFee);
+    const remainingAmount = totalAmount - bFee;
 
     // 2. Laundry creation
     const laundry = await Laundry.create({
@@ -461,7 +464,8 @@ export const bookLaundry = async (req: Request, res: Response, next: NextFunctio
       services,
       pickUpDate,
       status: 'PENDING',
-      remainingAmount: totalAmount
+      bookingFee: bFee,
+      remainingAmount: remainingAmount
     });
 
     // 3. Invoice creation
@@ -470,9 +474,9 @@ export const bookLaundry = async (req: Request, res: Response, next: NextFunctio
       branch: branchId,
       vendor: vendorId,
       invoiceNumber: await generateInvoiceNumber(),
-      subtotal: totalAmount,
-      total: totalAmount,
-      balanceDue: totalAmount,
+      subtotal: bFee,
+      total: bFee,
+      balanceDue: remainingAmount,
       paymentStatus: 'PENDING'
     });
 
@@ -486,10 +490,10 @@ export const bookLaundry = async (req: Request, res: Response, next: NextFunctio
         customer: userId,
         branch: branchId,
         vendor: vendorId,
-        amount: totalAmount,
+        amount: bFee,
         phone: msisdn,
         invoiceNumber: invoice.invoiceNumber,
-        type: 'FULLPAYMENT'
+        type: 'BOOKING_FEE'
       });
 
       return res.status(202).json({
