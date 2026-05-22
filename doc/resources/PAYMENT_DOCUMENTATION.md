@@ -1,4 +1,4 @@
-# 💰 TEO KICKS API - Payment Management Documentation
+# 💰 DOHEZ-API - Payment Management Documentation
 
 ## 📋 Table of Contents
 - [Payment Management Overview](#payment-management-overview)
@@ -15,7 +15,7 @@
 
 ## Payment Management Overview
 
-Payment Management handles the processing of payments for invoices within the TEO KICKS API system. It supports multiple payment methods including M-Pesa STK Push (via Daraja API), Paystack card payments, cash payments, post-to-bill, and cash on delivery (COD). Payments are linked to invoices, which are linked to orders, creating a complete transactional flow. Upon successful payment, the system automatically updates invoice and order payment statuses, generates receipts, and updates inventory.
+Payment Management handles the processing of payments for invoices within the DOHEZ-API system. It supports multiple payment methods including M-Pesa STK Push (via Daraja API), Paystack card payments, cash payments, post-to-bill, and cash on delivery (COD). Payments are linked to invoices, which are linked to orders, appointments, tickets, or laundry requests, creating a complete transactional flow. Upon successful payment, the system automatically updates status, generates receipts, and updates inventory or booking states.
 
 **Key Features:**
 - **Multiple Payment Methods:** Supports M-Pesa STK Push, Paystack card payments, cash, post-to-bill, and COD
@@ -34,6 +34,7 @@ Payment Management handles the processing of payments for invoices within the TE
 export interface IPayment extends Document {
   paymentNumber: string;
   invoice: (Types.ObjectId | IInvoice)[];
+  customer: Types.ObjectId | IUser;
   branch: Types.ObjectId | IBranch;
   vendor: Types.ObjectId | IVendor;
   method: "mpesa" | "paystack" | "cash" | "post_to_bill" | "cod";
@@ -58,7 +59,7 @@ export interface IPayment extends Document {
 
 ### Model Implementation
 
-**File: `../models/paymentModel.ts`**
+**File: `src/models/paymentModel.ts`**
 
 ```typescript
 import mongoose, { Schema } from 'mongoose';
@@ -75,6 +76,11 @@ const paymentSchema = new Schema<IPayment>(
       type: Schema.Types.ObjectId,
       ref: 'Invoice',
     }],
+    customer: {
+      type: Schema.Types.ObjectId,
+      ref: 'User',
+      required: true,
+    },
     branch: {
       type: Schema.Types.ObjectId,
       ref: 'Branch',
@@ -168,14 +174,17 @@ import Order from '../models/Order';
 import Receipt from '../models/receiptModel';
 import Product from '../models/Product';
 import Ticket from '../models/Ticket';
+import Laundry from '../models/Laundry';
 import { 
   createPaymentRecord, 
   initiateMpesaAppointmentPayment, 
   initiateMpesaProductPayment,
   initiateMpesaTicketPayment,
+  initiateMpesaLaundryPayment,
   applySucceFullProductPayment, 
   applySuccessFullAppointmentPayment,
   applySuccessfulTicketPayment,
+  applySuccessFullLaundryPayment,
   generateInvoiceNumber,
   generateTicketNumber
 } from '../services/internal/paymentService';
@@ -186,6 +195,173 @@ import mongoose from 'mongoose';
 ```
 
 ### Functions Overview
+
+#### `bookLaundry()`
+**Purpose:** Books a laundry service, creates an invoice, and initiates payment.  
+**Access:** Private (Authenticated User)  
+**Validation:** `vendorId`, `branchId`, `location`, `services`, and `pickUpDate` are required. `phoneNumber` is required for M-Pesa.  
+**Process:** Validates vendor, branch, and services. Creates `Laundry` and `Invoice` records. Initiates M-Pesa STK push.  
+**Response:** Success message, laundry details, payment ID, and Daraja refs.
+
+**Controller Implementation:**
+```typescript
+export const bookLaundry = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const { 
+      vendorId, 
+      branchId, 
+      location, 
+      services, 
+      pickUpDate, 
+      paymentMethod, 
+      phoneNumber 
+    } = req.body;
+    
+    const userId = (req as any).user?._id;
+
+    // 1. Validation
+    const vendor = await Vendor.findById(vendorId);
+    if (!vendor) return next(errorHandler(404, 'Vendor not found'));
+
+    const branch = await Branch.findById(branchId);
+    if (!branch) return next(errorHandler(404, 'Branch not found'));
+
+    const serviceProducts = await Product.find({ _id: { $in: services } });
+    if (serviceProducts.length !== services.length) {
+      return next(errorHandler(404, 'One or more services not found'));
+    }
+
+    const totalAmount = serviceProducts.reduce((sum, p) => sum + (p.offerPrice || p.price), 0);
+
+    // 2. Laundry creation
+    const laundry = await Laundry.create({
+      laundryNumber: await generateLaundryNumber(),
+      customer: userId,
+      vendor: vendorId,
+      branch: branchId,
+      location,
+      services,
+      pickUpDate,
+      status: 'PENDING',
+      remainingAmount: totalAmount
+    });
+
+    // 3. Invoice creation
+    const invoice = await Invoice.create({
+      laundry: laundry._id,
+      branch: branchId,
+      vendor: vendorId,
+      invoiceNumber: await generateInvoiceNumber(),
+      subtotal: totalAmount,
+      total: totalAmount,
+      balanceDue: totalAmount,
+      paymentStatus: 'PENDING'
+    });
+
+    // 4. Payment Initiation
+    if (paymentMethod === 'mpesa') {
+      if (!phoneNumber) return next(errorHandler(400, 'phoneNumber is required for mpesa'));
+      const msisdn = normalizePhoneNumber(phoneNumber);
+
+      const { payment, res: darajaRes } = await initiateMpesaLaundryPayment({
+        invoiceId: invoice._id,
+        customer: userId,
+        branch: branchId,
+        vendor: vendorId,
+        amount: totalAmount,
+        phone: msisdn,
+        invoiceNumber: invoice.invoiceNumber,
+        type: 'FULLPAYMENT'
+      });
+
+      return res.status(202).json({
+        success: true,
+        message: 'Laundry booked and M-Pesa STK Push initiated',
+        data: {
+          laundryId: laundry._id,
+          paymentId: payment._id,
+          status: payment.status,
+          daraja: {
+            merchantRequestId: darajaRes.merchantRequestId,
+            checkoutRequestId: darajaRes.checkoutRequestId
+          }
+        }
+      });
+    }
+
+    return next(errorHandler(400, 'Unsupported payment method'));
+  } catch (error) {
+    next(error);
+  }
+};
+```
+
+#### `payLaundryInvoice()`
+**Purpose:** Initiates payment for an existing laundry invoice.  
+**Access:** Private (Authenticated User)  
+**Validation:** `invoiceId`, `method`, and `payerPhone` are required.  
+**Process:** Validates invoice status and association. Initiates M-Pesa STK push for the balance due.  
+**Response:** Success message and payment details.
+
+**Controller Implementation:**
+```typescript
+export const payLaundryInvoice = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const { invoiceId, method, payerPhone } = req.body;
+
+    if (!invoiceId || !method) {
+      return next(errorHandler(400, 'invoiceId and method are required'));
+    }
+
+    const invoice = await Invoice.findById(invoiceId);
+    if (!invoice) return next(errorHandler(404, 'Invoice not found'));
+    
+    if (!invoice.laundry) return next(errorHandler(400, 'Invoice is not associated with a laundry request'));
+
+    const laundry = await Laundry.findById(invoice.laundry);
+    if (!laundry) return next(errorHandler(404, 'Laundry request not found'));
+
+    if (invoice.paymentStatus === 'PAID') return next(errorHandler(409, 'Invoice already paid'));
+    if (invoice.paymentStatus === 'CANCELLED') return next(errorHandler(409, 'Invoice is cancelled'));
+
+    const amount = invoice.balanceDue;
+    const userId = (req as any).user?._id;
+
+    if (method === 'mpesa') {
+      if (!payerPhone) return next(errorHandler(400, 'payerPhone is required for mpesa'));
+      const msisdn = normalizePhoneNumber(payerPhone);
+
+      const { payment, res: darajaRes } = await initiateMpesaLaundryPayment({
+        invoiceId: invoice._id,
+        customer: userId,
+        branch: invoice.branch as any,
+        vendor: invoice.vendor as any,
+        amount,
+        phone: msisdn,
+        invoiceNumber: invoice.invoiceNumber,
+        type: 'FULLPAYMENT'
+      });
+
+      return res.status(202).json({
+        success: true,
+        message: 'Payment initiated for laundry',
+        data: {
+          paymentId: payment._id,
+          status: payment.status,
+          daraja: {
+            merchantRequestId: darajaRes.merchantRequestId,
+            checkoutRequestId: darajaRes.checkoutRequestId
+          }
+        }
+      });
+    }
+
+    return next(errorHandler(400, 'Unsupported payment method'));
+  } catch (error) {
+    next(error);
+  }
+};
+```
 
 #### `confirmAppointment()`
 **Purpose:** Validates appointment slot and initiates a booking fee payment.  
@@ -868,6 +1044,10 @@ router.post('/tickets/book', authenticateToken, bookTicket);
 
 router.post('/tickets/pay', authenticateToken, payTicketInvoices);
 
+router.post('/laundries/book', authenticateToken, bookLaundry);
+
+router.post('/laundries/pay', authenticateToken, payLaundryInvoice);
+
 router.post('/appointments/confirm/:appointmentId', authenticateToken, confirmAppointment);
 
 router.post('/appointments/pay', authenticateToken, payAppointmentInvoice);
@@ -973,10 +1153,89 @@ export default router;
       "checkoutRequestId": "ws_CO_06052026123456789"
     }
   }
-}
-```
+  }
+  }
 
-#### `POST /api/payments/appointments/confirm/:appointmentId`
+  #### `POST /api/payments/laundries/book`
+  **Headers:** 
+  - `Authorization: Bearer <token>`
+  - `Content-Type: application/json`
+
+  **Request Body (JSON):**
+  ```json
+  {
+  "vendorId": "65e26b1c09b068c201383805",
+  "branchId": "65e26b1c09b068c201383810",
+  "location": {
+  "address": "123 Ngong Road, Nairobi",
+  "coordinates": {
+    "lat": -1.3005,
+    "lng": 36.7846
+  }
+  },
+  "services": ["65e26b1c09b068c201383815"],
+  "pickUpDate": {
+  "day": "2026-05-25",
+  "hour": "10:30"
+  },
+  "paymentMethod": "mpesa",
+  "phoneNumber": "254712345678"
+  }
+  ```
+
+  **Purpose:** Book laundry service and initiate payment.
+  **Access:** Private (Authenticated User)
+  **Response (202 Accepted):**
+  ```json
+  {
+  "success": true,
+  "message": "Laundry booked and M-Pesa STK Push initiated",
+  "data": {
+  "laundryId": "66389f4b52e2a1b4e8d1a2d1",
+  "paymentId": "66389f4b52e2a1b4e8d1a2d2",
+  "status": "INITIATED",
+  "daraja": {
+    "merchantRequestId": "29115-1234567-2",
+    "checkoutRequestId": "ws_CO_06052026123456790"
+  }
+  }
+  }
+  ```
+
+  #### `POST /api/payments/laundries/pay`
+  **Headers:** 
+  - `Authorization: Bearer <token>`
+  - `Content-Type: application/json`
+
+  **Request Body (JSON):**
+  ```json
+  {
+  "invoiceId": "66389f4b52e2a1b4e8d1a2c1",
+  "method": "mpesa",
+  "payerPhone": "254712345678"
+  }
+  ```
+
+  **Purpose:** Pay laundry invoice.
+  **Access:** Private (Authenticated User)
+  **Response (202 Accepted):**
+  ```json
+  {
+  "success": true,
+  "message": "Payment initiated for laundry",
+  "data": {
+  "paymentId": "66389f4b52e2a1b4e8d1a2d3",
+  "status": "INITIATED",
+  "daraja": {
+    "merchantRequestId": "29115-1234567-3",
+    "checkoutRequestId": "ws_CO_06052026123456791"
+  }
+  }
+  }
+  ```
+
+  #### `POST /api/payments/appointments/confirm/:appointmentId`
+
 **Headers:** 
 - `Authorization: Bearer <token>`
 - `Content-Type: application/json`
@@ -1276,6 +1535,37 @@ curl -X POST http://localhost:5000/api/payments/appointments/pay \
   -H "Authorization: Bearer <access_token>" \
   -d '{
     "appointmentId": "65e26b1c09b068c201383812",
+    "method": "mpesa",
+    "payerPhone": "254712345678"
+  }'
+```
+
+### Book Laundry
+```bash
+curl -X POST http://localhost:5000/api/payments/laundries/book \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer <access_token>" \
+  -d '{
+    "vendorId": "65e26b1c09b068c201383805",
+    "branchId": "65e26b1c09b068c201383810",
+    "location": {
+      "address": "123 Ngong Road, Nairobi",
+      "coordinates": { "lat": -1.3005, "lng": 36.7846 }
+    },
+    "services": ["65e26b1c09b068c201383815"],
+    "pickUpDate": { "day": "2026-05-25", "hour": "10:30" },
+    "paymentMethod": "mpesa",
+    "phoneNumber": "254712345678"
+  }'
+```
+
+### Pay Laundry Invoice
+```bash
+curl -X POST http://localhost:5000/api/payments/laundries/pay \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer <access_token>" \
+  -d '{
+    "invoiceId": "66389f4b52e2a1b4e8d1a2c1",
     "method": "mpesa",
     "payerPhone": "254712345678"
   }'

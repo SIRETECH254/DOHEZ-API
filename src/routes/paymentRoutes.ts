@@ -6,6 +6,8 @@ import {
   payAppointmentInvoice,
   bookTicket,
   payTicketInvoices,
+  bookLaundry,
+  payLaundryInvoice,
   mpesaWebhook, 
   queryMpesaByCheckoutId, 
   getPayments, 
@@ -43,6 +45,26 @@ router.post('/tickets/book', authenticateToken, bookTicket);
  *     security: [{ bearerAuth: [] }]
  */
 router.post('/tickets/pay', authenticateToken, payTicketInvoices);
+
+/**
+ * @swagger
+ * /api/payments/laundries/book:
+ *   post:
+ *     summary: Book laundry service and initiate payment
+ *     tags: [Payments]
+ *     security: [{ bearerAuth: [] }]
+ */
+router.post('/laundries/book', authenticateToken, bookLaundry);
+
+/**
+ * @swagger
+ * /api/payments/laundries/pay:
+ *   post:
+ *     summary: Pay laundry invoice
+ *     tags: [Payments]
+ *     security: [{ bearerAuth: [] }]
+ */
+router.post('/laundries/pay', authenticateToken, payLaundryInvoice);
 
 /**
  * @swagger

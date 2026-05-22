@@ -35,6 +35,7 @@ import availabilityRoutes from "./routes/availabilityRoutes";
 import appointmentRoutes from "./routes/appointmentRoutes";
 import ticketRoutes from "./routes/ticketRoutes";
 import receiptRoutes from "./routes/receiptRoutes";
+import laundryRoutes from "./routes/laundryRoutes";
 
 // Initialize application
 const app = express();
@@ -187,6 +188,8 @@ app.use("/api/appointments", appointmentRoutes);
 app.use("/api/tickets", ticketRoutes);
 
 app.use("/api/receipts", receiptRoutes);
+
+app.use("/api/laundries", laundryRoutes);
 
 
 

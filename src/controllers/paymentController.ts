@@ -684,6 +684,10 @@ export const queryMpesaByCheckoutId = async (req: Request, res: Response, next: 
           {
             await applySuccessfulTicketPayment({ invoice, payment, io, method: 'mpesa_stk' });
           }
+          else if (invoice.laundry) 
+          {
+            await applySuccessFullLaundryPayment({ invoice, payment, io, method: 'mpesa_stk' });
+          }
         }
       }
 
