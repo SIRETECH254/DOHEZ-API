@@ -53,9 +53,9 @@ const allowedOrigins: string[] = [
   "http://localhost:5174",
   "http://localhost:5175",
   "http://localhost:3500",
-  "https://appointment-api-zlfq.onrender.com",
-  "https://appointment-admin-t5yy.onrender.com",
-  "https://appointment-client-gwkg.onrender.com"
+  "https://dohez-admin.onrender.com",
+  "https://dohez-api.onrender.com",
+  "https://dohez-client.onrender.com"
 ];
 
 // Add CALLBACK_URL if it exists
@@ -211,7 +211,7 @@ const socketConnections = new Map<string, string>();
 io.on("connection", (socket) => {
   console.log("Client connected:", socket.id);
 
-  socket.on("authenticate", (userId: string) => {
+socket.on("authenticate", (userId: string) => {
     socketConnections.set(userId, socket.id);
     socket.join(`user_${userId}`);
     console.log(`User ${userId} connected with socket ${socket.id}`);
