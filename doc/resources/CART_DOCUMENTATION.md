@@ -344,28 +344,31 @@ export default router;
   "success": true,
   "data": {
     "cart": {
-      "id": "660af9994444444444444444",
+      "_id": "660af9994444444444444444",
       "userId": "660af1238888888888888888",
       "cartGroups": [
         {
+          "_id": "660af9994444444444444445",
           "vendorId": {
-            "id": "660af4569999999999999999",
+            "_id": "660af4569999999999999999",
             "name": "Vendor Name"
           },
           "branchId": {
-            "id": "660af7890000000000000000",
+            "_id": "660af7890000000000000000",
             "name": "Branch Name"
           },
           "items": [
             {
+              "_id": "660af8881111111111111222",
               "productId": {
-                "id": "660af9995555555555555555",
+                "_id": "660af9995555555555555555",
                 "name": "Luxury Pizza"
               },
               "skuId": "660af8881111111111111111",
               "quantity": 2,
               "priceAtAddition": 1500,
-              "variants": []
+              "variants": [],
+              "modifiers": []
             }
           ],
           "groupSubtotal": 3000
@@ -373,8 +376,9 @@ export default router;
       ],
       "totalCartValue": 3000,
       "totalItems": 2,
-      "createdAt": "2026-04-30T10:00:00.000Z",
-      "updatedAt": "2026-04-30T10:00:00.000Z"
+      "createdAt": "2026-05-25T10:00:00.000Z",
+      "updatedAt": "2026-05-25T10:00:00.000Z",
+      "__v": 0
     }
   }
 }
@@ -394,35 +398,38 @@ export default router;
   "priceAtAddition": 1500
 }
 ```
-
-**Complex Request Body (with Variants and Modifiers):**
-```json
-{
-  "vendorId": "660af4569999999999999999",
-  "branchId": "660af7890000000000000000",
-  "productId": "660af9995555555555555555",
-  "skuId": "660af8881111111111111111",
-  "quantity": 1,
-  "priceAtAddition": 1800,
-  "variants": [
-    { "variantId": "660af0001111111111111111", "optionId": "660af0002222222222222222" }
-  ],
-  "modifiers": [
-    { "modifierId": "660af0003333333333333333", "optionId": "660af0004444444444444444" }
-  ]
-}
-```
 - **Response:**
 ```json
 {
   "success": true,
   "data": {
     "cart": {
-      "id": "660af9994444444444444444",
+      "_id": "660af9994444444444444444",
       "userId": "660af1238888888888888888",
+      "cartGroups": [
+        {
+          "_id": "660af9994444444444444445",
+          "vendorId": "660af4569999999999999999",
+          "branchId": "660af7890000000000000000",
+          "items": [
+            {
+              "_id": "660af8881111111111111222",
+              "productId": "660af9995555555555555555",
+              "skuId": "660af8881111111111111111",
+              "quantity": 1,
+              "priceAtAddition": 1500,
+              "variants": [],
+              "modifiers": []
+            }
+          ],
+          "groupSubtotal": 1500
+        }
+      ],
       "totalCartValue": 1500,
       "totalItems": 1,
-      "updatedAt": "2026-04-30T10:05:00.000Z"
+      "createdAt": "2026-05-25T10:00:00.000Z",
+      "updatedAt": "2026-05-25T10:05:00.000Z",
+      "__v": 1
     }
   }
 }
@@ -439,20 +446,38 @@ export default router;
   "quantity": 5
 }
 ```
-**Body Fields:**
-- `branchId`: (String) The ID of the branch group containing the item.
-- `cartItemId`: (String) The unique `_id` of the cart line item. This ID represents a specific combination of SKU + Variants + Modifiers.
-- `quantity`: (Number) The new total quantity for this specific configuration.
-
 - **Response:**
 ```json
 {
   "success": true,
   "data": {
     "cart": {
-      "id": "660af9994444444444444444",
+      "_id": "660af9994444444444444444",
+      "userId": "660af1238888888888888888",
+      "cartGroups": [
+        {
+          "_id": "660af9994444444444444445",
+          "vendorId": "660af4569999999999999999",
+          "branchId": "660af7890000000000000000",
+          "items": [
+            {
+              "_id": "660af8881111111111111222",
+              "productId": "660af9995555555555555555",
+              "skuId": "660af8881111111111111111",
+              "quantity": 5,
+              "priceAtAddition": 1500,
+              "variants": [],
+              "modifiers": []
+            }
+          ],
+          "groupSubtotal": 7500
+        }
+      ],
       "totalCartValue": 7500,
-      "updatedAt": "2026-04-30T10:10:00.000Z"
+      "totalItems": 5,
+      "createdAt": "2026-05-25T10:00:00.000Z",
+      "updatedAt": "2026-05-25T10:10:00.000Z",
+      "__v": 2
     }
   }
 }
@@ -468,9 +493,13 @@ export default router;
   "cartItemId": "660af8881111111111111222"
 }
 ```
-**Body Fields:**
-- `branchId`: (String) The ID of the branch group containing the item.
-- `cartItemId`: (String) The unique `_id` of the specific cart line item configuration to remove.
+- **Response:**
+```json
+{
+  "success": true,
+  "message": "Item removed"
+}
+```
 
 #### 5. Clear Cart
 - **Route:** `DELETE /api/cart/clear`

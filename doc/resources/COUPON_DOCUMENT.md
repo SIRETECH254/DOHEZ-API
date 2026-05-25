@@ -862,12 +862,29 @@ export default router;
   "message": "Coupon created successfully",
   "data": {
     "coupon": {
-      "id": "6638a1b2c3d4e5f6g7h8i9j0",
+      "_id": "6638a1b2c3d4e5f6g7h8i9j0",
       "code": "XYZ12345",
       "name": "Welcome Discount",
+      "description": "10% off for first-time orders",
       "discountType": "percentage",
       "discountValue": 10,
-      "isActive": true
+      "minimumOrderAmount": 500,
+      "isActive": true,
+      "hasExpiry": false,
+      "hasUsageLimit": false,
+      "usedCount": 0,
+      "isFirstTimeOnly": true,
+      "applicableProducts": [],
+      "applicableCategories": [],
+      "excludedProducts": [],
+      "excludedCategories": [],
+      "vendor": "65e26b1c09b068c201383805",
+      "branch": "65e26b1c09b068c201383810",
+      "createdBy": "65e26b1c09b068c201383801",
+      "lastUsedBy": [],
+      "createdAt": "2026-05-25T10:00:00.000Z",
+      "updatedAt": "2026-05-25T10:00:00.000Z",
+      "__v": 0
     }
   }
 }
@@ -890,11 +907,15 @@ export default router;
   "data": {
     "coupons": [
       {
-        "id": "6638a1b2c3d4e5f6g7h8i9j0",
+        "_id": "6638a1b2c3d4e5f6g7h8i9j0",
         "code": "XYZ12345",
         "name": "Welcome Discount",
         "discountType": "percentage",
-        "discountValue": 10
+        "discountValue": 10,
+        "isActive": true,
+        "createdAt": "2026-05-25T10:00:00.000Z",
+        "updatedAt": "2026-05-25T10:00:00.000Z",
+        "__v": 0
       }
     ],
     "pagination": {
@@ -921,13 +942,22 @@ export default router;
   "success": true,
   "data": {
     "coupon": {
-      "id": "6638a1b2c3d4e5f6g7h8i9j0",
+      "_id": "6638a1b2c3d4e5f6g7h8i9j0",
       "code": "XYZ12345",
       "name": "Welcome Discount",
       "discountType": "percentage",
       "discountValue": 10,
-      "vendor": "65e26b1c09b068c201383805",
-      "branch": "65e26b1c09b068c201383810"
+      "vendor": {
+        "_id": "65e26b1c09b068c201383805",
+        "name": "Sample Vendor"
+      },
+      "branch": {
+        "_id": "65e26b1c09b068c201383810",
+        "name": "Main Branch"
+      },
+      "createdAt": "2026-05-25T10:00:00.000Z",
+      "updatedAt": "2026-05-25T10:00:00.000Z",
+      "__v": 0
     }
   }
 }
@@ -957,10 +987,15 @@ export default router;
   "message": "Coupon updated successfully",
   "data": {
     "coupon": {
-      "id": "6638a1b2c3d4e5f6g7h8i9j0",
+      "_id": "6638a1b2c3d4e5f6g7h8i9j0",
+      "code": "XYZ12345",
       "name": "Holiday Special",
+      "discountType": "percentage",
       "discountValue": 15,
-      "isActive": false
+      "isActive": false,
+      "createdAt": "2026-05-25T10:00:00.000Z",
+      "updatedAt": "2026-05-25T11:00:00.000Z",
+      "__v": 1
     }
   }
 }
@@ -1005,7 +1040,7 @@ export default router;
   "message": "Coupon is valid",
   "data": {
     "coupon": {
-      "id": "6638a1b2c3d4e5f6g7h8i9j0",
+      "_id": "6638a1b2c3d4e5f6g7h8i9j0",
       "code": "XYZ12345",
       "name": "Welcome Discount",
       "discountType": "percentage",
@@ -1040,7 +1075,7 @@ export default router;
   "message": "Coupon applied successfully",
   "data": {
     "coupon": {
-      "id": "6638a1b2c3d4e5f6g7h8i9j0",
+      "_id": "6638a1b2c3d4e5f6g7h8i9j0",
       "code": "XYZ12345",
       "name": "Welcome Discount",
       "discountType": "percentage",
@@ -1072,7 +1107,7 @@ export default router;
       "lastUsedBy": [
         {
           "user": "65e26b1c09b068c201383801",
-          "usedAt": "2026-05-06T14:30:00.000Z"
+          "usedAt": "2026-05-25T14:30:00.000Z"
         }
       ]
     }

@@ -414,7 +414,7 @@ export default router;
   "name": "Downtown Branch",
   "email": "downtown@vendor.com",
   "phone": "+254700000000",
-  "location": "{\"address\": \"Main St\", \"lat\": -1.29, \"lng\": 36.82, \"place_id\": \"...\"}",
+  "location": "{\"address\": \"Main St\", \"lat\": -1.29, \"lng\": 36.82, \"place_id\": \"chIJsx123\"}",
   "workingHours": "{\"monday\": {\"start\": \"08:00\", \"end\": \"18:00\"}}"
 }
 ```
@@ -425,7 +425,27 @@ export default router;
   "data": {
     "branch": {
       "_id": "650af1234567890abcdef888",
-      "name": "Downtown Branch"
+      "vendorId": "650af1234567890abcdef999",
+      "name": "Downtown Branch",
+      "email": "downtown@vendor.com",
+      "phone": "+254700000000",
+      "location": {
+        "address": "Main St",
+        "coordinates": {
+          "lat": -1.29,
+          "lng": 36.82
+        },
+        "place_id": "chIJsx123"
+      },
+      "cover": null,
+      "coverPublicId": null,
+      "workingHours": {
+        "monday": { "start": "08:00", "end": "18:00" }
+      },
+      "gallery": [],
+      "createdAt": "2026-05-25T10:00:00.000Z",
+      "updatedAt": "2026-05-25T10:00:00.000Z",
+      "__v": 0
     }
   }
 }
@@ -441,7 +461,27 @@ export default router;
     "branches": [
       {
         "_id": "650af1234567890abcdef888",
-        "name": "Downtown Branch"
+        "vendorId": "650af1234567890abcdef999",
+        "name": "Downtown Branch",
+        "email": "downtown@vendor.com",
+        "phone": "+254700000000",
+        "location": {
+          "address": "Main St",
+          "coordinates": {
+            "lat": -1.29,
+            "lng": 36.82
+          },
+          "place_id": "chIJsx123"
+        },
+        "cover": null,
+        "coverPublicId": null,
+        "workingHours": {
+          "monday": { "start": "08:00", "end": "18:00" }
+        },
+        "gallery": [],
+        "createdAt": "2026-05-25T10:00:00.000Z",
+        "updatedAt": "2026-05-25T10:00:00.000Z",
+        "__v": 0
       }
     ],
     "pagination": {
@@ -461,8 +501,27 @@ export default router;
   "data": {
     "branch": {
       "_id": "650af1234567890abcdef888",
+      "vendorId": "650af1234567890abcdef999",
       "name": "Downtown Branch",
-      "email": "downtown@vendor.com"
+      "email": "downtown@vendor.com",
+      "phone": "+254700000000",
+      "location": {
+        "address": "Main St",
+        "coordinates": {
+          "lat": -1.29,
+          "lng": 36.82
+        },
+        "place_id": "chIJsx123"
+      },
+      "cover": null,
+      "coverPublicId": null,
+      "workingHours": {
+        "monday": { "start": "08:00", "end": "18:00" }
+      },
+      "gallery": [],
+      "createdAt": "2026-05-25T10:00:00.000Z",
+      "updatedAt": "2026-05-25T10:00:00.000Z",
+      "__v": 0
     }
   }
 }
@@ -478,7 +537,27 @@ export default router;
   "data": {
     "branch": {
       "_id": "650af1234567890abcdef888",
-      "name": "Downtown Branch Pro"
+      "vendorId": "650af1234567890abcdef999",
+      "name": "Downtown Branch Pro",
+      "email": "downtown@vendor.com",
+      "phone": "+254700000000",
+      "location": {
+        "address": "Main St",
+        "coordinates": {
+          "lat": -1.29,
+          "lng": 36.82
+        },
+        "place_id": "chIJsx123"
+      },
+      "cover": null,
+      "coverPublicId": null,
+      "workingHours": {
+        "monday": { "start": "08:00", "end": "18:00" }
+      },
+      "gallery": [],
+      "createdAt": "2026-05-25T10:00:00.000Z",
+      "updatedAt": "2026-05-25T12:00:00.000Z",
+      "__v": 1
     }
   }
 }

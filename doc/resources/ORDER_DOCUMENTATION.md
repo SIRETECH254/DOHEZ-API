@@ -1051,7 +1051,7 @@ export default router;
     "orders": [
       {
         "_id": "650af123890abcdef1234567",
-        "createdAt": "2026-05-05T10:00:00.000Z",
+        "createdAt": "2026-05-25T10:00:00.000Z",
         "status": "PLACED",
         "paymentStatus": "UNPAID",
         "pricing": {
@@ -1066,7 +1066,9 @@ export default router;
         "invoice": {
           "_id": "650af456890abcdef1234568",
           "number": "INV-2026-123456"
-        }
+        },
+        "updatedAt": "2026-05-25T10:00:00.000Z",
+        "__v": 0
       }
     ],
     "pagination": {
@@ -1089,23 +1091,29 @@ export default router;
     "order": {
       "_id": "650af123890abcdef1234567",
       "customer": {
+        "_id": "65e26b1c09b068c201383801",
         "firstName": "John",
         "lastName": "Doe",
         "email": "john.doe@example.com",
         "phone": "+254700000000"
       },
       "vendor": {
+        "_id": "65e26b1c09b068c201383810",
         "name": "Quick Mart"
       },
       "branch": {
+        "_id": "65e26b1c09b068c201383811",
         "name": "Main Branch"
       },
       "items": [
         {
+          "sku": "650af123890abcdef1234569",
           "product": {
+            "_id": "650af123890abcdef1234569",
             "name": "Milk 500ml",
-            "price": 60
+            "images": [{"url": "...", "publicId": "..."}]
           },
+          "title": "Milk 500ml",
           "quantity": 2,
           "unitPrice": 60
         }
@@ -1114,8 +1122,20 @@ export default router;
       "paymentStatus": "UNPAID",
       "pricing": {
         "subtotal": 120,
+        "discounts": 0,
+        "packagingFee": 0,
+        "schedulingFee": 0,
+        "deliveryFee": 0,
+        "tax": 0,
         "total": 120
-      }
+      },
+      "invoice": {
+        "_id": "650af456890abcdef1234568",
+        "number": "INV-2026-123456"
+      },
+      "createdAt": "2026-05-25T10:00:00.000Z",
+      "updatedAt": "2026-05-25T10:00:00.000Z",
+      "__v": 0
     }
   }
 }
@@ -1166,14 +1186,25 @@ export default router;
       {
         "_id": "650af123890abcdef1234567",
         "customer": {
+          "_id": "650af123890abcdef1234567",
           "firstName": "John",
           "lastName": "Doe",
           "email": "john.doe@example.com"
         },
         "status": "PLACED",
+        "paymentStatus": "UNPAID",
         "pricing": {
-          "total": 1550
-        }
+          "subtotal": 120,
+          "discounts": 0,
+          "packagingFee": 0,
+          "schedulingFee": 0,
+          "deliveryFee": 0,
+          "tax": 0,
+          "total": 120
+        },
+        "createdAt": "2026-05-25T10:00:00.000Z",
+        "updatedAt": "2026-05-25T10:00:00.000Z",
+        "__v": 0
       }
     ],
     "pagination": {

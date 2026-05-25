@@ -681,21 +681,30 @@ export default router;
 {
   "firstName": "John",
   "lastName": "Doe",
-  "email": "john@company.com",
+  "email": "john.doe@example.com",
   "phone": "+254712345678",
   "password": "securePassword123",
   "role": "staff"
 }
 ```
-**Response:**
+**Response (201 Created):**
 ```json
 {
   "success": true,
   "message": "User registered successfully. Please verify your account with the OTP sent.",
   "data": {
-    "userId": "...",
-    "email": "john@company.com",
+    "userId": "650af1234567890abcdef123",
+    "firstName": "John",
+    "lastName": "Doe",
+    "email": "john.doe@example.com",
     "phone": "+254712345678",
+    "roles": [
+      {
+        "_id": "650af1234567890abcdef001",
+        "name": "staff",
+        "displayName": "Staff"
+      }
+    ],
     "isVerified": false
   }
 }
@@ -705,23 +714,33 @@ export default router;
 **Body:**
 ```json
 {
-  "email": "john@company.com",
+  "email": "john.doe@example.com",
   "otp": "123456"
 }
 ```
-**Response:**
+**Response (200 OK):**
 ```json
 {
   "success": true,
   "message": "Account verified successfully",
   "data": {
     "user": {
-      "id": "...",
-      "email": "john@company.com",
+      "id": "650af1234567890abcdef123",
+      "firstName": "John",
+      "lastName": "Doe",
+      "email": "john.doe@example.com",
+      "phone": "+254712345678",
+      "roles": [
+        {
+          "_id": "650af1234567890abcdef001",
+          "name": "staff",
+          "displayName": "Staff"
+        }
+      ],
       "isVerified": true
     },
-    "accessToken": "eyJhbGciOiJIUzI1NiIs...",
-    "refreshToken": "eyJhbGciOiJIUzI1NiIs..."
+    "accessToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+    "refreshToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
   }
 }
 ```
@@ -730,18 +749,19 @@ export default router;
 **Body:**
 ```json
 {
-  "email": "john@company.com"
+  "email": "john.doe@example.com"
 }
 ```
-**Response:**
+**Response (200 OK):**
 ```json
 {
   "success": true,
   "message": "OTP has been resent to your email and phone",
   "data": {
-    "userId": "...",
-    "email": "john@company.com",
-    "otpExpiry": "2026-04-21T00:00:00.000Z"
+    "userId": "650af1234567890abcdef123",
+    "email": "john.doe@example.com",
+    "phone": "+254712345678",
+    "otpExpiry": "2026-05-22T10:45:00.000Z"
   }
 }
 ```
@@ -750,23 +770,34 @@ export default router;
 **Body:**
 ```json
 {
-  "email": "john@company.com",
+  "email": "john.doe@example.com",
   "password": "securePassword123"
 }
 ```
-**Response:**
+**Response (200 OK):**
 ```json
 {
   "success": true,
   "message": "Login successful",
   "data": {
     "user": {
-      "id": "...",
-      "email": "john@company.com",
-      "roles": []
+      "id": "650af1234567890abcdef123",
+      "firstName": "John",
+      "lastName": "Doe",
+      "email": "john.doe@example.com",
+      "phone": "+254712345678",
+      "avatar": "https://res.cloudinary.com/dohez/image/upload/v1234567890/avatars/john.jpg",
+      "roles": [
+        {
+          "_id": "650af1234567890abcdef001",
+          "name": "staff",
+          "displayName": "Staff"
+        }
+      ],
+      "isVerified": true
     },
-    "accessToken": "eyJhbGciOiJIUzI1NiIs...",
-    "refreshToken": "eyJhbGciOiJIUzI1NiIs..."
+    "accessToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+    "refreshToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
   }
 }
 ```
@@ -775,10 +806,10 @@ export default router;
 **Body:**
 ```json
 {
-  "email": "john@company.com"
+  "email": "john.doe@example.com"
 }
 ```
-**Response:**
+**Response (200 OK):**
 ```json
 {
   "success": true,
@@ -790,10 +821,10 @@ export default router;
 **Body:**
 ```json
 {
-  "newPassword": "newSecurePassword123"
+  "newPassword": "newSecurePassword456"
 }
 ```
-**Response:**
+**Response (200 OK):**
 ```json
 {
   "success": true,
@@ -805,34 +836,62 @@ export default router;
 **Body:**
 ```json
 {
-  "refreshToken": "your_refresh_token_here"
+  "refreshToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
 }
 ```
-**Response:**
+**Response (200 OK):**
 ```json
 {
   "success": true,
   "message": "Token refreshed successfully",
   "data": {
-    "accessToken": "eyJhbGciOiJIUzI1NiIs...",
-    "refreshToken": "eyJhbGciOiJIUzI1NiIs..."
+    "accessToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+    "refreshToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
   }
 }
 ```
 
 #### `GET /api/auth/me`
 **Headers:** `Authorization: Bearer <token>`
-**Response:**
+**Response (200 OK):**
 ```json
 {
   "success": true,
   "data": {
     "user": {
-      "id": "...",
-      "email": "john@company.com"
+      "id": "650af1234567890abcdef123",
+      "firstName": "John",
+      "lastName": "Doe",
+      "email": "john.doe@example.com",
+      "phone": "+254712345678",
+      "avatar": "https://res.cloudinary.com/dohez/image/upload/v1234567890/avatars/john.jpg",
+      "roles": [
+        {
+          "_id": "650af1234567890abcdef001",
+          "name": "staff",
+          "displayName": "Staff"
+        }
+      ],
+      "isActive": true,
+      "isVerified": true,
+      "lastLoginAt": "2026-05-22T10:30:00.000Z",
+      "createdAt": "2026-05-20T08:00:00.000Z"
     }
   }
 }
+```
+
+---
+
+## 🔐 Middleware
+
+### Authentication Middleware
+
+#### `authenticateToken`
+**Purpose:** Verify JWT token and load user with roles  
+**Usage:**
+```typescript
+router.get('/me', authenticateToken, getMe);
 ```
 
 ---
@@ -846,24 +905,30 @@ curl -X POST http://localhost:3500/api/auth/register \
   -d '{
     "firstName": "John",
     "lastName": "Doe",
-    "email": "john@company.com",
+    "email": "john.doe@example.com",
     "password": "securePassword123",
     "phone": "+254712345678",
     "role": "customer"
   }'
 ```
-**Response:**
+**Response (201 Created):**
 ```json
 {
   "success": true,
   "message": "User registered successfully. Please verify your account with the OTP sent.",
   "data": {
-    "userId": "...",
+    "userId": "650af1234567890abcdef123",
     "firstName": "John",
     "lastName": "Doe",
-    "email": "john@company.com",
+    "email": "john.doe@example.com",
     "phone": "+254712345678",
-    "roles": [...],
+    "roles": [
+      {
+        "_id": "650af1234567890abcdef002",
+        "name": "customer",
+        "displayName": "Customer"
+      }
+    ],
     "isVerified": false
   }
 }
@@ -874,27 +939,33 @@ curl -X POST http://localhost:3500/api/auth/register \
 curl -X POST http://localhost:3500/api/auth/verify-otp \
   -H "Content-Type: application/json" \
   -d '{
-    "email": "john@company.com",
+    "email": "john.doe@example.com",
     "otp": "123456"
   }'
 ```
-**Response:**
+**Response (200 OK):**
 ```json
 {
   "success": true,
   "message": "Account verified successfully",
   "data": {
     "user": {
-      "id": "...",
+      "id": "650af1234567890abcdef123",
       "firstName": "John",
       "lastName": "Doe",
-      "email": "john@company.com",
+      "email": "john.doe@example.com",
       "phone": "+254712345678",
-      "roles": [...],
+      "roles": [
+        {
+          "_id": "650af1234567890abcdef002",
+          "name": "customer",
+          "displayName": "Customer"
+        }
+      ],
       "isVerified": true
     },
-    "accessToken": "eyJhbGciOiJIUzI1NiIs...",
-    "refreshToken": "eyJhbGciOiJIUzI1NiIs..."
+    "accessToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+    "refreshToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
   }
 }
 ```
@@ -904,28 +975,34 @@ curl -X POST http://localhost:3500/api/auth/verify-otp \
 curl -X POST http://localhost:3500/api/auth/login \
   -H "Content-Type: application/json" \
   -d '{
-    "email": "john@company.com",
+    "email": "john.doe@example.com",
     "password": "securePassword123"
   }'
 ```
-**Response:**
+**Response (200 OK):**
 ```json
 {
   "success": true,
   "message": "Login successful",
   "data": {
     "user": {
-      "id": "...",
+      "id": "650af1234567890abcdef123",
       "firstName": "John",
       "lastName": "Doe",
-      "email": "john@company.com",
+      "email": "john.doe@example.com",
       "phone": "+254712345678",
-      "avatar": null,
-      "roles": [...],
+      "avatar": "https://res.cloudinary.com/dohez/image/upload/v1234567890/avatars/john.jpg",
+      "roles": [
+        {
+          "_id": "650af1234567890abcdef002",
+          "name": "customer",
+          "displayName": "Customer"
+        }
+      ],
       "isVerified": true
     },
-    "accessToken": "eyJhbGciOiJIUzI1NiIs...",
-    "refreshToken": "eyJhbGciOiJIUzI1NiIs..."
+    "accessToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+    "refreshToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
   }
 }
 ```
@@ -935,19 +1012,19 @@ curl -X POST http://localhost:3500/api/auth/login \
 curl -X POST http://localhost:3500/api/auth/resend-otp \
   -H "Content-Type: application/json" \
   -d '{
-    "email": "john@company.com"
+    "email": "john.doe@example.com"
   }'
 ```
-**Response:**
+**Response (200 OK):**
 ```json
 {
   "success": true,
   "message": "OTP has been resent to your email and phone",
   "data": {
-    "userId": "...",
-    "email": "john@company.com",
+    "userId": "650af1234567890abcdef123",
+    "email": "john.doe@example.com",
     "phone": "+254712345678",
-    "otpExpiry": "2026-04-21T00:00:00.000Z"
+    "otpExpiry": "2026-05-22T11:00:00.000Z"
   }
 }
 ```
@@ -957,10 +1034,10 @@ curl -X POST http://localhost:3500/api/auth/resend-otp \
 curl -X POST http://localhost:3500/api/auth/forgot-password \
   -H "Content-Type: application/json" \
   -d '{
-    "email": "john@company.com"
+    "email": "john.doe@example.com"
   }'
 ```
-**Response:**
+**Response (200 OK):**
 ```json
 {
   "success": true,
@@ -970,13 +1047,13 @@ curl -X POST http://localhost:3500/api/auth/forgot-password \
 
 ### Reset Password
 ```bash
-curl -X POST http://localhost:3500/api/auth/reset-password/your_reset_token_here \
+curl -X POST http://localhost:3500/api/auth/reset-password/a1b2c3d4e5f6g7h8i9j0 \
   -H "Content-Type: application/json" \
   -d '{
-    "newPassword": "newSecurePassword123"
+    "newPassword": "newSecurePassword456"
   }'
 ```
-**Response:**
+**Response (200 OK):**
 ```json
 {
   "success": true,
@@ -989,17 +1066,17 @@ curl -X POST http://localhost:3500/api/auth/reset-password/your_reset_token_here
 curl -X POST http://localhost:3500/api/auth/refresh-token \
   -H "Content-Type: application/json" \
   -d '{
-    "refreshToken": "your_refresh_token_here"
+    "refreshToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
   }'
 ```
-**Response:**
+**Response (200 OK):**
 ```json
 {
   "success": true,
   "message": "Token refreshed successfully",
   "data": {
-    "accessToken": "eyJhbGciOiJIUzI1NiIs...",
-    "refreshToken": "eyJhbGciOiJIUzI1NiIs..."
+    "accessToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+    "refreshToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
   }
 }
 ```
@@ -1009,23 +1086,29 @@ curl -X POST http://localhost:3500/api/auth/refresh-token \
 curl -X GET http://localhost:3500/api/auth/me \
   -H "Authorization: Bearer <access_token>"
 ```
-**Response:**
+**Response (200 OK):**
 ```json
 {
   "success": true,
   "data": {
     "user": {
-      "id": "...",
+      "id": "650af1234567890abcdef123",
       "firstName": "John",
       "lastName": "Doe",
-      "email": "john@company.com",
+      "email": "john.doe@example.com",
       "phone": "+254712345678",
-      "avatar": null,
-      "roles": [...],
+      "avatar": "https://res.cloudinary.com/dohez/image/upload/v1234567890/avatars/john.jpg",
+      "roles": [
+        {
+          "_id": "650af1234567890abcdef002",
+          "name": "customer",
+          "displayName": "Customer"
+        }
+      ],
       "isActive": true,
       "isVerified": true,
-      "lastLoginAt": "...",
-      "createdAt": "..."
+      "lastLoginAt": "2026-05-22T10:30:00.000Z",
+      "createdAt": "2026-05-20T08:00:00.000Z"
     }
   }
 }
@@ -1036,7 +1119,7 @@ curl -X GET http://localhost:3500/api/auth/me \
 curl -X POST http://localhost:3500/api/auth/logout \
   -H "Authorization: Bearer <access_token>"
 ```
-**Response:**
+**Response (200 OK):**
 ```json
 {
   "success": true,

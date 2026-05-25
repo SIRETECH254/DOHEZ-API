@@ -556,6 +556,16 @@ export default router;
             "endTime": "2026-05-20T12:00:00.000Z",
             "durationMinutes": 180,
             "amount": 2500
+          },
+          {
+            "serviceId": "service_gel_manicure",
+            "serviceName": "Gel Manicure",
+            "staffId": "staff_002",
+            "staffName": "Mary",
+            "startTime": "2026-05-20T12:00:00.000Z",
+            "endTime": "2026-05-20T12:45:00.000Z",
+            "durationMinutes": 45,
+            "amount": 700
           }
         ]
       }

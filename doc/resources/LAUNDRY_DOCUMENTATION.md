@@ -514,11 +514,13 @@ router.post('/laundries/pay', authenticateToken, payLaundryInvoice);
   "data": {
     "laundries": [
       {
-        "id": "650af1234567890abcdef125",
+        "_id": "650af1234567890abcdef125",
         "laundryNumber": "LND-2026-0001",
         "status": "PENDING",
         "remainingAmount": 2500,
-        "createdAt": "2026-05-22T10:00:00.000Z"
+        "createdAt": "2026-05-22T10:00:00.000Z",
+        "updatedAt": "2026-05-22T10:00:00.000Z",
+        "__v": 0
       }
     ],
     "pagination": {
@@ -610,7 +612,7 @@ router.post('/laundries/pay', authenticateToken, payLaundryInvoice);
   "success": true,
   "data": {
     "laundry": {
-      "id": "650af1234567890abcdef128",
+      "_id": "650af1234567890abcdef128",
       "laundryNumber": "LND-2026-0002",
       "pickUpDate": {
         "day": "2026-05-25T00:00:00.000Z",
@@ -630,7 +632,10 @@ router.post('/laundries/pay', authenticateToken, payLaundryInvoice);
           "name": "Dry Cleaning",
           "price": 1200
         }
-      ]
+      ],
+      "createdAt": "2026-05-25T09:00:00.000Z",
+      "updatedAt": "2026-05-25T09:00:00.000Z",
+      "__v": 0
     }
   }
 }
@@ -659,9 +664,12 @@ router.post('/laundries/pay', authenticateToken, payLaundryInvoice);
   "message": "Laundry updated successfully",
   "data": {
     "laundry": {
-      "id": "650af1234567890abcdef128",
+      "_id": "650af1234567890abcdef128",
       "status": "CONFIRMED",
-      "dropDate": "2026-05-28T16:00:00.000Z"
+      "dropDate": "2026-05-28T16:00:00.000Z",
+      "createdAt": "2026-05-25T09:00:00.000Z",
+      "updatedAt": "2026-05-26T10:00:00.000Z",
+      "__v": 1
     }
   }
 }

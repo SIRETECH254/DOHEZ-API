@@ -495,9 +495,11 @@ export default router;
       "selectedModifierOptions": [
         {
           "modifierId": "650af1234567890abcdef789",
-          "optionIds": ["650af1234567890abcdef001", "650af1234567890abcdef002"]
+          "optionIds": ["650af1234567890abcdef001", "650af1234567890abcdef002"],
+          "_id": "650af1234567890abcdef003"
         }
-      ]
+      ],
+      "__v": 1
     }
   }
 }
@@ -522,7 +524,8 @@ export default router;
       "_id": "650af1234567890abcdef123",
       "name": "Pizza",
       "modifiers": [],
-      "selectedModifierOptions": []
+      "selectedModifierOptions": [],
+      "__v": 2
     }
   }
 }
@@ -542,9 +545,9 @@ export default router;
   "branchId": "650af1234567890abcdef123",
   "sortOrder": 1,
   "options": [
-    { "value": "Extra Cheese", "sortOrder": 1 },
-    { "value": "Mushrooms", "sortOrder": 2 },
-    { "value": "Pepperoni", "sortOrder": 3 }
+    { "value": "Extra Cheese", "isActive": true, "sortOrder": 1, "_id": "650af1234567890abcdef001" },
+    { "value": "Mushrooms", "isActive": true, "sortOrder": 2, "_id": "650af1234567890abcdef002" },
+    { "value": "Pepperoni", "isActive": true, "sortOrder": 3, "_id": "650af1234567890abcdef003" }
   ]
 }
 ```
@@ -555,47 +558,22 @@ export default router;
   "data": {
     "modifier": {
       "_id": "650af1234567890abcdef789",
-      "name": "Extra Cheese",
-      "description": "Add an extra layer of mozzarella",
-      "price": 50,
-      "min_selection": 0,
-      "max_selection": 3,
-      "is_required": false,
-      "branchId": {
-        "_id": "650af1234567890abcdef123",
-        "vendorId": "650af1234567890abcdef000",
-        "name": "Main Branch",
-        "email": "branch@example.com",
-        "phone": "+254700000000",
-        "location": {
-          "address": "123 Street, Nairobi",
-          "coordinates": {
-            "lat": -1.2921,
-            "lng": 36.8219
-          },
-          "place_id": "ChIJ..."
-        },
-        "cover": "https://res.cloudinary.com/...",
-        "fulfillmentConfig": {
-          "delivery": true,
-          "pickup": true
-        },
-        "workingHours": {
-          "monday": { "start": "08:00", "end": "17:00" },
-          "tuesday": { "start": "08:00", "end": "17:00" },
-          "wednesday": { "start": "08:00", "end": "17:00" },
-          "thursday": { "start": "08:00", "end": "17:00" },
-          "friday": { "start": "08:00", "end": "17:00" },
-          "saturday": { "start": "09:00", "end": "14:00" },
-          "sunday": { "start": "Closed", "end": "Closed" }
-        },
-        "gallery": [],
-        "createdAt": "2026-04-30T09:00:00.000Z",
-        "updatedAt": "2026-04-30T09:00:00.000Z"
-      },
+      "name": "Toppings",
+      "description": "Choose your pizza toppings",
+      "options": [
+        { "value": "Extra Cheese", "isActive": true, "sortOrder": 1, "_id": "650af1234567890abcdef001" },
+        { "value": "Mushrooms", "isActive": true, "sortOrder": 2, "_id": "650af1234567890abcdef002" },
+        { "value": "Pepperoni", "isActive": true, "sortOrder": 3, "_id": "650af1234567890abcdef003" }
+      ],
+      "price": 0,
+      "min_selection": 1,
+      "max_selection": 5,
+      "is_required": true,
+      "branchId": "650af1234567890abcdef123",
       "sortOrder": 1,
       "createdAt": "2026-04-30T10:00:00.000Z",
-      "updatedAt": "2026-04-30T10:00:00.000Z"
+      "updatedAt": "2026-04-30T10:00:00.000Z",
+      "__v": 0
     }
   }
 }
@@ -612,12 +590,15 @@ export default router;
     "modifiers": [
       {
         "_id": "650af1234567890abcdef789",
-        "name": "Extra Cheese",
-        "description": "Add an extra layer of mozzarella",
-        "price": 50,
-        "min_selection": 0,
-        "max_selection": 3,
-        "is_required": false,
+        "name": "Toppings",
+        "description": "Choose your pizza toppings",
+        "options": [
+          { "value": "Extra Cheese", "isActive": true, "sortOrder": 1, "_id": "650af1234567890abcdef001" }
+        ],
+        "price": 0,
+        "min_selection": 1,
+        "max_selection": 5,
+        "is_required": true,
         "branchId": {
           "_id": "650af1234567890abcdef123",
           "vendorId": "650af1234567890abcdef000",
@@ -626,27 +607,21 @@ export default router;
           "phone": "+254700000000",
           "location": {
             "address": "123 Street, Nairobi",
-            "coordinates": {
-              "lat": -1.2921,
-              "lng": 36.8219
-            },
-            "place_id": "ChIJ..."
+            "coordinates": { "lat": -1.2921, "lng": 36.8219 },
+            "place_id": "ChIJ12345"
           },
-          "cover": "https://res.cloudinary.com/...",
-          "fulfillmentConfig": {
-            "delivery": true,
-            "pickup": true
-          },
-          "workingHours": {
-            "monday": { "start": "08:00", "end": "17:00" }
-          },
+          "cover": "https://res.cloudinary.com/dohez/image/upload/v12345/branch.jpg",
+          "fulfillmentConfig": { "delivery": true, "pickup": true },
+          "workingHours": { "monday": { "start": "08:00", "end": "17:00" } },
           "gallery": [],
           "createdAt": "2026-04-30T09:00:00.000Z",
-          "updatedAt": "2026-04-30T09:00:00.000Z"
+          "updatedAt": "2026-04-30T09:00:00.000Z",
+          "__v": 0
         },
         "sortOrder": 1,
         "createdAt": "2026-04-30T10:00:00.000Z",
-        "updatedAt": "2026-04-30T10:00:00.000Z"
+        "updatedAt": "2026-04-30T10:00:00.000Z",
+        "__v": 0
       }
     ],
     "pagination": {
@@ -670,12 +645,15 @@ export default router;
   "data": {
     "modifier": {
       "_id": "650af1234567890abcdef789",
-      "name": "Extra Cheese",
-      "description": "Add an extra layer of mozzarella",
-      "price": 50,
-      "min_selection": 0,
-      "max_selection": 3,
-      "is_required": false,
+      "name": "Toppings",
+      "description": "Choose your pizza toppings",
+      "options": [
+        { "value": "Extra Cheese", "isActive": true, "sortOrder": 1, "_id": "650af1234567890abcdef001" }
+      ],
+      "price": 0,
+      "min_selection": 1,
+      "max_selection": 5,
+      "is_required": true,
       "branchId": {
         "_id": "650af1234567890abcdef123",
         "vendorId": "650af1234567890abcdef000",
@@ -684,27 +662,21 @@ export default router;
         "phone": "+254700000000",
         "location": {
           "address": "123 Street, Nairobi",
-          "coordinates": {
-            "lat": -1.2921,
-            "lng": 36.8219
-          },
-          "place_id": "ChIJ..."
+          "coordinates": { "lat": -1.2921, "lng": 36.8219 },
+          "place_id": "ChIJ12345"
         },
-        "cover": "https://res.cloudinary.com/...",
-        "fulfillmentConfig": {
-          "delivery": true,
-          "pickup": true
-        },
-        "workingHours": {
-          "monday": { "start": "08:00", "end": "17:00" }
-        },
+        "cover": "https://res.cloudinary.com/dohez/image/upload/v12345/branch.jpg",
+        "fulfillmentConfig": { "delivery": true, "pickup": true },
+        "workingHours": { "monday": { "start": "08:00", "end": "17:00" } },
         "gallery": [],
         "createdAt": "2026-04-30T09:00:00.000Z",
-        "updatedAt": "2026-04-30T09:00:00.000Z"
+        "updatedAt": "2026-04-30T09:00:00.000Z",
+        "__v": 0
       },
       "sortOrder": 1,
       "createdAt": "2026-04-30T10:00:00.000Z",
-      "updatedAt": "2026-04-30T10:00:00.000Z"
+      "updatedAt": "2026-04-30T10:00:00.000Z",
+      "__v": 0
     }
   }
 }
@@ -727,19 +699,20 @@ export default router;
   "data": {
     "modifier": {
       "_id": "650af1234567890abcdef789",
-      "name": "Extra Cheese",
-      "description": "Add an extra layer of mozzarella",
+      "name": "Toppings",
+      "description": "Choose your pizza toppings",
+      "options": [
+        { "value": "Extra Cheese", "isActive": true, "sortOrder": 1, "_id": "650af1234567890abcdef001" }
+      ],
       "price": 60,
-      "min_selection": 0,
-      "max_selection": 3,
-      "is_required": false,
-      "branchId": {
-        "_id": "650af1234567890abcdef123",
-        "name": "Main Branch"
-      },
+      "min_selection": 1,
+      "max_selection": 5,
+      "is_required": true,
+      "branchId": "650af1234567890abcdef123",
       "sortOrder": 1,
       "createdAt": "2026-04-30T10:00:00.000Z",
-      "updatedAt": "2026-04-30T11:00:00.000Z"
+      "updatedAt": "2026-04-30T11:00:00.000Z",
+      "__v": 0
     }
   }
 }

@@ -412,12 +412,14 @@ export default router;
       {
         "_id": "650af1234567890abcdef123",
         "name": "Product Vendor",
-        "slug": "product-vendor",
         "description": "Vendors selling physical products",
-        "isActive": true,
+        "slug": "product-vendor",
         "image": "https://res.cloudinary.com/dohez/image/upload/v1/types/product.jpg",
-        "createdAt": "2026-04-27T12:00:00.000Z",
-        "updatedAt": "2026-04-27T12:00:00.000Z"
+        "imagePublicId": "dohez/vendor-types/product_img_123",
+        "isActive": true,
+        "createdAt": "2026-05-20T10:30:00.000Z",
+        "updatedAt": "2026-05-20T10:30:00.000Z",
+        "__v": 0
       }
     ],
     "pagination": {
@@ -442,10 +444,14 @@ export default router;
     "vendorType": {
       "_id": "650af1234567890abcdef123",
       "name": "Product Vendor",
-      "slug": "product-vendor",
       "description": "Vendors selling physical products",
+      "slug": "product-vendor",
+      "image": "https://res.cloudinary.com/dohez/image/upload/v1/types/product.jpg",
+      "imagePublicId": "dohez/vendor-types/product_img_123",
       "isActive": true,
-      "image": "https://res.cloudinary.com/dohez/image/upload/v1/types/product.jpg"
+      "createdAt": "2026-05-20T10:30:00.000Z",
+      "updatedAt": "2026-05-20T10:30:00.000Z",
+      "__v": 0
     }
   }
 }
@@ -469,10 +475,14 @@ export default router;
     "vendorType": {
       "_id": "650af1234567890abcdef124",
       "name": "Service Vendor",
-      "slug": "service-vendor",
       "description": "Vendors providing specialized services",
+      "slug": "service-vendor",
+      "image": "https://res.cloudinary.com/dohez/image/upload/v1/types/service.jpg",
+      "imagePublicId": "dohez/vendor-types/service_img_456",
       "isActive": true,
-      "image": "https://res.cloudinary.com/dohez/image/upload/v1/types/service.jpg"
+      "createdAt": "2026-05-25T14:15:00.000Z",
+      "updatedAt": "2026-05-25T14:15:00.000Z",
+      "__v": 0
     }
   }
 }
@@ -498,9 +508,14 @@ export default router;
     "vendorType": {
       "_id": "650af1234567890abcdef123",
       "name": "Physical Product Vendor",
+      "description": "Updated description for physical product vendors",
       "slug": "physical-product-vendor",
-      "description": "Updated description",
-      "isActive": true
+      "image": "https://res.cloudinary.com/dohez/image/upload/v1/types/updated_product.jpg",
+      "imagePublicId": "dohez/vendor-types/updated_product_img_789",
+      "isActive": true,
+      "createdAt": "2026-05-20T10:30:00.000Z",
+      "updatedAt": "2026-05-25T15:20:00.000Z",
+      "__v": 1
     }
   }
 }

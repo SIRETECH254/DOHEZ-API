@@ -335,7 +335,7 @@ export default router;
   "orderId": "65e26b1c09b068c201383812"
 }
 ```
-**Response:**
+**Response (201 Created):**
 ```json
 {
   "success": true,
@@ -348,7 +348,7 @@ export default router;
 #### `GET /api/invoices`
 **Headers:** `Authorization: Bearer <admin_token>`
 **Query Parameters:** `page`, `limit`, `paymentStatus`
-**Response:**
+**Response (200 OK):**
 ```json
 {
   "success": true,
@@ -356,9 +356,26 @@ export default router;
     "invoices": [
       {
         "_id": "6638b2c3d4e5f6g7h8i9j0k5",
+        "order": "65e26b1c09b068c201383812",
+        "appointment": null,
+        "branch": "65e26b1c09b068c201383810",
+        "vendor": "65e26b1c09b068c201383805",
         "invoiceNumber": "INV-2026-0001",
+        "lineItems": [
+          { "label": "Items subtotal", "amount": 1500 },
+          { "label": "Tax", "amount": 50 }
+        ],
+        "subtotal": 1500,
+        "discounts": 0,
+        "fees": 0,
+        "tax": 50,
+        "total": 1550,
+        "balanceDue": 1550,
         "paymentStatus": "PENDING",
-        "total": 1550
+        "metadata": {},
+        "createdAt": "2026-05-06T12:00:00.000Z",
+        "updatedAt": "2026-05-06T12:00:00.000Z",
+        "__v": 0
       }
     ],
     "pagination": {
@@ -372,27 +389,42 @@ export default router;
 
 #### `GET /api/invoices/:id`
 **Headers:** `Authorization: Bearer <admin_token>`
-**Response:**
+**Response (200 OK):**
 ```json
 {
   "success": true,
   "data": {
     "invoice": {
       "_id": "6638b2c3d4e5f6g7h8i9j0k5",
-      "invoiceNumber": "INV-2026-0001",
-      "paymentStatus": "PENDING",
       "order": {
         "_id": "65e26b1c09b068c201383812",
         "orderNumber": "ORD-2026-001"
+      },
+      "appointment": null,
+      "branch": {
+        "_id": "65e26b1c09b068c201383810",
+        "name": "Main Distribution Center"
       },
       "vendor": {
         "_id": "65e26b1c09b068c201383805",
         "name": "Organic Supplies Co."
       },
-      "branch": {
-        "_id": "65e26b1c09b068c201383810",
-        "name": "Main Distribution Center"
-      }
+      "invoiceNumber": "INV-2026-0001",
+      "lineItems": [
+        { "label": "Items subtotal", "amount": 1500 },
+        { "label": "Tax", "amount": 50 }
+      ],
+      "subtotal": 1500,
+      "discounts": 0,
+      "fees": 0,
+      "tax": 50,
+      "total": 1550,
+      "balanceDue": 1550,
+      "paymentStatus": "PENDING",
+      "metadata": {},
+      "createdAt": "2026-05-06T12:00:00.000Z",
+      "updatedAt": "2026-05-06T12:00:00.000Z",
+      "__v": 0
     }
   }
 }

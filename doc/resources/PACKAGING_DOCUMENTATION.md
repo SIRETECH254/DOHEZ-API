@@ -453,7 +453,10 @@ export default router;
       "isActive": true,
       "isDefault": true,
       "vendor": "65e26b1c09b068c201383805",
-      "branch": "65e26b1c09b068c201383810"
+      "branch": "65e26b1c09b068c201383810",
+      "createdAt": "2026-05-25T10:00:00.000Z",
+      "updatedAt": "2026-05-25T10:00:00.000Z",
+      "__v": 0
     }
   }
 }
@@ -474,7 +477,10 @@ export default router;
         "isActive": true,
         "isDefault": true,
         "vendor": "65e26b1c09b068c201383805",
-        "branch": "65e26b1c09b068c201383810"
+        "branch": "65e26b1c09b068c201383810",
+        "createdAt": "2026-05-25T10:00:00.000Z",
+        "updatedAt": "2026-05-25T10:00:00.000Z",
+        "__v": 0
       },
       {
         "_id": "6638b2c3d4e5f6g7h8i9j0k2",
@@ -483,7 +489,10 @@ export default router;
         "isActive": true,
         "isDefault": false,
         "vendor": "65e26b1c09b068c201383805",
-        "branch": "65e26b1c09b068c201383810"
+        "branch": "65e26b1c09b068c201383810",
+        "createdAt": "2026-05-25T10:05:00.000Z",
+        "updatedAt": "2026-05-25T10:05:00.000Z",
+        "__v": 0
       }
     ],
     "pagination": {
@@ -515,7 +524,10 @@ export default router;
       "branch": {
         "_id": "65e26b1c09b068c201383810",
         "name": "Main Distribution Center"
-      }
+      },
+      "createdAt": "2026-05-25T10:00:00.000Z",
+      "updatedAt": "2026-05-25T10:00:00.000Z",
+      "__v": 0
     }
   }
 }
@@ -538,7 +550,14 @@ export default router;
     "packaging": {
       "_id": "6638b2c3d4e5f6g7h8i9j0k1",
       "name": "Premium Box",
-      "price": 100
+      "price": 100,
+      "isActive": true,
+      "isDefault": true,
+      "vendor": "65e26b1c09b068c201383805",
+      "branch": "65e26b1c09b068c201383810",
+      "createdAt": "2026-05-25T10:00:00.000Z",
+      "updatedAt": "2026-05-25T11:00:00.000Z",
+      "__v": 0
     }
   }
 }
@@ -563,7 +582,14 @@ export default router;
     "packaging": {
       "_id": "6638b2c3d4e5f6g7h8i9j0k1",
       "name": "Premium Box",
-      "isDefault": true
+      "price": 100,
+      "isActive": true,
+      "isDefault": true,
+      "vendor": "65e26b1c09b068c201383805",
+      "branch": "65e26b1c09b068c201383810",
+      "createdAt": "2026-05-25T10:00:00.000Z",
+      "updatedAt": "2026-05-25T11:00:00.000Z",
+      "__v": 0
     }
   }
 }

@@ -397,17 +397,30 @@ export default router;
 
 #### `GET /api/roles`
 **Headers:** `Authorization: Bearer <admin_token>`
-**Query:** `isActive`, `search`, `page`, `limit`
-**Response:**
+**Query:** `isActive=true`, `search=admin`, `page=1`, `limit=10`
+**Response (200 OK):**
 ```json
 {
   "success": true,
   "data": {
-    "roles": [],
+    "roles": [
+      {
+        "_id": "650af1234567890abcdef001",
+        "name": "admin",
+        "displayName": "Admin",
+        "description": "Full system access for administrators",
+        "permissions": ["*"],
+        "isActive": true,
+        "isSystemRole": true,
+        "createdAt": "2026-05-20T08:00:00.000Z",
+        "updatedAt": "2026-05-20T08:00:00.000Z",
+        "__v": 0
+      }
+    ],
     "pagination": {
       "currentPage": 1,
       "totalPages": 1,
-      "totalRoles": 0,
+      "totalRoles": 1,
       "hasNextPage": false,
       "hasPrevPage": false
     }
@@ -417,47 +430,90 @@ export default router;
 
 #### `GET /api/roles/:roleId`
 **Headers:** `Authorization: Bearer <admin_token>`
-**Params:** `roleId`
-**Response:**
+**Params:** `roleId: 650af1234567890abcdef001`
+**Response (200 OK):**
 ```json
 {
   "success": true,
   "data": {
-    "_id": "...",
-    "name": "customer",
-    "displayName": "Customer",
-    "permissions": []
+    "_id": "650af1234567890abcdef001",
+    "name": "admin",
+    "displayName": "Admin",
+    "description": "Full system access for administrators",
+    "permissions": ["*"],
+    "isActive": true,
+    "isSystemRole": true,
+    "createdAt": "2026-05-20T08:00:00.000Z",
+    "updatedAt": "2026-05-20T08:00:00.000Z",
+    "__v": 0
   }
 }
 ```
 
 #### `POST /api/roles`
 **Headers:** `Authorization: Bearer <admin_token>`
-**Body:** `{ name, displayName, description, permissions }`
-**Response:**
+**Body:**
+```json
+{
+  "name": "support_agent",
+  "displayName": "Support Agent",
+  "description": "Role for customer support agents",
+  "permissions": ["view_customers", "reply_tickets"],
+  "isActive": true
+}
+```
+**Response (201 Created):**
 ```json
 {
   "success": true,
-  "data": { "..." }
+  "data": {
+    "_id": "650af1234567890abcdef005",
+    "name": "support_agent",
+    "displayName": "Support Agent",
+    "description": "Role for customer support agents",
+    "permissions": ["view_customers", "reply_tickets"],
+    "isActive": true,
+    "isSystemRole": false,
+    "createdAt": "2026-05-22T10:00:00.000Z",
+    "updatedAt": "2026-05-22T10:00:00.000Z",
+    "__v": 0
+  }
 }
 ```
 
 #### `PUT /api/roles/:roleId`
 **Headers:** `Authorization: Bearer <admin_token>`
-**Params:** `roleId`
-**Body:** `{ displayName, description, permissions, isActive }`
-**Response:**
+**Params:** `roleId: 650af1234567890abcdef005`
+**Body:**
+```json
+{
+  "displayName": "Senior Support Agent",
+  "permissions": ["view_customers", "reply_tickets", "manage_tickets"]
+}
+```
+**Response (200 OK):**
 ```json
 {
   "success": true,
-  "data": { "..." }
+  "data": {
+    "_id": "650af1234567890abcdef005",
+    "name": "support_agent",
+    "displayName": "Senior Support Agent",
+    "description": "Role for customer support agents",
+    "permissions": ["view_customers", "reply_tickets", "manage_tickets"],
+    "isActive": true,
+    "isSystemRole": false,
+    "createdAt": "2026-05-22T10:00:00.000Z",
+    "updatedAt": "2026-05-22T10:05:00.000Z",
+    "__v": 0
+  }
 }
 ```
 
 #### `DELETE /api/roles/:roleId`
 **Headers:** `Authorization: Bearer <admin_token>`
-**Params:** `roleId`
-**Response:**
+**Params:** `roleId: 650af1234567890abcdef005`
+**Response (200 OK):**
 ```json
 {
   "success": true,
@@ -467,24 +523,44 @@ export default router;
 
 #### `GET /api/roles/:roleId/users`
 **Headers:** `Authorization: Bearer <admin_token>`
-**Params:** `roleId`
-**Response:**
+**Params:** `roleId: 650af1234567890abcdef001`
+**Response (200 OK):**
 ```json
 {
   "success": true,
-  "count": 0,
-  "data": []
+  "count": 1,
+  "data": [
+    {
+      "_id": "650af1234567890abcdef888",
+      "firstName": "Super",
+      "lastName": "Admin",
+      "email": "admin@dohez.com"
+    }
+  ]
 }
 ```
 
 #### `GET /api/roles/customer/users`
 **Headers:** `Authorization: Bearer <admin_token>`
-**Response:**
+**Response (200 OK):**
 ```json
 {
   "success": true,
-  "count": 0,
-  "data": []
+  "count": 2,
+  "data": [
+    {
+      "_id": "650af1234567890abcdef123",
+      "firstName": "John",
+      "lastName": "Doe",
+      "email": "john.doe@example.com"
+    },
+    {
+      "_id": "650af1234567890abcdef124",
+      "firstName": "Jane",
+      "lastName": "Customer",
+      "email": "jane@customer.com"
+    }
+  ]
 }
 ```
 

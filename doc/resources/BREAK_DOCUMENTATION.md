@@ -457,7 +457,7 @@ export default router;
 }
 ```
 
-### DELETE /api/breaks/:id
+#### `DELETE /api/breaks/:id`
 **Headers:** `Authorization: Bearer <token>`
 **Response:**
 ```json

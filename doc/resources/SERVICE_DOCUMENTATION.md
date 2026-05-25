@@ -391,13 +391,13 @@ export default router;
 
 #### `GET /api/services`
 **Headers:**
-- **Authorization:** Bearer <token> (Optional)
+- **Authorization:** Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9 (Optional)
 **Query:**
 - **task:** 650af1234567890abcdef000
-- **search:** Shirt
+- **search:** Suit
 - **page:** 1
 - **limit:** 10
-**Response:**
+**Response (200 OK):**
 ```json
 {
   "success": true,
@@ -409,10 +409,14 @@ export default router;
           "_id": "650af1234567890abcdef000",
           "name": "Laundry"
         },
-        "name": "Shirt Wash",
-        "description": "Standard wash",
+        "name": "Suit Wash",
+        "description": "Dry cleaning and steam press for premium suits",
         "isActive": true,
-        "image": "https://res.cloudinary.com/demo/image/upload/v123/service.jpg"
+        "image": "https://res.cloudinary.com/demo/image/upload/v123/service.jpg",
+        "imagePublicId": "dohez/services/suit_123",
+        "createdAt": "2026-04-24T12:00:00.000Z",
+        "updatedAt": "2026-04-24T12:00:00.000Z",
+        "__v": 0
       }
     ],
     "pagination": {
@@ -429,7 +433,7 @@ export default router;
 #### `GET /api/services/:serviceId`
 **Params:**
 - **serviceId:** 650af1234567890abcdef123
-**Response:**
+**Response (200 OK):**
 ```json
 {
   "success": true,
@@ -437,14 +441,19 @@ export default router;
     "service": {
       "_id": "650af1234567890abcdef123",
       "task": {
+        "_id": "650af1234567890abcdef000",
         "name": "Laundry",
-        "description": "...",
-        "image": "..."
+        "description": "Professional cleaning services",
+        "image": "https://res.cloudinary.com/dohez/image/upload/task.jpg"
       },
-      "name": "Shirt Wash",
-      "description": "...",
+      "name": "Suit Wash",
+      "description": "Dry cleaning and steam press for premium suits",
       "isActive": true,
-      "image": "..."
+      "image": "https://res.cloudinary.com/demo/image/upload/v123/service.jpg",
+      "imagePublicId": "dohez/services/suit_123",
+      "createdAt": "2026-04-24T12:00:00.000Z",
+      "updatedAt": "2026-04-24T12:00:00.000Z",
+      "__v": 0
     }
   }
 }
@@ -452,29 +461,33 @@ export default router;
 
 #### `POST /api/services`
 **Headers:**
-- **Authorization:** Bearer <super_admin_token>
+- **Authorization:** Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9
 **Body:**
 ```json
 {
   "task": "650af1234567890abcdef000",
-  "name": "VIP Ticket",
-  "description": "Access to VIP lounge",
+  "name": "Deluxe Wash",
+  "description": "Deep clean with premium detergents",
   "isActive": true
 }
 ```
-**Response:**
+**Response (201 Created):**
 ```json
 {
   "success": true,
   "message": "Service created successfully",
   "data": {
     "service": {
-      "_id": "650af1234567890abcdef124",
+      "_id": "650af1234567890abcdef125",
       "task": "650af1234567890abcdef000",
-      "name": "VIP Ticket",
-      "description": "Access to VIP lounge",
+      "name": "Deluxe Wash",
+      "description": "Deep clean with premium detergents",
       "isActive": true,
-      "image": "..."
+      "image": null,
+      "imagePublicId": null,
+      "createdAt": "2026-05-22T10:00:00.000Z",
+      "updatedAt": "2026-05-22T10:00:00.000Z",
+      "__v": 0
     }
   }
 }
@@ -482,18 +495,18 @@ export default router;
 
 #### `PUT /api/services/:serviceId`
 **Headers:**
-- **Authorization:** Bearer <super_admin_token>
+- **Authorization:** Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9
 **Params:**
 - **serviceId:** 650af1234567890abcdef123
 **Body:**
 ```json
 {
-  "name": "Deluxe Wash",
-  "description": "Extra care washing",
+  "name": "Premium Suit Wash",
+  "description": "Express dry cleaning",
   "isActive": true
 }
 ```
-**Response:**
+**Response (200 OK):**
 ```json
 {
   "success": true,
@@ -502,10 +515,14 @@ export default router;
     "service": {
       "_id": "650af1234567890abcdef123",
       "task": "650af1234567890abcdef000",
-      "name": "Deluxe Wash",
-      "description": "Extra care washing",
+      "name": "Premium Suit Wash",
+      "description": "Express dry cleaning",
       "isActive": true,
-      "image": "..."
+      "image": "https://res.cloudinary.com/demo/image/upload/v123/service.jpg",
+      "imagePublicId": "dohez/services/suit_123",
+      "createdAt": "2026-04-24T12:00:00.000Z",
+      "updatedAt": "2026-05-22T11:30:00.000Z",
+      "__v": 0
     }
   }
 }
@@ -513,10 +530,10 @@ export default router;
 
 #### `DELETE /api/services/:serviceId`
 **Headers:**
-- **Authorization:** Bearer <super_admin_token>
+- **Authorization:** Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9
 **Params:**
 - **serviceId:** 650af1234567890abcdef123
-**Response:**
+**Response (200 OK):**
 ```json
 {
   "success": true,

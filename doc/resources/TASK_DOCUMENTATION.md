@@ -374,7 +374,7 @@ export default router;
 - **all:** true
 - **page:** 1
 - **limit:** 10
-**Response:**
+**Response (200 OK):**
 ```json
 {
   "success": true,
@@ -386,8 +386,10 @@ export default router;
         "description": "Professional washing services",
         "isActive": true,
         "image": "https://res.cloudinary.com/demo/image/upload/v123/task.jpg",
-        "createdAt": "2023-09-20T12:00:00Z",
-        "updatedAt": "2023-09-20T12:00:00Z"
+        "imagePublicId": "tasks/task_image_123",
+        "createdAt": "2023-09-20T12:00:00.000Z",
+        "updatedAt": "2023-09-20T12:00:00.000Z",
+        "__v": 0
       }
     ],
     "pagination": {
@@ -404,7 +406,7 @@ export default router;
 #### `GET /api/tasks/:taskId`
 **Params:**
 - **taskId:** 650af1234567890abcdef123
-**Response:**
+**Response (200 OK):**
 ```json
 {
   "success": true,
@@ -414,7 +416,11 @@ export default router;
       "name": "Laundry",
       "description": "Professional washing and ironing services",
       "isActive": true,
-      "image": "https://res.cloudinary.com/demo/image/upload/v123/task.jpg"
+      "image": "https://res.cloudinary.com/demo/image/upload/v123/task.jpg",
+      "imagePublicId": "tasks/task_image_123",
+      "createdAt": "2023-09-20T12:00:00.000Z",
+      "updatedAt": "2023-09-21T10:00:00.000Z",
+      "__v": 0
     }
   }
 }
@@ -431,7 +437,7 @@ export default router;
   "isActive": true
 }
 ```
-**Response:**
+**Response (201 Created):**
 ```json
 {
   "success": true,
@@ -442,7 +448,11 @@ export default router;
       "name": "Cleaning",
       "description": "Full house cleaning",
       "isActive": true,
-      "image": "https://res.cloudinary.com/demo/image/upload/v124/cleaning.jpg"
+      "image": null,
+      "imagePublicId": null,
+      "createdAt": "2026-05-22T10:00:00.000Z",
+      "updatedAt": "2026-05-22T10:00:00.000Z",
+      "__v": 0
     }
   }
 }
@@ -461,7 +471,7 @@ export default router;
   "isActive": true
 }
 ```
-**Response:**
+**Response (200 OK):**
 ```json
 {
   "success": true,
@@ -472,7 +482,11 @@ export default router;
       "name": "Laundry Premium",
       "description": "Express washing services",
       "isActive": true,
-      "image": "https://res.cloudinary.com/demo/image/upload/v125/premium.jpg"
+      "image": "https://res.cloudinary.com/demo/image/upload/v123/task.jpg",
+      "imagePublicId": "tasks/task_image_123",
+      "createdAt": "2023-09-20T12:00:00.000Z",
+      "updatedAt": "2026-05-22T11:00:00.000Z",
+      "__v": 0
     }
   }
 }
@@ -483,7 +497,7 @@ export default router;
 - **Authorization:** Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9
 **Params:**
 - **taskId:** 650af1234567890abcdef123
-**Response:**
+**Response (200 OK):**
 ```json
 {
   "success": true,

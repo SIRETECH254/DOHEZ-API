@@ -131,7 +131,7 @@ export default router;
           "html_attributions": [
             "<a href=\"https://maps.google.com/maps/contrib/114620023475143301016\">John Doe</a>"
           ],
-          "photo_reference": "Aap_uEDR_...",
+          "photo_reference": "Aap_uEDR_456789ABCDEF1234567890",
           "width": 3024
         }
       ],

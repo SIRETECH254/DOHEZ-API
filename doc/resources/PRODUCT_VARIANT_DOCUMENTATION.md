@@ -393,16 +393,20 @@ export default router;
   "message": "Variant attached and configured successfully",
   "data": {
     "product": {
-      "id": "650af9994444444444444444",
+      "_id": "650af9994444444444444444",
       "name": "Luxury Pizza",
       "variants": ["650af1112222222222222222"],
       "selectedVariantOptions": [
         { 
           "variantId": "650af1112222222222222222", 
-          "optionIds": ["650af2223333333333333333"] 
+          "optionIds": ["650af2223333333333333333"],
+          "_id": "650af3334444444444444444"
         }
       ],
-      "skus": [ ... ]
+      "skus": [],
+      "createdAt": "2026-05-25T10:00:00.000Z",
+      "updatedAt": "2026-05-25T10:00:00.000Z",
+      "__v": 1
     }
   }
 }
@@ -424,10 +428,13 @@ export default router;
   "message": "Variant detached successfully",
   "data": {
     "product": {
-      "id": "650af9994444444444444444",
+      "_id": "650af9994444444444444444",
       "name": "Luxury Pizza",
       "variants": [],
-      "selectedVariantOptions": []
+      "selectedVariantOptions": [],
+      "createdAt": "2026-05-25T10:00:00.000Z",
+      "updatedAt": "2026-05-25T10:05:00.000Z",
+      "__v": 2
     }
   }
 }
@@ -458,11 +465,12 @@ export default router;
       "branchId": "650af1234567890abcdef123",
       "sortOrder": 1,
       "options": [
-        { "value": "Small", "isActive": true, "sortOrder": 1 },
-        { "value": "Large", "isActive": true, "sortOrder": 2 }
+        { "value": "Small", "isActive": true, "sortOrder": 1, "_id": "650af1234567890abcdef790" },
+        { "value": "Large", "isActive": true, "sortOrder": 2, "_id": "650af1234567890abcdef791" }
       ],
-      "createdAt": "2026-04-29T10:00:00.000Z",
-      "updatedAt": "2026-04-29T10:00:00.000Z"
+      "createdAt": "2026-05-25T10:00:00.000Z",
+      "updatedAt": "2026-05-25T10:00:00.000Z",
+      "__v": 0
     }
   }
 }
@@ -494,16 +502,17 @@ export default router;
           },
           "isMainBranch": true,
           "isActive": true,
-          "createdAt": "2026-04-29T09:00:00.000Z",
-          "updatedAt": "2026-04-29T09:00:00.000Z"
+          "createdAt": "2026-05-25T09:00:00.000Z",
+          "updatedAt": "2026-05-25T09:00:00.000Z"
         },
         "sortOrder": 1,
         "options": [
-          { "value": "Small", "isActive": true, "sortOrder": 1 },
-          { "value": "Large", "isActive": true, "sortOrder": 2 }
+          { "value": "Small", "isActive": true, "sortOrder": 1, "_id": "650af1234567890abcdef790" },
+          { "value": "Large", "isActive": true, "sortOrder": 2, "_id": "650af1234567890abcdef791" }
         ],
-        "createdAt": "2026-04-29T10:00:00.000Z",
-        "updatedAt": "2026-04-29T10:00:00.000Z"
+        "createdAt": "2026-05-25T10:00:00.000Z",
+        "updatedAt": "2026-05-25T10:00:00.000Z",
+        "__v": 0
       }
     ],
     "pagination": {
@@ -542,16 +551,17 @@ export default router;
         },
         "isMainBranch": true,
         "isActive": true,
-        "createdAt": "2026-04-29T09:00:00.000Z",
-        "updatedAt": "2026-04-29T09:00:00.000Z"
+        "createdAt": "2026-05-25T09:00:00.000Z",
+        "updatedAt": "2026-05-25T09:00:00.000Z"
       },
       "sortOrder": 1,
       "options": [
-        { "value": "Small", "isActive": true, "sortOrder": 1 },
-        { "value": "Large", "isActive": true, "sortOrder": 2 }
+        { "value": "Small", "isActive": true, "sortOrder": 1, "_id": "650af1234567890abcdef790" },
+        { "value": "Large", "isActive": true, "sortOrder": 2, "_id": "650af1234567890abcdef791" }
       ],
-      "createdAt": "2026-04-29T10:00:00.000Z",
-      "updatedAt": "2026-04-29T10:00:00.000Z"
+      "createdAt": "2026-05-25T10:00:00.000Z",
+      "updatedAt": "2026-05-25T10:00:00.000Z",
+      "__v": 0
     }
   }
 }
@@ -578,11 +588,12 @@ export default router;
       "branchId": "650af1234567890abcdef123",
       "sortOrder": 2,
       "options": [
-        { "value": "Small", "isActive": true, "sortOrder": 1 },
-        { "value": "Large", "isActive": true, "sortOrder": 2 }
+        { "value": "Small", "isActive": true, "sortOrder": 1, "_id": "650af1234567890abcdef790" },
+        { "value": "Large", "isActive": true, "sortOrder": 2, "_id": "650af1234567890abcdef791" }
       ],
-      "createdAt": "2026-04-29T10:00:00.000Z",
-      "updatedAt": "2026-04-29T11:00:00.000Z"
+      "createdAt": "2026-05-25T10:00:00.000Z",
+      "updatedAt": "2026-05-25T11:00:00.000Z",
+      "__v": 1
     }
   }
 }

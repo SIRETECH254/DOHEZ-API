@@ -480,7 +480,7 @@ export default router;
   "categoryId": "650af1234567890abcdef123",
   "phone": "+254700000000",
   "email": "contact@quick.com",
-  "location": "{\"address\": \"Street 123\", \"lat\": -1.2921, \"lng\": 36.8219, \"place_id\": \"chIJsx...\"}",
+  "location": "{\"address\": \"Street 123\", \"lat\": -1.2921, \"lng\": 36.8219, \"place_id\": \"chIJsx123\"}",
   "workingHours": "{\"monday\": \"08:00-18:00\"}"
 }
 ```
@@ -491,6 +491,7 @@ export default router;
   "message": "Vendor registered successfully",
   "data": {
     "vendor": {
+      "_id": "650af1234567890abcdef999",
       "userId": "65e26b1c09b068c201383801",
       "name": "Quick Laundry",
       "details": "Professional laundry services",
@@ -498,6 +499,7 @@ export default router;
       "phone": "+254700000000",
       "email": "contact@quick.com",
       "location": {
+        "name": null,
         "address": "Street 123",
         "regions": {
           "country": "Kenya"
@@ -506,7 +508,7 @@ export default router;
           "lat": -1.2921,
           "lng": 36.8219
         },
-        "place_id": "chIJsx..."
+        "place_id": "chIJsx123"
       },
       "branches": [
         "650af1234567890abcdef888"
@@ -518,12 +520,12 @@ export default router;
       "logoPublicId": null,
       "cover": null,
       "coverPublicId": null,
-      "_id": "650af1234567890abcdef999",
       "createdAt": "2026-05-07T10:00:00.000Z",
       "updatedAt": "2026-05-07T10:00:00.000Z",
-      "__v": 1
+      "__v": 0
     },
     "branch": {
+      "_id": "650af1234567890abcdef888",
       "vendorId": "650af1234567890abcdef999",
       "name": "Quick Laundry - Main Branch",
       "email": "contact@quick.com",
@@ -536,16 +538,13 @@ export default router;
         "coordinates": {
           "lat": -1.2921,
           "lng": 36.8219
-        },
-        "place_id": "chIJsx..."
+        }
       },
       "workingHours": {
         "monday": "08:00-18:00"
       },
       "isMainBranch": true,
       "isActive": true,
-      "gallery": [],
-      "_id": "650af1234567890abcdef888",
       "createdAt": "2026-05-07T10:00:00.000Z",
       "updatedAt": "2026-05-07T10:00:00.000Z",
       "__v": 0
@@ -721,7 +720,8 @@ export default router;
       "details": "Best laundry in town",
       "vendorCategory": "650af1234567890abcdef123",
       "slug": "quick-laundry-pro",
-      "updatedAt": "2026-05-07T11:00:00.000Z"
+      "updatedAt": "2026-05-07T11:00:00.000Z",
+      "__v": 1
     }
   }
 }

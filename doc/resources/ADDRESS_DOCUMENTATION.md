@@ -427,8 +427,16 @@ export default router;
         "lat": -1.29,
         "lng": 36.82
       },
+      "regions": {
+        "country": "Kenya",
+        "locality": "Nairobi"
+      },
       "address": "123 Main St, Nairobi, Kenya",
-      "isDefault": true
+      "details": null,
+      "isDefault": true,
+      "createdAt": "2026-05-25T10:00:00.000Z",
+      "updatedAt": "2026-05-25T10:00:00.000Z",
+      "__v": 0
     }
   }
 }
@@ -445,8 +453,22 @@ export default router;
     "addresses": [
       {
         "_id": "6638b2c3d4e5f6g7h8i9j0k1",
+        "userId": "65e26b1c09b068c201383801",
         "name": "Home",
-        "isDefault": true
+        "coordinates": {
+          "lat": -1.29,
+          "lng": 36.82
+        },
+        "regions": {
+          "country": "Kenya",
+          "locality": "Nairobi"
+        },
+        "address": "123 Main St, Nairobi, Kenya",
+        "details": null,
+        "isDefault": true,
+        "createdAt": "2026-05-25T10:00:00.000Z",
+        "updatedAt": "2026-05-25T10:00:00.000Z",
+        "__v": 0
       }
     ],
     "pagination": {
@@ -471,7 +493,20 @@ export default router;
       "_id": "6638b2c3d4e5f6g7h8i9j0k1",
       "userId": "65e26b1c09b068c201383801",
       "name": "Home",
-      "address": "123 Main St, Nairobi, Kenya"
+      "coordinates": {
+        "lat": -1.29,
+        "lng": 36.82
+      },
+      "regions": {
+        "country": "Kenya",
+        "locality": "Nairobi"
+      },
+      "address": "123 Main St, Nairobi, Kenya",
+      "details": null,
+      "isDefault": true,
+      "createdAt": "2026-05-25T10:00:00.000Z",
+      "updatedAt": "2026-05-25T10:00:00.000Z",
+      "__v": 0
     }
   }
 }
@@ -496,7 +531,20 @@ export default router;
       "_id": "6638b2c3d4e5f6g7h8i9j0k1",
       "userId": "65e26b1c09b068c201383801",
       "name": "Office",
-      "address": "456 Corporate Ave, Nairobi"
+      "coordinates": {
+        "lat": -1.29,
+        "lng": 36.82
+      },
+      "regions": {
+        "country": "Kenya",
+        "locality": "Nairobi"
+      },
+      "address": "456 Corporate Ave, Nairobi",
+      "details": null,
+      "isDefault": true,
+      "createdAt": "2026-05-25T10:00:00.000Z",
+      "updatedAt": "2026-05-25T11:00:00.000Z",
+      "__v": 0
     }
   }
 }
@@ -522,8 +570,22 @@ export default router;
   "data": {
     "address": {
       "_id": "6638b2c3d4e5f6g7h8i9j0k1",
+      "userId": "65e26b1c09b068c201383801",
       "name": "Office",
-      "isDefault": true
+      "coordinates": {
+        "lat": -1.29,
+        "lng": 36.82
+      },
+      "regions": {
+        "country": "Kenya",
+        "locality": "Nairobi"
+      },
+      "address": "456 Corporate Ave, Nairobi",
+      "details": null,
+      "isDefault": true,
+      "createdAt": "2026-05-25T10:00:00.000Z",
+      "updatedAt": "2026-05-25T12:00:00.000Z",
+      "__v": 0
     }
   }
 }

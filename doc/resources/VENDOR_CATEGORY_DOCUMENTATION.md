@@ -413,13 +413,16 @@ export default router;
   "data": {
     "category": {
       "_id": "650af1234567890abcdef123",
+      "vendorType": null,
       "name": "Food & Drinks",
-      "slug": "food-drinks",
       "description": "Restaurants, cafes and beverage providers",
+      "slug": "food-drinks",
       "image": "https://res.cloudinary.com/dohez/image/upload/v1/categories/food.jpg",
+      "imagePublicId": "dohez/vendor-categories/food_img_123",
       "isActive": true,
-      "createdAt": "2026-04-27T10:00:00.000Z",
-      "updatedAt": "2026-04-27T10:00:00.000Z"
+      "createdAt": "2026-05-25T10:00:00.000Z",
+      "updatedAt": "2026-05-25T10:00:00.000Z",
+      "__v": 0
     }
   }
 }
@@ -435,17 +438,29 @@ export default router;
     "categories": [
       {
         "_id": "650af1234567890abcdef123",
+        "vendorType": null,
         "name": "Food & Drinks",
+        "description": "Restaurants, cafes and beverage providers",
         "slug": "food-drinks",
         "image": "https://res.cloudinary.com/dohez/image/upload/v1/categories/food.jpg",
-        "isActive": true
+        "imagePublicId": "dohez/vendor-categories/food_img_123",
+        "isActive": true,
+        "createdAt": "2026-05-25T10:00:00.000Z",
+        "updatedAt": "2026-05-25T10:00:00.000Z",
+        "__v": 0
       },
       {
         "_id": "650af1234567890abcdef456",
+        "vendorType": null,
         "name": "Laundry",
+        "description": "Professional laundry and dry cleaning",
         "slug": "laundry",
         "image": "https://res.cloudinary.com/dohez/image/upload/v1/categories/laundry.jpg",
-        "isActive": true
+        "imagePublicId": "dohez/vendor-categories/laundry_img_456",
+        "isActive": true,
+        "createdAt": "2026-05-25T11:00:00.000Z",
+        "updatedAt": "2026-05-25T11:00:00.000Z",
+        "__v": 0
       }
     ],
     "pagination": {
@@ -468,11 +483,16 @@ export default router;
   "data": {
     "category": {
       "_id": "650af1234567890abcdef123",
+      "vendorType": null,
       "name": "Food & Drinks",
-      "slug": "food-drinks",
       "description": "Restaurants, cafes and beverage providers",
+      "slug": "food-drinks",
       "image": "https://res.cloudinary.com/dohez/image/upload/v1/categories/food.jpg",
-      "isActive": true
+      "imagePublicId": "dohez/vendor-categories/food_img_123",
+      "isActive": true,
+      "createdAt": "2026-05-25T10:00:00.000Z",
+      "updatedAt": "2026-05-25T10:00:00.000Z",
+      "__v": 0
     }
   }
 }
@@ -496,9 +516,16 @@ export default router;
   "data": {
     "category": {
       "_id": "650af1234567890abcdef123",
+      "vendorType": null,
       "name": "Food & Beverages",
+      "description": "Restaurants, cafes and beverage providers",
       "slug": "food-beverages",
-      "isActive": true
+      "image": "https://res.cloudinary.com/dohez/image/upload/v1/categories/food.jpg",
+      "imagePublicId": "dohez/vendor-categories/food_img_123",
+      "isActive": true,
+      "createdAt": "2026-05-25T10:00:00.000Z",
+      "updatedAt": "2026-05-25T15:00:00.000Z",
+      "__v": 1
     }
   }
 }

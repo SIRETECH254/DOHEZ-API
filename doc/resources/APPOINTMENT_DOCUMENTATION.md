@@ -996,8 +996,25 @@ export default router;
     "_id": "650af3210000000000000002",
     "appointmentNumber": "APT-2026-0002",
     "customer": "650af9870000000000000001",
+    "branch": "650af1230000000000000001",
+    "vendor": "650af4560000000000000001",
+    "staff": ["650af0120000000000000001"],
+    "items": [
+      {
+        "service": "650af7890000000000000001",
+        "staff": "650af0120000000000000001",
+        "startTime": "2026-05-20T10:00:00.000Z",
+        "endTime": "2026-05-20T11:00:00.000Z",
+        "durationMinutes": 60,
+        "amount": 2000
+      }
+    ],
     "status": "CONFIRMED",
-    "createdAt": "2026-05-20T09:10:00.000Z"
+    "bookingFeeAmount": 0,
+    "remainingAmount": 2000,
+    "createdAt": "2026-05-20T09:10:00.000Z",
+    "updatedAt": "2026-05-20T09:10:00.000Z",
+    "__v": 0
   }
 }
 ```
@@ -1014,7 +1031,10 @@ export default router;
       {
         "_id": "650af3210000000000000001",
         "appointmentNumber": "APT-2026-0001",
-        "status": "PENDING"
+        "status": "PENDING",
+        "createdAt": "2026-05-20T09:00:00.000Z",
+        "updatedAt": "2026-05-20T09:00:00.000Z",
+        "__v": 0
       }
     ],
     "pagination": {
@@ -1040,7 +1060,10 @@ export default router;
       {
         "_id": "650af3210000000000000001",
         "appointmentNumber": "APT-2026-0001",
-        "status": "PENDING"
+        "status": "PENDING",
+        "createdAt": "2026-05-20T09:00:00.000Z",
+        "updatedAt": "2026-05-20T09:00:00.000Z",
+        "__v": 0
       }
     ],
     "pagination": {
@@ -1068,7 +1091,10 @@ export default router;
       "firstName": "John",
       "lastName": "Doe"
     },
-    "status": "PENDING"
+    "status": "PENDING",
+    "createdAt": "2026-05-20T09:00:00.000Z",
+    "updatedAt": "2026-05-20T09:00:00.000Z",
+    "__v": 0
   }
 }
 ```
@@ -1097,7 +1123,9 @@ export default router;
   "data": {
     "_id": "650af3210000000000000001",
     "appointmentNumber": "APT-2026-0001",
-    "status": "PENDING"
+    "status": "PENDING",
+    "updatedAt": "2026-05-21T09:00:00.000Z",
+    "__v": 0
   }
 }
 ```

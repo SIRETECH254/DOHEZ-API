@@ -308,8 +308,9 @@ export default router;
       "slug": "electronics",
       "icon": "https://res.cloudinary.com/dohez/image/upload/v1/product-types/electronics.png",
       "iconPublicId": "product-types/electronics",
-      "createdAt": "2026-04-29T10:00:00.000Z",
-      "updatedAt": "2026-04-29T10:00:00.000Z"
+      "createdAt": "2026-05-25T10:00:00.000Z",
+      "updatedAt": "2026-05-25T10:00:00.000Z",
+      "__v": 0
     }
   }
 }
@@ -335,8 +336,9 @@ export default router;
         "slug": "electronics",
         "icon": "https://res.cloudinary.com/dohez/image/upload/v1/product-types/electronics.png",
         "iconPublicId": "product-types/electronics",
-        "createdAt": "2026-04-29T10:00:00.000Z",
-        "updatedAt": "2026-04-29T10:00:00.000Z"
+        "createdAt": "2026-05-25T10:00:00.000Z",
+        "updatedAt": "2026-05-25T10:00:00.000Z",
+        "__v": 0
       }
     ],
     "pagination": {
@@ -369,8 +371,9 @@ export default router;
       "slug": "electronics",
       "icon": "https://res.cloudinary.com/dohez/image/upload/v1/product-types/electronics.png",
       "iconPublicId": "product-types/electronics",
-      "createdAt": "2026-04-29T10:00:00.000Z",
-      "updatedAt": "2026-04-29T10:00:00.000Z"
+      "createdAt": "2026-05-25T10:00:00.000Z",
+      "updatedAt": "2026-05-25T10:00:00.000Z",
+      "__v": 0
     }
   }
 }
@@ -393,8 +396,9 @@ export default router;
       "slug": "home-appliances",
       "icon": "https://res.cloudinary.com/dohez/image/upload/v1/product-types/home-appliances.png",
       "iconPublicId": "product-types/home-appliances",
-      "createdAt": "2026-04-29T10:00:00.000Z",
-      "updatedAt": "2026-04-29T11:00:00.000Z"
+      "createdAt": "2026-05-25T10:00:00.000Z",
+      "updatedAt": "2026-05-25T11:00:00.000Z",
+      "__v": 1
     }
   }
 }

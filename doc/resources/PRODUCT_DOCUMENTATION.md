@@ -1011,7 +1011,7 @@ export default router;
   "success": true,
   "data": {
     "product": {
-      "id": "650af9994444444444444444",
+      "_id": "650af9994444444444444444",
       "name": "Luxury Pizza",
       "slug": "luxury-pizza",
       "details": "Delicious wood-fired pizza",
@@ -1039,8 +1039,8 @@ export default router;
       "skus": [],
       "status": true,
       "trackInventory": true,
-      "createdAt": "2026-05-20T10:00:00.000Z",
-      "updatedAt": "2026-05-20T10:00:00.000Z",
+      "createdAt": "2026-05-25T10:00:00.000Z",
+      "updatedAt": "2026-05-25T10:00:00.000Z",
       "__v": 0
     }
   }
@@ -1048,7 +1048,7 @@ export default router;
 ```
 
 #### `GET /api/products`
-**Query:** `page=1`, `limit=10`, `search=...`, `category=...`, `vendor=...`, `branch=...`, `service=...`
+**Query:** `page=1`, `limit=10`, `search=Luxury`, `category=650af1238888888888888888`, `vendor=650af4569999999999999999`, `branch=650af7890000000000000000`, `service=650af0001111111111111111`
 **Response:**
 ```json
 {
@@ -1056,12 +1056,27 @@ export default router;
   "data": {
     "products": [
       {
-        "id": "650af9994444444444444444",
+        "_id": "650af9994444444444444444",
         "name": "Luxury Pizza",
         "slug": "luxury-pizza",
+        "details": "Delicious wood-fired pizza",
         "price": 1500,
-        "createdAt": "2026-05-20T10:00:00.000Z",
-        "updatedAt": "2026-05-20T10:00:00.000Z",
+        "offerPrice": 1200,
+        "images": [
+          {
+            "url": "https://cloudinary.com/dohez/products/pizza.jpg",
+            "publicId": "dohez/products/pizza123",
+            "_id": "650af9995555555555555555"
+          }
+        ],
+        "category": "650af1238888888888888888",
+        "vendor": "650af4569999999999999999",
+        "branch": "650af7890000000000000000",
+        "service": "650af0001111111111111111",
+        "status": true,
+        "trackInventory": true,
+        "createdAt": "2026-05-25T10:00:00.000Z",
+        "updatedAt": "2026-05-25T10:00:00.000Z",
         "__v": 0
       }
     ],
@@ -1083,20 +1098,40 @@ export default router;
   "success": true,
   "data": {
     "product": {
-      "id": "650af9994444444444444444",
+      "_id": "650af9994444444444444444",
       "name": "Luxury Pizza",
       "slug": "luxury-pizza",
       "details": "Delicious wood-fired pizza",
       "price": 1500,
       "offerPrice": 1200,
-      "category": "650af1238888888888888888",
-      "vendor": "650af4569999999999999999",
-      "branch": "650af7890000000000000000",
-      "service": "650af0001111111111111111",
+      "images": [
+        {
+          "url": "https://cloudinary.com/dohez/products/pizza.jpg",
+          "publicId": "dohez/products/pizza123",
+          "_id": "650af9995555555555555555"
+        }
+      ],
+      "category": {
+        "_id": "650af1238888888888888888",
+        "name": "Fast Food",
+        "slug": "fast-food"
+      },
+      "vendor": {
+        "_id": "650af4569999999999999999",
+        "name": "Pizza Hut"
+      },
+      "branch": {
+        "_id": "650af7890000000000000000",
+        "name": "CBD Branch"
+      },
+      "service": {
+        "_id": "650af0001111111111111111",
+        "name": "Food Delivery"
+      },
       "status": true,
       "trackInventory": true,
-      "createdAt": "2026-05-20T10:00:00.000Z",
-      "updatedAt": "2026-05-20T10:00:00.000Z",
+      "createdAt": "2026-05-25T10:00:00.000Z",
+      "updatedAt": "2026-05-25T10:00:00.000Z",
       "__v": 0
     }
   }
@@ -1112,12 +1147,13 @@ export default router;
   "message": "Product updated successfully",
   "data": {
     "product": {
-      "id": "650af9994444444444444444",
+      "_id": "650af9994444444444444444",
       "name": "Luxury Pizza V2",
       "slug": "luxury-pizza-v2",
       "price": 1600,
-      "updatedAt": "2026-05-20T11:00:00.000Z",
-      "__v": 0
+      "createdAt": "2026-05-25T10:00:00.000Z",
+      "updatedAt": "2026-05-25T11:00:00.000Z",
+      "__v": 1
     }
   }
 }
@@ -1143,10 +1179,10 @@ export default router;
   "message": "SKU updated successfully",
   "data": {
     "product": {
-      "id": "650af9994444444444444444",
+      "_id": "650af9994444444444444444",
       "name": "Luxury Pizza V2",
-      "updatedAt": "2026-05-20T12:00:00.000Z",
-      "__v": 0
+      "updatedAt": "2026-05-25T12:00:00.000Z",
+      "__v": 2
     }
   }
 }

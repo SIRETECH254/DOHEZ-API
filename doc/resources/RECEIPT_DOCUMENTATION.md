@@ -262,7 +262,7 @@ export default router;
 #### `GET /api/receipts`
 **Headers:** `Authorization: Bearer <token>`  
 **Query Parameters:** `page`, `limit`, `search`, `vendor`, `branch`, `paymentMethod`  
-**Response:** List of receipts with pagination.
+**Response (200 OK):**
 ```json
 {
   "success": true,
@@ -270,14 +270,19 @@ export default router;
     "receipts": [
       {
         "_id": "650af1234567890abcdef123",
-        "receiptNumber": "RCP-2026-0001",
-        "amountPaid": 1500,
-        "paymentMethod": "mpesa",
-        "issuedAt": "2026-05-20T10:00:00.000Z",
+        "order": "650af1234567890abcdef005",
+        "appointment": null,
+        "ticket": null,
         "invoice": "650af1234567890abcdef001",
         "customer": "650af1234567890abcdef002",
         "branch": "650af1234567890abcdef003",
         "vendor": "650af1234567890abcdef004",
+        "receiptNumber": "RCP-2026-0001",
+        "amountPaid": 1500,
+        "paymentMethod": "mpesa",
+        "issuedAt": "2026-05-20T10:00:00.000Z",
+        "pdfUrl": "https://res.cloudinary.com/dohez/raw/upload/v1/receipts/receipt-RCP-2026-0001.pdf",
+        "metadata": {},
         "createdAt": "2026-05-20T10:00:00.000Z",
         "updatedAt": "2026-05-20T10:00:00.000Z",
         "__v": 0
@@ -296,14 +301,19 @@ export default router;
 
 #### `GET /api/receipts/:id`
 **Headers:** `Authorization: Bearer <token>`  
-**Response:** Detailed receipt object.
+**Response (200 OK):**
 ```json
 {
   "success": true,
   "data": {
     "receipt": {
       "_id": "650af1234567890abcdef123",
-      "receiptNumber": "RCP-2026-0001",
+      "order": {
+        "_id": "650af1234567890abcdef005",
+        "orderNumber": "ORD-2026-001"
+      },
+      "appointment": null,
+      "ticket": null,
       "invoice": {
         "_id": "650af1234567890abcdef001",
         "invoiceNumber": "INV-2026-001",
@@ -322,6 +332,7 @@ export default router;
         "_id": "650af1234567890abcdef004",
         "name": "TEO KICKS"
       },
+      "receiptNumber": "RCP-2026-0001",
       "amountPaid": 1500,
       "paymentMethod": "mpesa",
       "issuedAt": "2026-05-20T10:00:00.000Z",

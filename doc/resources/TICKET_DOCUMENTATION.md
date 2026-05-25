@@ -310,7 +310,10 @@ export default router;
       {
         "_id": "650af1234567890abcdef123",
         "ticketNumber": "TCK-123456",
-        "event": "650af1234567890abcdef001",
+        "event": {
+          "_id": "650af1234567890abcdef001",
+          "name": "Summer Concert"
+        },
         "vendor": "650af1234567890abcdef002",
         "branch": "650af1234567890abcdef003",
         "details": {
@@ -319,7 +322,10 @@ export default router;
           "phone": "+254712345678"
         },
         "type": "VIP",
-        "status": "PENDING"
+        "status": "PENDING",
+        "createdAt": "2026-05-25T10:00:00.000Z",
+        "updatedAt": "2026-05-25T10:00:00.000Z",
+        "__v": 0
       }
     ],
     "pagination": {
@@ -345,9 +351,24 @@ export default router;
         "_id": "650af1234567890abcdef001",
         "name": "Summer Concert"
       },
-      "vendor": "650af1234567890abcdef002",
-      "branch": "650af1234567890abcdef003",
-      "status": "PENDING"
+      "vendor": {
+        "_id": "650af1234567890abcdef002",
+        "name": "Vendor Co"
+      },
+      "branch": {
+        "_id": "650af1234567890abcdef003",
+        "name": "Main Branch"
+      },
+      "details": {
+        "name": "Jane Doe",
+        "email": "jane.doe@example.com",
+        "phone": "+254712345678"
+      },
+      "type": "VIP",
+      "status": "PENDING",
+      "createdAt": "2026-05-25T10:00:00.000Z",
+      "updatedAt": "2026-05-25T10:00:00.000Z",
+      "__v": 0
     }
   }
 }
@@ -369,7 +390,19 @@ export default router;
     "ticket": {
       "_id": "650af1234567890abcdef123",
       "ticketNumber": "TCK-123456",
-      "status": "USED"
+      "event": "650af1234567890abcdef001",
+      "vendor": "650af1234567890abcdef002",
+      "branch": "650af1234567890abcdef003",
+      "details": {
+        "name": "Jane Doe",
+        "email": "jane.doe@example.com",
+        "phone": "+254712345678"
+      },
+      "type": "VIP",
+      "status": "USED",
+      "createdAt": "2026-05-25T10:00:00.000Z",
+      "updatedAt": "2026-05-25T11:00:00.000Z",
+      "__v": 0
     }
   }
 }

@@ -1080,7 +1080,7 @@ export default router;
   "eventId": "65e26b1c09b068c201383812",
   "ticketsRequested": [
     {
-      "skuId": "65e26b1c09b068c201383815",
+      "variantOptionId": "65e26b1c09b068c201383815",
       "quantity": 2,
       "attendees": [
         { "name": "John Doe", "email": "john@example.com", "phone": "254700000001" },
@@ -1109,6 +1109,7 @@ export default router;
         "ticketId": "65e26b1c09b068c201383850", 
         "invoiceId": "66389f4b52e2a1b4e8d1a2c1", 
         "ticketNumber": "TKT-2026-0001", 
+        "invoiceNumber": "INV-2026-0001",
         "price": 1000, 
         "attendee": "John Doe" 
       },
@@ -1116,6 +1117,7 @@ export default router;
         "ticketId": "65e26b1c09b068c201383851", 
         "invoiceId": "66389f4b52e2a1b4e8d1a2c2", 
         "ticketNumber": "TKT-2026-0002", 
+        "invoiceNumber": "INV-2026-0002",
         "price": 1000, 
         "attendee": "Jane Doe" 
       }
@@ -1157,87 +1159,87 @@ export default router;
       "checkoutRequestId": "ws_CO_06052026123456789"
     }
   }
-  }
-  }
+}
+```
 
-  #### `POST /api/payments/laundries/book`
-  **Headers:** 
-  - `Authorization: Bearer <token>`
-  - `Content-Type: application/json`
+#### `POST /api/payments/laundries/book`
+**Headers:** 
+- `Authorization: Bearer <token>`
+- `Content-Type: application/json`
 
-  **Request Body (JSON):**
-  ```json
-  {
+**Request Body (JSON):**
+```json
+{
   "vendorId": "65e26b1c09b068c201383805",
   "branchId": "65e26b1c09b068c201383810",
   "location": {
-  "address": "123 Ngong Road, Nairobi",
-  "coordinates": {
-    "lat": -1.3005,
-    "lng": 36.7846
-  }
+    "address": "123 Ngong Road, Nairobi",
+    "coordinates": {
+      "lat": -1.3005,
+      "lng": 36.7846
+    }
   },
   "services": ["65e26b1c09b068c201383815"],
   "pickUpDate": {
-  "day": "2026-05-25",
-  "hour": "10:30"
+    "day": "2026-05-25",
+    "hour": "10:30"
   },
   "paymentMethod": "mpesa",
   "phoneNumber": "254712345678",
   "bookingFee": 50
-  }
-  ```
+}
+```
 
-  **Purpose:** Book laundry service and initiate payment.
-  **Access:** Private (Authenticated User)
-  **Response (202 Accepted):**
-  ```json
-  {
+**Purpose:** Book laundry service and initiate payment.
+**Access:** Private (Authenticated User)
+**Response (202 Accepted):**
+```json
+{
   "success": true,
   "message": "Laundry booked and M-Pesa STK Push initiated",
   "data": {
-  "laundryId": "66389f4b52e2a1b4e8d1a2d1",
-  "paymentId": "66389f4b52e2a1b4e8d1a2d2",
-  "status": "INITIATED",
-  "daraja": {
-    "merchantRequestId": "29115-1234567-2",
-    "checkoutRequestId": "ws_CO_06052026123456790"
+    "laundryId": "66389f4b52e2a1b4e8d1a2d1",
+    "paymentId": "66389f4b52e2a1b4e8d1a2d2",
+    "status": "INITIATED",
+    "daraja": {
+      "merchantRequestId": "29115-1234567-2",
+      "checkoutRequestId": "ws_CO_06052026123456790"
+    }
   }
-  }
-  }
-  ```
+}
+```
 
 #### `POST /api/payments/laundries/pay`
-  **Headers:** 
-  - `Authorization: Bearer <token>`
-  - `Content-Type: application/json`
+**Headers:** 
+- `Authorization: Bearer <token>`
+- `Content-Type: application/json`
 
-  **Request Body (JSON):**
-  ```json
-  {
+**Request Body (JSON):**
+```json
+{
   "invoiceId": "66389f4b52e2a1b4e8d1a2c1",
   "method": "mpesa",
   "payerPhone": "254712345678"
-  }
-  ```
+}
+```
 
-  **Purpose:** Pay laundry invoice.
-  **Access:** Private (Authenticated User)
-  **Response (202 Accepted):**
-  ```json
-  {
+**Purpose:** Pay laundry invoice.
+**Access:** Private (Authenticated User)
+**Response (202 Accepted):**
+```json
+{
   "success": true,
   "message": "Payment initiated for laundry",
   "data": {
-  "paymentId": "66389f4b52e2a1b4e8d1a2d3",
-  "status": "INITIATED",
-  "daraja": {
-    "merchantRequestId": "29115-1234567-3",
-    "checkoutRequestId": "ws_CO_06052026123456791"
+    "paymentId": "66389f4b52e2a1b4e8d1a2d3",
+    "status": "INITIATED",
+    "daraja": {
+      "merchantRequestId": "29115-1234567-3",
+      "checkoutRequestId": "ws_CO_06052026123456791"
+    }
   }
-  }
-  }
-  ```
+}
+```
 
 #### `POST /api/payments/appointments/confirm/:appointmentId`
 
@@ -1450,7 +1452,9 @@ export default router;
         "method": "mpesa",
         "amount": 1550,
         "status": "SUCCESS",
-        "createdAt": "2026-05-06T12:00:00.000Z"
+        "createdAt": "2026-05-06T12:00:00.000Z",
+        "updatedAt": "2026-05-06T12:01:00.000Z",
+        "__v": 0
       }
     ],
     "pagination": {
@@ -1492,11 +1496,14 @@ export default router;
       "method": "mpesa",
       "amount": 1550,
       "status": "SUCCESS",
-      "createdAt": "2026-05-06T12:00:00.000Z"
+      "createdAt": "2026-05-06T12:00:00.000Z",
+      "updatedAt": "2026-05-06T12:01:00.000Z",
+      "__v": 0
     }
   }
 }
 ```
+
 
 ---
 
