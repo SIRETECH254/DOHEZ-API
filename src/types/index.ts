@@ -85,9 +85,9 @@ export interface IUser extends Document {
     sms?: boolean;
     inApp?: boolean;
   };
-  vendor?: Types.ObjectId;
-  branch?: Types.ObjectId;
-  services?: Types.ObjectId[];
+  vendor?: Types.ObjectId | IVendor;
+  branch?: Types.ObjectId | IBranch;
+  services?: Types.ObjectId[] | IProduct[];
   workingHours?: {
     monday?: { start: string; end: string };
     tuesday?: { start: string; end: string };

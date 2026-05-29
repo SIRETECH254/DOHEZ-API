@@ -44,9 +44,9 @@ interface IUser extends Document {
     sms?: boolean;
     inApp?: boolean;
   };
-  vendor?: Types.ObjectId;
-  branch?: Types.ObjectId;
-  services?: Types.ObjectId[];
+  vendor?: Types.ObjectId | IVendor;
+  branch?: Types.ObjectId | IBranch;
+  services?: Types.ObjectId[] | IProduct[];
   workingHours?: {
     monday?: { start: string; end: string };
     tuesday?: { start: string; end: string };
@@ -361,14 +361,14 @@ export const updateNotificationPreferences = async (req: Request, res: Response,
 **Purpose:** List users  
 **Access:** Admin  
 **Validation:** None  
-**Process:** Filter, paginate, return users  
+**Process:** Filter (by search, role, or status), paginate, return users  
 **Response:** User list and pagination
 
 **Controller Implementation:**
 ```typescript
 export const getAllUsers = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
-    const { page = 1, limit = 10, search } = req.query;
+    const { page = 1, limit = 10, search, role, status } = req.query;
     const query: any = {};
     if (search) {
       query.$or = [
@@ -377,6 +377,18 @@ export const getAllUsers = async (req: Request, res: Response, next: NextFunctio
         { email: { $regex: search, $options: "i" } }
       ];
     }
+
+    if (status === "active") {
+      query.isActive = true;
+    } else if (status === "inactive") {
+      query.isActive = false;
+    }
+
+    if (role) {
+      const roleData = await Role.findOne({ name: role as string });
+      query.roles = roleData ? roleData._id : new mongoose.Types.ObjectId();
+    }
+
     const options = { page: parseInt(page as string) || 1, limit: parseInt(limit as string) || 10 };
     const users = await User.find(query)
       .select("-password -otpCode -resetPasswordToken")
@@ -410,14 +422,20 @@ export const getAllUsers = async (req: Request, res: Response, next: NextFunctio
 **Purpose:** Fetch user by ID  
 **Access:** Admin  
 **Validation:** User must exist  
-**Process:** Find user and populate roles  
+**Process:** Find user and populate roles, vendor, branch, and services  
 **Response:** User details
 
 **Controller Implementation:**
 ```typescript
 export const getUserById = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
-    const user = await User.findById(req.params.userId).select("-password -otpCode -resetPasswordToken").populate("roles");
+    const user = await User.findById(req.params.userId)
+      .select("-password -otpCode -resetPasswordToken")
+      .populate("roles")
+      .populate("vendor")
+      .populate("branch")
+      .populate("services");
+      
     if (!user) return next(errorHandler(404, "User not found"));
     res.status(200).json({ success: true, data: { user } });
   } catch (error: any) {
@@ -910,7 +928,7 @@ export default router;
 
 #### `GET /api/users`
 **Headers:** `Authorization: Bearer <admin_token>`
-**Query:** `page=1`, `limit=10`, `search=John`
+**Query:** `page=1`, `limit=10`, `search=John`, `role=staff`, `status=active`
 **Response:**
 ```json
 {
@@ -1215,7 +1233,7 @@ curl -X POST http://localhost:3500/api/users/admin-create \
 
 ### Get All Users (Admin)
 ```bash
-curl -X GET "http://localhost:3500/api/users?page=1&limit=10" \
+curl -X GET "http://localhost:3500/api/users?page=1&limit=10&role=staff&status=active" \
   -H "Authorization: Bearer <admin_token>"
 ```
 **Response:**

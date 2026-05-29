@@ -1,3 +1,4 @@
+import mongoose from "mongoose";
 import { Request, Response, NextFunction } from "express";
 import bcrypt from "bcryptjs";
 import validator from "validator";
@@ -157,7 +158,7 @@ export const updateNotificationPreferences = async (req: Request, res: Response,
 
 export const getAllUsers = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
-    const { page = 1, limit = 10, search } = req.query;
+    const { page = 1, limit = 10, search, role, status } = req.query;
     const query: any = {};
 
     if (search) {
@@ -166,6 +167,17 @@ export const getAllUsers = async (req: Request, res: Response, next: NextFunctio
         { lastName: { $regex: search, $options: "i" } },
         { email: { $regex: search, $options: "i" } }
       ];
+    }
+
+    if (status === "active") {
+      query.isActive = true;
+    } else if (status === "inactive") {
+      query.isActive = false;
+    }
+
+    if (role) {
+      const roleData = await Role.findOne({ name: role as string });
+      query.roles = roleData ? roleData._id : new mongoose.Types.ObjectId();
     }
 
     const options = { page: parseInt(page as string) || 1, limit: parseInt(limit as string) || 10 };
@@ -201,7 +213,10 @@ export const getUserById = async (req: Request, res: Response, next: NextFunctio
   try {
     const user = await User.findById(req.params.userId)
       .select("-password -otpCode -resetPasswordToken")
-      .populate("roles");
+      .populate("roles")
+      .populate("vendor")
+      .populate("branch")
+      .populate("services");
 
     if (!user) return next(errorHandler(404, "User not found"));
 

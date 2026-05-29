@@ -96,6 +96,18 @@ interface IUser {
     sms?: boolean;
     inApp?: boolean;
   };
+  vendor?: ObjectId | IVendor;
+  branch?: ObjectId | IBranch;
+  services?: ObjectId[] | IProduct[];
+  workingHours?: {
+    monday?: { start: string; end: string };
+    tuesday?: { start: string; end: string };
+    wednesday?: { start: string; end: string };
+    thursday?: { start: string; end: string };
+    friday?: { start: string; end: string };
+    saturday?: { start: string; end: string };
+    sunday?: { start: string; end: string };
+  };
   createdAt: Date;
   updatedAt: Date;
 }
@@ -731,7 +743,7 @@ interface IStoreConfiguration {
 - `changePassword()` - Change password
 - `getNotificationPreferences()` - Get user notification settings
 - `updateNotificationPreferences()` - Update user notification settings
-- `getAllUsers()` - Admin list of users
+- `getAllUsers()` - Admin list of users with search, role, and status filters
 - `getUserById()` - Get user by ID (admin)
 - `updateUser()` - Update user details (admin)
 - `updateUserStatus()` - Activate/deactivate user (admin)
@@ -1004,7 +1016,7 @@ PUT    /profile                   // Update my profile
 PUT    /change-password           // Change password
 GET    /locations                 // Get saved locations
 POST   /locations                 // Add saved location
-GET    /                          // List users (admin)
+GET    /                          // List users (admin) - supports ?search, ?role, ?status, ?page, ?limit
 PUT    /:userId/status            // Update user status (admin)
 ```
 
