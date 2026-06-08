@@ -43,6 +43,18 @@ export interface IProduct extends Document {
   trackInventory: boolean;
   duration?: string;
   buffertime?: string;
+  venue?: string;
+  location?: {
+    address?: string;
+    coordinates?: { lat?: number; lng?: number };
+    place_id?: string;
+  };
+  startDate?: Date;
+  endDate?: Date;
+  openAt?: string;
+  ageLimit?: number;
+  dresscode?: string;
+  maxTicket?: number;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -230,11 +242,38 @@ const productSchema = new Schema<IProduct>(
     },
     duration: {
       type: String,
-      default: null,
     },
     buffertime: {
       type: String,
-      default: null,
+    },
+    venue: {
+      type: String,
+    },
+    location: {
+      address: String,
+      coordinates: {
+        lat: Number,
+        lng: Number,
+      },
+      place_id: String,
+    },
+    startDate: {
+      type: Date,
+    },
+    endDate: {
+      type: Date,
+    },
+    openAt: {
+      type: String,
+    },
+    ageLimit: {
+      type: Number,
+    },
+    dresscode: {
+      type: String,
+    },
+    maxTicket: {
+      type: Number,
     },
   },
   {
@@ -451,6 +490,14 @@ status:         { default: true }
 trackInventory: { default: true }
 duration:       { optional, type: String }
 buffertime:     { optional, type: String }
+venue:          { optional, type: String }
+location:       { optional, type: Object }
+startDate:      { optional, type: Date }
+endDate:        { optional, type: Date }
+openAt:         { optional, type: String }
+ageLimit:       { optional, type: Number }
+dresscode:      { optional, type: String }
+maxTicket:      { optional, type: Number }
 ```
 
 **Note:** For `createProduct`, `createService`, and `createEvent`, the system validates the existence of referenced `category`, `vendor`, `branch`, and `service` IDs sequentially. Additionally, `createProduct` performs independent validation for `variants` and their nested `selectedVariantOptions`.

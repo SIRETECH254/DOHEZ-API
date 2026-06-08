@@ -349,7 +349,7 @@ export const getOrderById = async (req: Request, res: Response, next: NextFuncti
       .populate('invoice')
       .populate('receipt')
       .populate('address')
-      .populate({ path: 'customer', select: 'firstName lastName email phone' })
+      .populate({ path: 'customer', select: 'firstName lastName email phone avatar' })
       .populate({ path: 'createdBy', select: 'firstName lastName email phone' })
       .populate({ path: 'items.product', select: 'name images price' })
       .populate('vendor')
@@ -404,6 +404,8 @@ export const getUserOrders = async (req: Request, res: Response, next: NextFunct
       paymentStatus,
       type,
       location,
+      vendor,
+      branch,
       q
     } = req.query as any;
 
@@ -412,6 +414,8 @@ export const getUserOrders = async (req: Request, res: Response, next: NextFunct
     if (paymentStatus) filters.paymentStatus = paymentStatus;
     if (type) filters.type = type;
     if (location) filters.location = location;
+    if (vendor) filters.vendor = new mongoose.Types.ObjectId(vendor);
+    if (branch) filters.branch = new mongoose.Types.ObjectId(branch);
 
     const skip = (Number(page) - 1) * Number(limit);
 
@@ -426,6 +430,24 @@ export const getUserOrders = async (req: Request, res: Response, next: NextFunct
         }
       },
       { $unwind: { path: '$invoice', preserveNullAndEmptyArrays: true } },
+      {
+        $lookup: {
+          from: 'vendors',
+          localField: 'vendor',
+          foreignField: '_id',
+          as: 'vendor'
+        }
+      },
+      { $unwind: { path: '$vendor', preserveNullAndEmptyArrays: true } },
+      {
+        $lookup: {
+          from: 'branches',
+          localField: 'branch',
+          foreignField: '_id',
+          as: 'branch'
+        }
+      },
+      { $unwind: { path: '$branch', preserveNullAndEmptyArrays: true } },
       ...(q ? [{ $match: { 'invoice.invoiceNumber': { $regex: q, $options: 'i' } } }] : []),
       { $sort: { createdAt: -1 as any } },
       {
@@ -440,6 +462,8 @@ export const getUserOrders = async (req: Request, res: Response, next: NextFunct
                 status: 1,
                 paymentStatus: 1,
                 pricing: 1,
+                vendor: { _id: '$vendor._id', name: '$vendor.name', logo: '$vendor.logo' },
+                branch: { _id: '$branch._id', name: '$branch.name' },
                 invoice: { _id: '$invoice._id', invoiceNumber: '$invoice.invoiceNumber' }
               }
             }
@@ -482,6 +506,8 @@ export const getOrders = async (req: Request, res: Response, next: NextFunction)
       paymentStatus,
       type,
       location,
+      vendor,
+      branch,
       q
     } = req.query as any;
 
@@ -490,6 +516,8 @@ export const getOrders = async (req: Request, res: Response, next: NextFunction)
     if (paymentStatus) filters.paymentStatus = paymentStatus;
     if (type) filters.type = type;
     if (location) filters.location = location;
+    if (vendor) filters.vendor = new mongoose.Types.ObjectId(vendor);
+    if (branch) filters.branch = new mongoose.Types.ObjectId(branch);
 
     const skip = (Number(page) - 1) * Number(limit);
 
@@ -513,6 +541,24 @@ export const getOrders = async (req: Request, res: Response, next: NextFunction)
         }
       },
       { $unwind: { path: '$customer', preserveNullAndEmptyArrays: true } },
+      {
+        $lookup: {
+          from: 'vendors',
+          localField: 'vendor',
+          foreignField: '_id',
+          as: 'vendor'
+        }
+      },
+      { $unwind: { path: '$vendor', preserveNullAndEmptyArrays: true } },
+      {
+        $lookup: {
+          from: 'branches',
+          localField: 'branch',
+          foreignField: '_id',
+          as: 'branch'
+        }
+      },
+      { $unwind: { path: '$branch', preserveNullAndEmptyArrays: true } },
       ...(q ? [{ $match: { 'invoice.invoiceNumber': { $regex: q, $options: 'i' } } }] : []),
       { $sort: { createdAt: -1 as any } },
       {
@@ -527,8 +573,10 @@ export const getOrders = async (req: Request, res: Response, next: NextFunction)
                 status: 1,
                 paymentStatus: 1,
                 pricing: 1,
+                vendor: { _id: '$vendor._id', name: '$vendor.name', logo: '$vendor.logo' },
+                branch: { _id: '$branch._id', name: '$branch.name' },
                 invoice: { _id: '$invoice._id', invoiceNumber: '$invoice.invoiceNumber' },
-                customer: { _id: '$customer._id', firstName: '$customer.firstName', lastName: '$customer.lastName', email: '$customer.email' }
+                customer: { _id: '$customer._id', firstName: '$customer.firstName', lastName: '$customer.lastName', email: '$customer.email', avatar: '$customer.avatar' }
               }
             }
           ],

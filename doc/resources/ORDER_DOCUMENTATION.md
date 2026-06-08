@@ -704,7 +704,7 @@ export const getOrderById = async (req: Request, res: Response, next: NextFuncti
       .populate('invoice')
       .populate('receipt')
       .populate('address')
-      .populate({ path: 'customer', select: 'firstName lastName email phone' })
+      .populate({ path: 'customer', select: 'firstName lastName email phone avatar' })
       .populate({ path: 'createdBy', select: 'firstName lastName email phone' })
       .populate({ path: 'items.product', select: 'name images price' })
       .populate('vendor')
@@ -778,6 +778,8 @@ export const getUserOrders = async (req: Request, res: Response, next: NextFunct
       paymentStatus,
       type,
       location,
+      vendor,
+      branch,
       q
     } = req.query as any;
 
@@ -786,6 +788,8 @@ export const getUserOrders = async (req: Request, res: Response, next: NextFunct
     if (paymentStatus) filters.paymentStatus = paymentStatus;
     if (type) filters.type = type;
     if (location) filters.location = location;
+    if (vendor) filters.vendor = new mongoose.Types.ObjectId(vendor);
+    if (branch) filters.branch = new mongoose.Types.ObjectId(branch);
 
     const skip = (Number(page) - 1) * Number(limit);
 
@@ -800,6 +804,24 @@ export const getUserOrders = async (req: Request, res: Response, next: NextFunct
         }
       },
       { $unwind: { path: '$invoice', preserveNullAndEmptyArrays: true } },
+      {
+        $lookup: {
+          from: 'vendors',
+          localField: 'vendor',
+          foreignField: '_id',
+          as: 'vendor'
+        }
+      },
+      { $unwind: { path: '$vendor', preserveNullAndEmptyArrays: true } },
+      {
+        $lookup: {
+          from: 'branches',
+          localField: 'branch',
+          foreignField: '_id',
+          as: 'branch'
+        }
+      },
+      { $unwind: { path: '$branch', preserveNullAndEmptyArrays: true } },
       ...(q ? [{ $match: { 'invoice.number': { $regex: q, $options: 'i' } } }] : []),
       { $sort: { createdAt: -1 as any } },
       {
@@ -814,6 +836,8 @@ export const getUserOrders = async (req: Request, res: Response, next: NextFunct
                 status: 1,
                 paymentStatus: 1,
                 pricing: 1,
+                vendor: { _id: '$vendor._id', name: '$vendor.name', logo: '$vendor.logo' },
+                branch: { _id: '$branch._id', name: '$branch.name' },
                 invoice: { _id: '$invoice._id', number: '$invoice.number' }
               }
             }
@@ -863,6 +887,8 @@ export const getOrders = async (req: Request, res: Response, next: NextFunction)
       paymentStatus,
       type,
       location,
+      vendor,
+      branch,
       q
     } = req.query as any;
 
@@ -871,6 +897,8 @@ export const getOrders = async (req: Request, res: Response, next: NextFunction)
     if (paymentStatus) filters.paymentStatus = paymentStatus;
     if (type) filters.type = type;
     if (location) filters.location = location;
+    if (vendor) filters.vendor = new mongoose.Types.ObjectId(vendor);
+    if (branch) filters.branch = new mongoose.Types.ObjectId(branch);
 
     const skip = (Number(page) - 1) * Number(limit);
 
@@ -894,6 +922,24 @@ export const getOrders = async (req: Request, res: Response, next: NextFunction)
         }
       },
       { $unwind: { path: '$customer', preserveNullAndEmptyArrays: true } },
+      {
+        $lookup: {
+          from: 'vendors',
+          localField: 'vendor',
+          foreignField: '_id',
+          as: 'vendor'
+        }
+      },
+      { $unwind: { path: '$vendor', preserveNullAndEmptyArrays: true } },
+      {
+        $lookup: {
+          from: 'branches',
+          localField: 'branch',
+          foreignField: '_id',
+          as: 'branch'
+        }
+      },
+      { $unwind: { path: '$branch', preserveNullAndEmptyArrays: true } },
       ...(q ? [{ $match: { 'invoice.number': { $regex: q, $options: 'i' } } }] : []),
       { $sort: { createdAt: -1 as any } },
       {
@@ -908,8 +954,10 @@ export const getOrders = async (req: Request, res: Response, next: NextFunction)
                 status: 1,
                 paymentStatus: 1,
                 pricing: 1,
+                vendor: { _id: '$vendor._id', name: '$vendor.name', logo: '$vendor.logo' },
+                branch: { _id: '$branch._id', name: '$branch.name' },
                 invoice: { _id: '$invoice._id', number: '$invoice.number' },
-                customer: { _id: '$customer._id', firstName: '$customer.firstName', lastName: '$customer.lastName', email: '$customer.email' }
+                customer: { _id: '$customer._id', firstName: '$customer.firstName', lastName: '$customer.lastName', email: '$customer.email', avatar: '$customer.avatar' }
               }
             }
           ],
@@ -1042,7 +1090,7 @@ export default router;
 
 #### `GET /api/orders/my-orders`
 **Headers:** `Authorization: Bearer <token>`
-**Query:** `page=1`, `limit=10`
+**Query:** `page=1`, `limit=10`, `vendor=...`, `branch=...`
 **Response:**
 ```json
 {
@@ -1063,6 +1111,8 @@ export default router;
           "tax": 0,
           "total": 1550
         },
+        "vendor": { "_id": "65e26b1c09b068c201383810", "name": "Quick Mart", "logo": "..." },
+        "branch": { "_id": "65e26b1c09b068c201383811", "name": "Main Branch" },
         "invoice": {
           "_id": "650af456890abcdef1234568",
           "number": "INV-2026-123456"
@@ -1095,7 +1145,8 @@ export default router;
         "firstName": "John",
         "lastName": "Doe",
         "email": "john.doe@example.com",
-        "phone": "+254700000000"
+        "phone": "+254700000000",
+        "avatar": "..."
       },
       "vendor": {
         "_id": "65e26b1c09b068c201383810",
@@ -1176,7 +1227,7 @@ export default router;
 
 #### `GET /api/orders`
 **Headers:** `Authorization: Bearer <admin_token>`
-**Query:** `page=1`, `limit=10`
+**Query:** `page=1`, `limit=10`, `vendor=...`, `branch=...`
 **Response:**
 ```json
 {
@@ -1189,8 +1240,11 @@ export default router;
           "_id": "650af123890abcdef1234567",
           "firstName": "John",
           "lastName": "Doe",
-          "email": "john.doe@example.com"
+          "email": "john.doe@example.com",
+          "avatar": "..."
         },
+        "vendor": { "_id": "65e26b1c09b068c201383810", "name": "Quick Mart", "logo": "..." },
+        "branch": { "_id": "65e26b1c09b068c201383811", "name": "Main Branch" },
         "status": "PLACED",
         "paymentStatus": "UNPAID",
         "pricing": {

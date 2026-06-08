@@ -14,7 +14,7 @@ import { IRole } from "../types";
  */
 export const registerVendor = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
-    const { userId, name, description, categoryId, phone, email, location, workingHours } = req.body;
+    const { userId, name, description, categoryId, phone, email, location, workingHours, cover, kraPin, regNo, service } = req.body;
 
     if (!userId) {
       return next(errorHandler(400, "User ID is required in request body"));
@@ -29,6 +29,10 @@ export const registerVendor = async (req: Request, res: Response, next: NextFunc
       email,
       location: location ? (typeof location === 'string' ? JSON.parse(location) : location) : {},
       slug: name ? name.toLowerCase().replace(/ /g, '-') : '',
+      cover,
+      kraPin,
+      regNo,
+      service
     };
 
     // Handle logo and cover uploads
@@ -139,7 +143,9 @@ export const getVendorById = async (req: Request, res: Response, next: NextFunct
   try {
     const vendor = await Vendor.findById(req.params.vendorId)
       .populate('vendorCategory')
-      .populate('branches');
+      .populate('branches')
+      .populate('userId')
+      .populate('service');
 
     if (!vendor) {
       return next(errorHandler(404, "Vendor not found"));
@@ -161,13 +167,8 @@ export const getVendorById = async (req: Request, res: Response, next: NextFunct
  */
 export const updateVendorProfile = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
-    const { name, description, categoryId } = req.body;
+    const { name, description, categoryId, cover, kraPin, regNo, service } = req.body;
     const { vendorId } = req.params;
-    const userRole = (req.user as any)?.role;
-
-    if (userRole !== 'super_admin' && userRole !== 'admin') {
-      return next(errorHandler(403, "Not authorized to update vendor"));
-    }
 
     const vendor = await Vendor.findById(vendorId);
 
@@ -178,15 +179,21 @@ export const updateVendorProfile = async (req: Request, res: Response, next: Nex
     if (name) vendor.name = name;
     if (description !== undefined) vendor.details = description;
     if (categoryId) vendor.vendorCategory = categoryId;
+    if (cover !== undefined) vendor.cover = cover;
+    if (kraPin !== undefined) vendor.kraPin = kraPin;
+    if (regNo !== undefined) vendor.regNo = regNo;
+    if (service !== undefined) vendor.service = service;
 
     const files = req.files as { [fieldname: string]: Express.Multer.File[] };
     if (files?.logo) {
       const uploadResult = await uploadToCloudinary(files.logo[0], "dohez/vendors/logos");
       vendor.logo = uploadResult.url;
+      vendor.logoPublicId = uploadResult.public_id;
     }
     if (files?.banner) {
       const uploadResult = await uploadToCloudinary(files.banner[0], "dohez/vendors/banners");
       vendor.cover = uploadResult.url;
+      vendor.coverPublicId = uploadResult.public_id;
     }
 
     await vendor.save();

@@ -5,6 +5,7 @@ import Vendor from "../models/Vendor";
 import User from "../models/User";
 import Role from "../models/Role";
 import { uploadToCloudinary, deleteFromCloudinary } from "../config/cloudinary";
+import { IRole } from "../types";
 
 /**
  * @desc    Create a new branch
@@ -65,6 +66,7 @@ export const getBranches = async (req: Request, res: Response, next: NextFunctio
     };
 
     const branches = await Branch.find(query)
+      .populate('vendorId')
       .limit(options.limit)
       .skip((options.page - 1) * options.limit);
 
@@ -96,7 +98,7 @@ export const getBranches = async (req: Request, res: Response, next: NextFunctio
  */
 export const getBranchById = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
-    const branch = await Branch.findById(req.params.branchId);
+    const branch = await Branch.findById(req.params.branchId).populate('vendorId');
     if (!branch) return next(errorHandler(404, "Branch not found"));
     res.status(200).json({ success: true, data: { branch } });
   } catch (error: any) {
@@ -107,7 +109,7 @@ export const getBranchById = async (req: Request, res: Response, next: NextFunct
 /**
  * @desc    Update branch
  * @route   PUT /api/branches/:branchId
- * @access  Private (Vendor Owner)
+ * @access  Private (Vendor Owner / Super Admin)
  */
 export const updateBranch = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
@@ -115,6 +117,16 @@ export const updateBranch = async (req: Request, res: Response, next: NextFuncti
     const branch = await Branch.findById(req.params.branchId);
 
     if (!branch) return next(errorHandler(404, "Branch not found"));
+
+    // Check authorization
+    const user = req.user!;
+    const roles = user.roles as IRole[];
+    const isSuperAdmin = roles.some(r => r.name === 'super_admin');
+    const isVendorAdmin = roles.some(r => r.name === 'vendor_admin') && user.vendor && user.vendor.toString() === branch.vendorId.toString();
+
+    if (!isSuperAdmin && !isVendorAdmin) {
+      return next(errorHandler(403, "Not authorized to update this branch"));
+    }
 
     if (name) branch.name = name;
     if (email) branch.email = email;
@@ -200,12 +212,24 @@ export const updateBranch = async (req: Request, res: Response, next: NextFuncti
 /**
  * @desc    Delete branch
  * @route   DELETE /api/branches/:branchId
- * @access  Private (Vendor Owner)
+ * @access  Private (Vendor Owner / Super Admin)
  */
 export const deleteBranch = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
-    const branch = await Branch.findByIdAndDelete(req.params.branchId);
+    const branch = await Branch.findById(req.params.branchId);
     if (!branch) return next(errorHandler(404, "Branch not found"));
+
+    // Check authorization
+    const user = req.user!;
+    const roles = user.roles as IRole[];
+    const isSuperAdmin = roles.some(r => r.name === 'super_admin');
+    const isVendorAdmin = roles.some(r => r.name === 'vendor_admin') && user.vendor && user.vendor.toString() === branch.vendorId.toString();
+
+    if (!isSuperAdmin && !isVendorAdmin) {
+      return next(errorHandler(403, "Not authorized to delete this branch"));
+    }
+
+    await branch.deleteOne();
     res.status(200).json({ success: true, message: "Branch deleted" });
   } catch (error: any) {
     next(error);

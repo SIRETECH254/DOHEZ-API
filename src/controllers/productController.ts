@@ -469,9 +469,15 @@ export const updateProduct = async (req: Request, res: Response, next: NextFunct
     }
 
     if (selectedModifierOptions !== undefined) {
-      product.selectedModifierOptions = typeof selectedModifierOptions === 'string' 
+      const parsedModifiers = typeof selectedModifierOptions === 'string' 
         ? JSON.parse(selectedModifierOptions) 
         : selectedModifierOptions;
+
+      // Transform incoming { modifierId, optionId } to { modifierId, optionIds: [optionId] }
+      product.selectedModifierOptions = parsedModifiers.map((mod: any) => ({
+        modifierId: mod.modifierId,
+        optionIds: mod.optionIds ? (Array.isArray(mod.optionIds) ? mod.optionIds : [mod.optionIds]) : (mod.optionId ? [mod.optionId] : [])
+      }));
     }
     
     if (status !== undefined) product.status = status;
@@ -479,9 +485,15 @@ export const updateProduct = async (req: Request, res: Response, next: NextFunct
 
     // Handle variant option updates and SKU regeneration
     if (selectedVariantOptions !== undefined) {
-      product.selectedVariantOptions = typeof selectedVariantOptions === 'string' 
+      const parsedOptions = typeof selectedVariantOptions === 'string' 
         ? JSON.parse(selectedVariantOptions) 
         : selectedVariantOptions;
+
+      // Transform incoming { variantId, optionId } to { variantId, optionIds: [optionId] }
+      product.selectedVariantOptions = parsedOptions.map((sel: any) => ({
+        variantId: sel.variantId,
+        optionIds: sel.optionIds ? (Array.isArray(sel.optionIds) ? sel.optionIds : [sel.optionIds]) : (sel.optionId ? [sel.optionId] : [])
+      }));
       shouldRegenerateSKUs = true;
     }
 

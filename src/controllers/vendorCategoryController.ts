@@ -70,7 +70,7 @@ export const createVendorCategory = async (req: Request, res: Response, next: Ne
  */
 export const getVendorCategories = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
-    const { search, all, page = 1, limit = 10 } = req.query;
+    const { search, all, vendorType, page = 1, limit = 10 } = req.query;
     const query: any = {};
 
     const isAdmin = req.user && (req.user.roles as IRole[]).some(role => 
@@ -83,6 +83,10 @@ export const getVendorCategories = async (req: Request, res: Response, next: Nex
 
     if (search) {
       query.name = { $regex: search, $options: "i" };
+    }
+
+    if (vendorType) {
+      query.vendorType = vendorType;
     }
 
     const options = {

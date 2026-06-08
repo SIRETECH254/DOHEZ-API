@@ -252,10 +252,12 @@ productSchema.methods.generateSKUs = async function (this: IProduct): Promise<IP
 
   const selectedOptionsMap = new Map<string, Set<string>>();
   this.selectedVariantOptions.forEach((sel) => {
-    selectedOptionsMap.set(
-      sel.variantId.toString(),
-      new Set(sel.optionIds.map((id) => id.toString()))
-    );
+    const existingOptions = selectedOptionsMap.get(sel.variantId.toString()) || new Set();
+    
+    // Add all new optionIds to the existing set
+    sel.optionIds.forEach(id => existingOptions.add(id.toString()));
+    
+    selectedOptionsMap.set(sel.variantId.toString(), existingOptions);
   });
 
   const variantsWithSelectedOptions = variants
