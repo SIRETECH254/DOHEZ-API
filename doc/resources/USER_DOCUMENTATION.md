@@ -361,14 +361,14 @@ export const updateNotificationPreferences = async (req: Request, res: Response,
 **Purpose:** List users  
 **Access:** Admin  
 **Validation:** None  
-**Process:** Filter (by search, role, or status), paginate, return users  
+**Process:** Filter (by search, role, status, vendor, or branch), paginate, return users  
 **Response:** User list and pagination
 
 **Controller Implementation:**
 ```typescript
 export const getAllUsers = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
-    const { page = 1, limit = 10, search, role, status } = req.query;
+    const { page = 1, limit = 10, search, role, status, vendor, branch } = req.query;
     const query: any = {};
     if (search) {
       query.$or = [
@@ -387,6 +387,14 @@ export const getAllUsers = async (req: Request, res: Response, next: NextFunctio
     if (role) {
       const roleData = await Role.findOne({ name: role as string });
       query.roles = roleData ? roleData._id : new mongoose.Types.ObjectId();
+    }
+    
+    if (vendor) {
+      query.vendor = vendor;
+    }
+
+    if (branch) {
+      query.branch = branch;
     }
 
     const options = { page: parseInt(page as string) || 1, limit: parseInt(limit as string) || 10 };
@@ -1233,7 +1241,7 @@ curl -X POST http://localhost:3500/api/users/admin-create \
 
 ### Get All Users (Admin)
 ```bash
-curl -X GET "http://localhost:3500/api/users?page=1&limit=10&role=staff&status=active" \
+curl -X GET "http://localhost:3500/api/users?page=1&limit=10&role=staff&status=active&vendor=<vendor_id>&branch=<branch_id>" \
   -H "Authorization: Bearer <admin_token>"
 ```
 **Response:**

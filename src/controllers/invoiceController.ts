@@ -71,7 +71,8 @@ export const getInvoices = async (req: Request, res: Response, next: NextFunctio
     const invoices = await Invoice.find(query)
       .sort({ createdAt: -1 })
       .limit(options.limit)
-      .skip((options.page - 1) * options.limit);
+      .skip((options.page - 1) * options.limit)
+      .populate('order appointment ticket laundry branch vendor');
       
     const total = await Invoice.countDocuments(query);
 
@@ -93,7 +94,7 @@ export const getInvoices = async (req: Request, res: Response, next: NextFunctio
 
 export const getInvoiceById = async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const invoice = await Invoice.findById(req.params.id).populate('order vendor branch');
+    const invoice = await Invoice.findById(req.params.id).populate('order appointment ticket laundry branch vendor');
     if (!invoice) return next(errorHandler(404, 'Invoice not found'));
     return res.status(200).json({ success: true, data: { invoice } });
   } catch (err) {

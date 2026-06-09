@@ -337,7 +337,7 @@ export const createAppointment = async (req: Request, res: Response, next: NextF
 ```
 
 #### `createAppointmentByAdmin()`
-**Purpose:** Create a new appointment for any customer, often directly in CONFIRMED status.  
+**Purpose:** Create a new appointment for any customer, defaulting to PENDING status and a standard booking fee.  
 **Access:** Admin, Branch Admin, Vendor Admin  
 **Validation:**
 - Customer, Branch, and Vendor must exist.
@@ -345,13 +345,13 @@ export const createAppointment = async (req: Request, res: Response, next: NextF
 - Staff and products (services) must exist and belong to the specified branch.
 - Availability must be confirmed for the selected slots.
 **Process:**
-- Similar to customer creation but allows manual status override (default: CONFIRMED) and bypasses typical customer-side fee logic.
+- Similar to customer creation but allows manual status and fee override (defaults: status='PENDING', bookingFeeAmount=50).
 
 **Controller Implementation:**
 ```typescript
 export const createAppointmentByAdmin = async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const { customerId, branch: branchId, vendor: vendorId, items, bookingFeeAmount = 0, status = "CONFIRMED" } = req.body;
+    const { customerId, branch: branchId, vendor: vendorId, items, bookingFeeAmount = 50, status = "PENDING" } = req.body;
 
     if (!customerId || !branchId || !vendorId || !items || !Array.isArray(items) || items.length === 0) {
       return res.status(400).json({ success: false, message: "Missing required fields: customerId, branch, vendor, and items." });

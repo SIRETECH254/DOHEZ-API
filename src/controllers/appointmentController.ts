@@ -15,7 +15,7 @@ import mongoose from 'mongoose';
  */
 export const createAppointment = async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const { branch: branchId, vendor: vendorId, items, bookingFeeAmount = 50 } = req.body;
+    const { branch: branchId, vendor: vendorId, items, bookingFeeAmount = 1 } = req.body;
     const customerId = req.user?._id;
 
     if (!branchId || !vendorId || !items || !Array.isArray(items) || items.length === 0) {
@@ -106,7 +106,6 @@ export const createAppointment = async (req: Request, res: Response, next: NextF
       items: processedItems,
       overallStartTime,
       overallEndTime,
-      status: "PENDING",
       bookingFeeAmount,
       remainingAmount: totalAmount - bookingFeeAmount
     });
@@ -126,7 +125,7 @@ export const createAppointment = async (req: Request, res: Response, next: NextF
  */
 export const createAppointmentByAdmin = async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const { customerId, branch: branchId, vendor: vendorId, items, bookingFeeAmount = 0, status = "CONFIRMED" } = req.body;
+    const { customerId, branch: branchId, vendor: vendorId, items, bookingFeeAmount = 1 } = req.body;
 
     if (!customerId || !branchId || !vendorId || !items || !Array.isArray(items) || items.length === 0) {
       return res.status(400).json({ success: false, message: "Missing required fields: customerId, branch, vendor, and items." });
@@ -198,7 +197,6 @@ export const createAppointmentByAdmin = async (req: Request, res: Response, next
       items: processedItems,
       overallStartTime,
       overallEndTime,
-      status,
       bookingFeeAmount,
       remainingAmount: totalAmount - bookingFeeAmount
     });
@@ -450,7 +448,7 @@ export const getAppointments = async (req: Request, res: Response, next: NextFun
       .populate('branch')
       .populate('items.service')
       .populate('items.staff')
-      .sort({ overallStartTime: -1 })
+      .sort({ createdAt: -1 })
       .limit(options.limit)
       .skip((options.page - 1) * options.limit);
 
@@ -511,7 +509,7 @@ export const getMyAppointments = async (req: Request, res: Response, next: NextF
       .populate('branch')
       .populate('items.service')
       .populate('items.staff')
-      .sort({ overallStartTime: -1 })
+      .sort({ createdAt: -1 })
       .limit(options.limit)
       .skip((options.page - 1) * options.limit);
 
@@ -546,6 +544,7 @@ export const getAppointmentById = async (req: Request, res: Response, next: Next
       .populate('customer')
       .populate('branch')
       .populate('vendor')
+      .populate('staff')
       .populate('items.service')
       .populate('items.staff');
 

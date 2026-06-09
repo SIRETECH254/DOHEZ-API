@@ -158,7 +158,7 @@ export const updateNotificationPreferences = async (req: Request, res: Response,
 
 export const getAllUsers = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
-    const { page = 1, limit = 10, search, role, status } = req.query;
+    const { page = 1, limit = 10, search, role, status, vendor, branch } = req.query;
     const query: any = {};
 
     if (search) {
@@ -179,11 +179,22 @@ export const getAllUsers = async (req: Request, res: Response, next: NextFunctio
       const roleData = await Role.findOne({ name: role as string });
       query.roles = roleData ? roleData._id : new mongoose.Types.ObjectId();
     }
+    
+    if (vendor) {
+      query.vendor = vendor;
+    }
+
+    if (branch) {
+      query.branch = branch;
+    }
 
     const options = { page: parseInt(page as string) || 1, limit: parseInt(limit as string) || 10 };
     const users = await User.find(query)
       .select("-password -otpCode -resetPasswordToken")
       .populate("roles")
+      .populate("vendor")
+      .populate("branch")
+      .populate("services")
       .sort({ createdAt: "desc" })
       .limit(options.limit)
       .skip((options.page - 1) * options.limit);
@@ -455,8 +466,18 @@ export const getCustomers = async (req: Request, res: Response, next: NextFuncti
 
 export const getStaff = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
+    const { vendor, branch } = req.query;
     const role = await Role.findOne({ name: "staff" });
-    const users = await User.find({ roles: role?._id });
+    const query: any = { roles: role?._id };
+
+    if (vendor) query.vendor = vendor;
+    if (branch) query.branch = branch;
+
+    const users = await User.find(query)
+      .populate("roles")
+      .populate("vendor")
+      .populate("branch")
+      .populate("services");
 
     res.status(200).json({
       success: true,

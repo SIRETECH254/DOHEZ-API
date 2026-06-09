@@ -1270,6 +1270,14 @@ export default router;
       "_id": "65e26b1c09b068c201383812",
       "status": "PENDING",
       "bookingFeeAmount": 500
+    },
+    "payment": {
+      "paymentId": "66389f4b52e2a1b4e8d1a2c3",
+      "status": "PENDING",
+      "daraja": {
+        "merchantRequestId": "29115-1234567-1",
+        "checkoutRequestId": "ws_CO_06052026123456789"
+      }
     }
   }
 }
@@ -1305,6 +1313,14 @@ export default router;
       "_id": "66389f4b52e2a1b4e8d1a2c3",
       "invoiceNumber": "INV-2026-001",
       "paymentStatus": "PENDING"
+    },
+    "payment": {
+      "paymentId": "66389f4b52e2a1b4e8d1a2c4",
+      "status": "PENDING",
+      "daraja": {
+        "merchantRequestId": "29115-1234567-4",
+        "checkoutRequestId": "ws_CO_06052026123456792"
+      }
     }
   }
 }

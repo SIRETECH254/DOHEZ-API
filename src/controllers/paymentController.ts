@@ -182,10 +182,20 @@ export const confirmAppointment = async (req: Request, res: Response, next: Next
       });
     }
 
+    // Retrieve the created payment to return its details
+    const payment = await Payment.findOne({ invoice: invoice._id });
+
     return res.status(200).json({ 
       success: true, 
       message: 'Booking fee initiated',
-      data: { appointment } 
+      data: { 
+        appointment,
+        payment: {
+          paymentId: payment?._id,
+          status: payment?.status,
+          daraja: (payment?.processorRefs as any)?.daraja
+        }
+      } 
     });
   } catch (err) {
     next(err);
@@ -210,7 +220,6 @@ export const payAppointmentInvoice = async (req: Request, res: Response, next: N
     if (invoice.paymentStatus === 'PAID') return next(errorHandler(409, 'Invoice already paid'));
     if (invoice.paymentStatus === 'CANCELLED') return next(errorHandler(409, 'Invoice is cancelled'));
 
-    if (appointment.status === 'COMPLETED') return next(errorHandler(409, 'Appointment is already completed'));
     if (appointment.status === 'CANCELLED') return next(errorHandler(409, 'Appointment is cancelled'));
     if (appointment.status === 'NO_SHOW') return next(errorHandler(409, 'Appointment was a no-show'));
 
@@ -234,10 +243,21 @@ export const payAppointmentInvoice = async (req: Request, res: Response, next: N
       });
     }
 
+    // Retrieve the created payment to return its details
+    const payment = await Payment.findOne({ invoice: invoice._id }).sort({ createdAt: -1 });
+
     return res.status(200).json({ 
       success: true, 
       message: "appointment paidfully",
-      data: { appointment, invoice } 
+      data: { 
+        appointment, 
+        invoice,
+        payment: {
+          paymentId: payment?._id,
+          status: payment?.status,
+          daraja: (payment?.processorRefs as any)?.daraja
+        }
+      } 
     });
   } catch (err) {
     next(err);
