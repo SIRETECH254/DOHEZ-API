@@ -6,6 +6,8 @@ import crypto from "crypto";
 import { errorHandler } from "../middleware/errorHandler";
 import User from "../models/User";
 import Role from "../models/Role";
+import Vendor from "../models/Vendor";
+import Branch from "../models/Branch";
 import { generateTokens, generateOTP } from "../utils/authHelpers";
 import {
   sendOTPNotification,
@@ -293,6 +295,108 @@ export const login = async (req: Request, res: Response, next: NextFunction): Pr
   } catch (error: any) {
     console.error("Login error:", error);
     next(errorHandler(500, "Server error during login"));
+  }
+};
+
+/**
+ * Admin/Staff Login with conditional populated fields
+ */
+export const loginAdmin = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  try {
+    const { email, phone, password }: { email?: string; phone?: string; password: string } = req.body;
+
+    if (!password) {
+      return next(errorHandler(400, "Password is required"));
+    }
+
+    if (!email && !phone) {
+      return next(errorHandler(400, "Email or phone is required"));
+    }
+
+    const query = email ? { email: email.toLowerCase() } : { phone };
+    const user = await User.findOne(query).select("+password");
+
+    if (!user) {
+      return next(errorHandler(401, email ? "Email does not exist" : "Phone does not exist"));
+    }
+
+    const isPasswordValid = bcrypt.compareSync(password, user.password);
+    if (!isPasswordValid) {
+      return next(errorHandler(401, "Invalid password"));
+    }
+
+    if (!user.isVerified) {
+      return next(errorHandler(403, "Please verify your account before logging in"));
+    }
+
+    if (!user.isActive) {
+      return next(errorHandler(403, "Account is deactivated. Please contact support."));
+    }
+
+    user.lastLoginAt = new Date();
+    await user.save();
+
+    // Populate roles, vendor, and branch
+    await user.populate([
+      { path: "roles" },
+      { path: "vendor" },
+      { path: "branch" }
+    ]);
+
+    // Check if the user has admin/staff privileges
+    const roles = user.roles as any[];
+    const hasAdminPrivileges = roles.some(role => role.name !== "customer");
+
+    if (!hasAdminPrivileges) {
+      return next(errorHandler(403, "Access denied. You do not have administrative privileges."));
+    }
+
+    const { accessToken, refreshToken } = generateTokens(user);
+
+    // Prepare response data
+    const responseData: any = {
+      user: {
+        id: user._id,
+        firstName: user.firstName,
+        lastName: user.lastName,
+        email: user.email,
+        phone: user.phone,
+        avatar: user.avatar,
+        isVerified: user.isVerified
+      },
+      accessToken,
+      refreshToken
+    };
+
+    // Add roles if exist
+    if (user.roles && (user.roles as any).length > 0) {
+      responseData.roles = user.roles;
+    }
+
+    // Verify vendor exists before adding to response
+    if (user.vendor && (user.vendor as any)._id) {
+      const vendor = await Vendor.findById((user.vendor as any)._id);
+      if (vendor) {
+        responseData.vendor = user.vendor;
+      }
+    }
+
+    // Verify branch exists before adding to response
+    if (user.branch && (user.branch as any)._id) {
+      const branch = await Branch.findById((user.branch as any)._id);
+      if (branch) {
+        responseData.branch = user.branch;
+      }
+    }
+
+    res.status(200).json({
+      success: true,
+      message: "Admin login successful",
+      data: responseData
+    });
+  } catch (error: any) {
+    console.error("Login Admin error:", error);
+    next(errorHandler(500, "Server error during admin login"));
   }
 };
 

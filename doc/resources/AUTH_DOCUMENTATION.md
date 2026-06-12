@@ -337,6 +337,24 @@ export const resendOTP = async (req: Request, res: Response, next: NextFunction)
 - Issue access/refresh tokens
 **Response:** User data + access/refresh tokens
 
+#### `loginAdmin(credentials)`
+**Purpose:** Authenticate admin/staff user and issue tokens with populated entities  
+**Access:** Admin/Staff  
+**Validation:**
+- Password required
+- Email or phone required (separate validation)
+- User exists
+- Password matches
+- User is verified and active
+- **User must have administrative or staff roles (any role other than just `customer`)**
+**Process:**
+- Update last login timestamp
+- Populate roles, vendor, and branch fully
+- **Check for administrative privileges (role names other than `customer`)**
+- Verify existence of vendor and branch in DB
+- Issue access/refresh tokens
+**Response:** User data + populated roles, vendor, branch + access/refresh tokens
+
 **Controller Implementation:**
 ```typescript
 export const login = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
@@ -398,6 +416,108 @@ export const login = async (req: Request, res: Response, next: NextFunction): Pr
   } catch (error: any) {
     console.error("Login error:", error);
     next(errorHandler(500, "Server error during login"));
+  }
+};
+```
+
+**Controller Implementation (Admin Login):**
+```typescript
+export const loginAdmin = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  try {
+    const { email, phone, password }: { email?: string; phone?: string; password: string } = req.body;
+
+    if (!password) {
+      return next(errorHandler(400, "Password is required"));
+    }
+
+    if (!email && !phone) {
+      return next(errorHandler(400, "Email or phone is required"));
+    }
+
+    const query = email ? { email: email.toLowerCase() } : { phone };
+    const user = await User.findOne(query).select("+password");
+
+    if (!user) {
+      return next(errorHandler(401, email ? "Email does not exist" : "Phone does not exist"));
+    }
+
+    const isPasswordValid = bcrypt.compareSync(password, user.password);
+    if (!isPasswordValid) {
+      return next(errorHandler(401, "Invalid password"));
+    }
+
+    if (!user.isVerified) {
+      return next(errorHandler(403, "Please verify your account before logging in"));
+    }
+
+    if (!user.isActive) {
+      return next(errorHandler(403, "Account is deactivated. Please contact support."));
+    }
+
+    user.lastLoginAt = new Date();
+    await user.save();
+
+    // Populate roles, vendor, and branch
+    await user.populate([
+      { path: "roles" },
+      { path: "vendor" },
+      { path: "branch" }
+    ]);
+
+    // Check if the user has admin/staff privileges
+    const roles = user.roles as any[];
+    const hasAdminPrivileges = roles.some(role => role.name !== "customer");
+
+    if (!hasAdminPrivileges) {
+      return next(errorHandler(403, "Access denied. You do not have administrative privileges."));
+    }
+
+    const { accessToken, refreshToken } = generateTokens(user);
+
+    // Prepare response data
+    const responseData: any = {
+      user: {
+        id: user._id,
+        firstName: user.firstName,
+        lastName: user.lastName,
+        email: user.email,
+        phone: user.phone,
+        avatar: user.avatar,
+        isVerified: user.isVerified
+      },
+      accessToken,
+      refreshToken
+    };
+
+    // Add roles if exist
+    if (user.roles && (user.roles as any).length > 0) {
+      responseData.roles = user.roles;
+    }
+
+    // Verify vendor exists before adding to response
+    if (user.vendor && (user.vendor as any)._id) {
+      const vendor = await Vendor.findById((user.vendor as any)._id);
+      if (vendor) {
+        responseData.vendor = user.vendor;
+      }
+    }
+
+    // Verify branch exists before adding to response
+    if (user.branch && (user.branch as any)._id) {
+      const branch = await Branch.findById((user.branch as any)._id);
+      if (branch) {
+        responseData.branch = user.branch;
+      }
+    }
+
+    res.status(200).json({
+      success: true,
+      message: "Admin login successful",
+      data: responseData
+    });
+  } catch (error: any) {
+    console.error("Login Admin error:", error);
+    next(errorHandler(500, "Server error during admin login"));
   }
 };
 ```
@@ -624,6 +744,7 @@ POST   /register                 // Register new user with OTP
 POST   /verify-otp               // Verify OTP and activate account
 POST   /resend-otp               // Resend OTP for verification
 POST   /login                    // User login (email/phone + password)
+POST   /login-admin              // Admin/Staff login with populated data
 POST   /logout                   // Logout user
 POST   /forgot-password          // Request password reset
 POST   /reset-password/:token    // Reset password with token
@@ -659,6 +780,8 @@ router.post('/verify-otp', verifyOTP);
 router.post('/resend-otp', resendOTP);
 
 router.post('/login', login);
+
+router.post('/login-admin', loginAdmin);
 
 router.post('/logout', authenticateToken, logout);
 
@@ -795,6 +918,51 @@ export default router;
         }
       ],
       "isVerified": true
+    },
+    "accessToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+    "refreshToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+  }
+}
+```
+
+#### `POST /api/auth/login-admin`
+**Body:**
+```json
+{
+  "email": "admin@dohez.com",
+  "password": "securePassword123"
+}
+```
+**Response (200 OK):**
+```json
+{
+  "success": true,
+  "message": "Admin login successful",
+  "data": {
+    "user": {
+      "id": "650af1234567890abcdef101",
+      "firstName": "Admin",
+      "lastName": "User",
+      "email": "admin@dohez.com",
+      "phone": "+254700000000",
+      "avatar": null,
+      "isVerified": true
+    },
+    "roles": [
+      {
+        "_id": "650af1234567890abcdef002",
+        "name": "admin",
+        "displayName": "Admin"
+      }
+    ],
+    "vendor": {
+      "_id": "650af1234567890abcdef201",
+      "name": "Dohez Store",
+      "email": "store@dohez.com"
+    },
+    "branch": {
+      "_id": "650af1234567890abcdef301",
+      "name": "Main Branch"
     },
     "accessToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
     "refreshToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
@@ -1000,6 +1168,52 @@ curl -X POST http://localhost:3500/api/auth/login \
         }
       ],
       "isVerified": true
+    },
+    "accessToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+    "refreshToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+  }
+}
+```
+
+### Admin Login (Populated Data)
+```bash
+curl -X POST http://localhost:3500/api/auth/login-admin \
+  -H "Content-Type: application/json" \
+  -d '{
+    "email": "admin@dohez.com",
+    "password": "securePassword123"
+  }'
+```
+**Response (200 OK):**
+```json
+{
+  "success": true,
+  "message": "Admin login successful",
+  "data": {
+    "user": {
+      "id": "650af1234567890abcdef101",
+      "firstName": "Admin",
+      "lastName": "User",
+      "email": "admin@dohez.com",
+      "phone": "+254700000000",
+      "avatar": null,
+      "isVerified": true
+    },
+    "roles": [
+      {
+        "_id": "650af1234567890abcdef002",
+        "name": "admin",
+        "displayName": "Admin"
+      }
+    ],
+    "vendor": {
+      "_id": "650af1234567890abcdef201",
+      "name": "Dohez Store",
+      "email": "store@dohez.com"
+    },
+    "branch": {
+      "_id": "650af1234567890abcdef301",
+      "name": "Main Branch"
     },
     "accessToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
     "refreshToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."

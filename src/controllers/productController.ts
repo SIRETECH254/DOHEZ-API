@@ -37,9 +37,10 @@ export const createProduct = async (req: Request, res: Response, next: NextFunct
       return next(errorHandler(400, "Product name is required"));
     }
 
-    if (!category || !vendor || !branch || !service) {
-      return next(errorHandler(400, "Category, vendor, branch, and service are required"));
-    }
+    if (!category) return next(errorHandler(400, "Category is required"));
+    if (!vendor) return next(errorHandler(400, "Vendor is required"));
+    if (!branch) return next(errorHandler(400, "Branch is required"));
+    if (!service) return next(errorHandler(400, "Service is required"));
 
     // Check existence individually
     const categoryExists = await Category.findById(category);
@@ -144,17 +145,26 @@ export const createProduct = async (req: Request, res: Response, next: NextFunct
  */
 export const createService = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
-    const { 
-      name, 
-      details, 
-      price, 
-      category, 
-      vendor, 
-      branch, 
-      service, 
-      duration, 
-      buffertime 
+    const {
+      name,
+      details,
+      price,
+      category,
+      vendor,
+      branch,
+      service,
+      duration,
+      buffertime
     } = req.body;
+
+    if (!name || typeof name !== 'string') {
+      return next(errorHandler(400, "Service name is required"));
+    }
+
+    if (!category) return next(errorHandler(400, "Category is required"));
+    if (!vendor) return next(errorHandler(400, "Vendor is required"));
+    if (!branch) return next(errorHandler(400, "Branch is required"));
+    if (!service) return next(errorHandler(400, "Service is required"));
 
     // 2. Existence Validation individually
     const categoryExists = await Category.findById(category);
@@ -232,6 +242,16 @@ export const createEvent = async (req: Request, res: Response, next: NextFunctio
       location,
       openAt
     } = req.body;
+
+    // 1. Validation
+    if (!name || typeof name !== 'string') {
+      return next(errorHandler(400, "Event name is required"));
+    }
+
+    if (!category) return next(errorHandler(400, "Category is required"));
+    if (!vendor) return next(errorHandler(400, "Vendor is required"));
+    if (!branch) return next(errorHandler(400, "Branch is required"));
+    if (!service) return next(errorHandler(400, "Service is required"));
 
     // 2. Existence Validation individually
     const categoryExists = await Category.findById(category);

@@ -5,6 +5,7 @@ import {
   verifyOTP,
   resendOTP,
   login,
+  loginAdmin,
   logout,
   forgotPassword,
   resetPassword,
@@ -70,6 +71,39 @@ router.post('/resend-otp', resendOTP);
  *     tags: [Authentication]
  */
 router.post('/login', login);
+
+/**
+ * @swagger
+ * /api/auth/login-admin:
+ *   post:
+ *     summary: Admin and Staff login
+ *     description: Authenticates admin or staff users and returns user data along with populated roles, vendor, and branch details if they exist.
+ *     tags: [Authentication]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               email:
+ *                 type: string
+ *                 example: admin@dohez.com
+ *               phone:
+ *                 type: string
+ *                 example: "+254700000000"
+ *               password:
+ *                 type: string
+ *                 example: password123
+ *     responses:
+ *       200:
+ *         description: Login successful
+ *       401:
+ *         description: Unauthorized - Invalid credentials
+ *       403:
+ *         description: Forbidden - Account inactive or unverified
+ */
+router.post('/login-admin', loginAdmin);
 
 /**
  * @swagger

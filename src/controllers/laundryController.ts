@@ -21,7 +21,11 @@ export const getLaundries = async (req: Request, res: Response, next: NextFuncti
 
     const options = { page: parseInt(page as string) || 1, limit: parseInt(limit as string) || 10 };
     const laundries = await Laundry.find(query)
-      .populate("customer vendor branch services")
+      .populate("vendor branch services")
+      .populate({
+        path: "customer",
+        select: "-password -otpCode -resetPasswordToken -resetPasswordExpiry"
+      })
       .sort({ createdAt: "desc" })
       .limit(options.limit)
       .skip((options.page - 1) * options.limit);
@@ -49,7 +53,12 @@ export const getLaundries = async (req: Request, res: Response, next: NextFuncti
 
 export const getLaundry = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
-    const laundry = await Laundry.findById(req.params.laundryId).populate("customer vendor branch services");
+    const laundry = await Laundry.findById(req.params.laundryId)
+      .populate("vendor branch services")
+      .populate({
+        path: "customer",
+        select: "-password -otpCode -resetPasswordToken -resetPasswordExpiry"
+      });
     if (!laundry) return next(errorHandler(404, "Laundry request not found"));
 
     res.status(200).json({

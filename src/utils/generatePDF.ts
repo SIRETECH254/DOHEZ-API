@@ -77,85 +77,154 @@ const renderTicketDocument = (
 ): void => {
   const margin = 50;
   const contentWidth = doc.page.width - margin * 2;
-  const columnGap = 20;
-  const columnWidth = (contentWidth - columnGap) / 2;
-  const leftX = margin;
-  const rightX = margin + columnWidth + columnGap;
-
-  const headerY = 40;
-  doc.font('Helvetica-Bold')
-    .fontSize(20)
-    .fillColor(TEXT_COLOR)
-    .text('DOHEZ', leftX, headerY, { width: columnWidth });
-  doc.font('Helvetica')
-    .fontSize(10)
-    .fillColor(MUTED_COLOR)
-    .text('Official Event Ticket', leftX, headerY + 22, { width: columnWidth });
-
-  doc.font('Helvetica-Bold')
-    .fontSize(26)
-    .fillColor(THEME_COLOR)
-    .text('TICKET', rightX, headerY, { width: columnWidth, align: 'right' });
-
-  const metaY = headerY + 70;
-  const metaRows = [
-    { label: 'Ticket #', value: ticket.ticketNumber || 'N/A' },
-    { label: 'Status', value: ticket.status || 'BOOKED' },
-    { label: 'Tier', value: ticket.type || 'Standard' }
-  ];
-
-  let rightY = drawKeyValueRows(doc, metaRows, rightX, metaY, columnWidth);
-
-  let leftY = metaY;
-  leftY = drawSectionTitleTicket(doc, 'Attendee Info', leftX, leftY, columnWidth);
-  const attendeeLines = [
-    ticket.details.name,
-    ticket.details.email,
-    ticket.details.phone
-  ];
-  leftY = drawLines(doc, attendeeLines, leftX, leftY, columnWidth);
-
-  const eventY = Math.max(leftY, rightY) + 30;
-  doc.moveTo(margin, eventY - 10)
-    .lineTo(margin + contentWidth, eventY - 10)
-    .strokeColor(BORDER_COLOR)
-    .stroke();
-
-  let currentY = eventY;
-  currentY = drawSectionTitleTicket(doc, 'Event Details', leftX, currentY, contentWidth);
   const event = ticket.event as any;
-  const eventLines = [
-    event.name,
-    `Venue: ${event.venue || 'N/A'}`,
-    `Date: ${formatDate(event.startDate)}`,
-  ];
-  currentY = drawLines(doc, eventLines, leftX, currentY, contentWidth);
+  const padding = 20;
 
-  // Draw QR Code
-  if (ticket.qrCodeData) {
-    const qrSize = 150;
-    const qrX = margin + (contentWidth - qrSize) / 2;
-    const qrY = currentY + 40;
-    
-    doc.image(ticket.qrCodeData, qrX, qrY, { width: qrSize });
+  doc.font('Helvetica');
+  let currentY = 50;
+
+  // --- 1. HEADER SECTION ---
+  const headerHeight = 50;
+  doc.rect(margin, currentY, contentWidth, headerHeight)
+     .strokeColor(BORDER_COLOR)
+     .lineWidth(1)
+     .stroke();
+
+  // Draw [D] Logo
+  const logoBoxSize = 24;
+  const logoX = margin + padding;
+  const logoY = currentY + (headerHeight - logoBoxSize) / 2;
+  
+  doc.rect(logoX, logoY, logoBoxSize, logoBoxSize)
+     .fillColor(THEME_COLOR)
+     .fill();
+  
+  doc.fillColor('#FFFFFF')
+     .font('Helvetica-Bold')
+     .fontSize(14)
+     .text('D', logoX, logoY + 5, { width: logoBoxSize, align: 'center' });
+
+  // DOHEZ and Event Name
+  doc.fillColor(TEXT_COLOR)
+     .font('Helvetica-Bold')
+     .fontSize(14)
+     .text('DOHEZ', logoX + logoBoxSize + 10, currentY + 17, { continued: true })
+     .fillColor(MUTED_COLOR)
+     .font('Helvetica')
+     .fontSize(12)
+     .text(`          ${(event?.name || 'Event').toUpperCase()}`, { align: 'left' });
+
+  currentY += headerHeight;
+
+  // --- 2. TICKET INFO & QR CODE SECTION ---
+  const infoHeight = 180;
+  doc.rect(margin, currentY, contentWidth, infoHeight)
+     .strokeColor(BORDER_COLOR)
+     .stroke();
+
+  // Vertical Divider
+  const dividerX = margin + contentWidth * 0.6;
+  doc.moveTo(dividerX, currentY)
+     .lineTo(dividerX, currentY + infoHeight)
+     .strokeColor(BORDER_COLOR)
+     .stroke();
+
+  // Left Side: Ticket Details
+  const detailsX = margin + padding;
+  const detailsY = currentY + padding;
+
+  doc.fillColor(TEXT_COLOR)
+     .font('Helvetica-Bold')
+     .fontSize(16)
+     .text('TICKET', detailsX, detailsY);
+
+  const rowStartY = detailsY + 35;
+  const rowSpacing = 22;
+
+  const drawRow = (label: string, value: string, y: number) => {
+    doc.font('Helvetica-Bold')
+       .fontSize(10)
+       .fillColor(TEXT_COLOR)
+       .text(label, detailsX, y);
     
     doc.font('Helvetica')
-      .fontSize(8)
-      .fillColor(MUTED_COLOR)
-      .text('Scan for verification', 0, qrY + qrSize + 10, { width: doc.page.width, align: 'center' });
+       .fontSize(10)
+       .text(value, detailsX + 70, y, { width: dividerX - detailsX - 80 });
+  };
+
+  drawRow('Ticket #:', ticket.ticketNumber || 'N/A', rowStartY);
+  drawRow('Status:', ticket.status || 'BOOKED', rowStartY + rowSpacing);
+  drawRow('Tier:', ticket.type || 'Standard', rowStartY + rowSpacing * 2);
+
+  // Right Side: QR Code
+  if (ticket.qrCodeData) {
+    const qrSize = 100;
+    const qrX = dividerX + (contentWidth * 0.4 - qrSize) / 2;
+    const qrY = currentY + 25;
+
+    // QR Code Box
+    doc.rect(qrX - 5, qrY - 5, qrSize + 10, qrSize + 10)
+       .strokeColor(BORDER_COLOR)
+       .stroke();
+
+    doc.image(ticket.qrCodeData, qrX, qrY, { width: qrSize });
+
+    doc.fillColor(MUTED_COLOR)
+       .font('Helvetica')
+       .fontSize(8)
+       .text('Scan for verification', dividerX, qrY + qrSize + 15, { width: contentWidth * 0.4, align: 'center' });
   }
 
-  // Footer
-  const footerY = doc.page.height - 60;
-  doc.moveTo(margin, footerY)
-    .lineTo(margin + contentWidth, footerY)
-    .strokeColor(BORDER_COLOR)
-    .stroke();
-  
+  currentY += infoHeight;
+
+  // --- 3. EVENT DETAILS SECTION ---
+  const eventHeight = 85;
+  doc.rect(margin, currentY, contentWidth, eventHeight)
+     .strokeColor(BORDER_COLOR)
+     .stroke();
+
+  doc.fillColor(TEXT_COLOR)
+     .font('Helvetica-Bold')
+     .fontSize(12)
+     .text('EVENT DETAILS', margin + padding, currentY + 15);
+
   doc.font('Helvetica')
-    .fontSize(8)
-    .fillColor(MUTED_COLOR)
-    .text('Thank you for choosing DOHEZ. Please present this ticket at the entrance.', margin, footerY + 10, { width: contentWidth, align: 'center' });
+     .fontSize(10)
+     .text(`Venue: ${event?.venue || 'N/A'}`, margin + padding, currentY + 38)
+     .text(`Date:  ${formatDate(event?.startDate)}`, margin + padding, currentY + 55);
+
+  currentY += eventHeight;
+
+  // --- 4. ATTENDEE INFO SECTION ---
+  const attendeeHeight = 100;
+  doc.rect(margin, currentY, contentWidth, attendeeHeight)
+     .strokeColor(BORDER_COLOR)
+     .stroke();
+
+  doc.fillColor(TEXT_COLOR)
+     .font('Helvetica-Bold')
+     .fontSize(12)
+     .text('ATTENDEE INFO', margin + padding, currentY + 15);
+
+  doc.font('Helvetica')
+     .fontSize(10)
+     .text(`Name:  ${ticket.details?.name || 'N/A'}`, margin + padding, currentY + 38)
+     .text(`Email: ${ticket.details?.email || 'N/A'}`, margin + padding, currentY + 55)
+     .text(`Phone: ${ticket.details?.phone || 'N/A'}`, margin + padding, currentY + 72);
+
+  currentY += attendeeHeight;
+
+  // --- 5. FOOTER SECTION ---
+  const footerHeight = 55;
+  doc.rect(margin, currentY, contentWidth, footerHeight)
+     .strokeColor(BORDER_COLOR)
+     .stroke();
+
+  doc.font('Helvetica')
+     .fontSize(10)
+     .fillColor(TEXT_COLOR)
+     .text('Thank you for choosing DOHEZ.', margin + padding, currentY + 15)
+     .text('Please present this ticket at the entrance.', margin + padding, currentY + 32);
 };
 
 const renderReceiptDocument = (

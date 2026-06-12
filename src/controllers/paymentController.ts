@@ -286,7 +286,9 @@ export const bookTicket = async (req: Request, res: Response, next: NextFunction
 
       const sku = event.skus.id(skuId);
       
+      
       if (!sku) return next(errorHandler(400, `Invalid ticket tier specified: ${skuId}`));
+
 
       if (sku.stock < quantity) {
         return next(errorHandler(400, `Insufficient ticket inventory for tier. Available: ${sku.stock}`));

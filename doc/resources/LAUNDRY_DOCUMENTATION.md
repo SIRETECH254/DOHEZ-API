@@ -622,7 +622,12 @@ router.post('/laundries/pay', authenticateToken, payLaundryInvoice);
       "customer": {
         "firstName": "John",
         "lastName": "Doe",
-        "email": "john.doe@example.com"
+        "email": "john.doe@example.com",
+        "phone": "254712345678",
+        "isActive": true,
+        "isVerified": true,
+        "createdAt": "2026-01-01T00:00:00.000Z",
+        "updatedAt": "2026-05-25T09:00:00.000Z"
       },
       "vendor": {
         "name": "Sparkle Cleaners"
@@ -839,7 +844,12 @@ curl -X GET http://localhost:3500/api/laundries/650af1234567890abcdef128 \
       "customer": {
         "firstName": "John",
         "lastName": "Doe",
-        "email": "john.doe@example.com"
+        "email": "john.doe@example.com",
+        "phone": "254712345678",
+        "isActive": true,
+        "isVerified": true,
+        "createdAt": "2026-01-01T00:00:00.000Z",
+        "updatedAt": "2026-05-25T09:00:00.000Z"
       },
       "vendor": {
         "name": "Sparkle Cleaners"
