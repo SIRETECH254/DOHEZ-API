@@ -35,7 +35,7 @@ const router = express.Router();
  *       201:
  *         description: Invoice created successfully
  */
-router.post('/', authenticateToken, authorizeRoles(['admin', 'vendor', 'super_admin']), createInvoice);
+router.post('/', authenticateToken, authorizeRoles(['admin', 'vendor_admin', 'super_admin']), createInvoice);
 
 /**
  * @swagger
@@ -58,7 +58,7 @@ router.post('/', authenticateToken, authorizeRoles(['admin', 'vendor', 'super_ad
  *       200:
  *         description: List of invoices
  */
-router.get('/', authenticateToken, authorizeRoles(['admin', 'super_admin']), getInvoices);
+router.get('/', authenticateToken, authorizeRoles(['admin', 'super_admin','staff','vendor_admin',"branch_admin"]), getInvoices);
 
 /**
  * @swagger
@@ -76,6 +76,6 @@ router.get('/', authenticateToken, authorizeRoles(['admin', 'super_admin']), get
  *       200:
  *         description: Invoice details
  */
-router.get('/:id', authenticateToken, authorizeRoles(['admin', 'super_admin']), getInvoiceById);
+router.get('/:id', authenticateToken, authorizeRoles(['admin', 'super_admin','staff','vendor_admin','branch_admin']), getInvoiceById);
 
 export default router;

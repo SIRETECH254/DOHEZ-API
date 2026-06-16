@@ -110,6 +110,7 @@ export const createProductModifier = async (req: Request, res: Response, next: N
       max_selection,
       is_required,
       branchId,
+      vendor: branch.vendorId,
       sortOrder
     });
 
@@ -126,7 +127,7 @@ export const createProductModifier = async (req: Request, res: Response, next: N
 
 export const getProductModifiers = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
-    const { page = 1, limit = 10, search } = req.query;
+    const { page = 1, limit = 10, search, branch, vendor } = req.query;
     const query: any = {};
 
     if (search) {
@@ -136,6 +137,9 @@ export const getProductModifiers = async (req: Request, res: Response, next: Nex
       ];
     }
 
+    if (branch) query.branchId = branch;
+    if (vendor) query.vendor = vendor;
+
     const options = {
       page: parseInt(page as string) || 1,
       limit: parseInt(limit as string) || 10
@@ -143,6 +147,7 @@ export const getProductModifiers = async (req: Request, res: Response, next: Nex
 
     const modifiers = await ProductModifier.find(query)
       .populate("branchId")
+      .populate("vendor")
       .sort({ sortOrder: 1, createdAt: "desc" })
       .limit(options.limit)
       .skip((options.page - 1) * options.limit);
@@ -170,7 +175,7 @@ export const getProductModifiers = async (req: Request, res: Response, next: Nex
 
 export const getProductModifierById = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
-    const modifier = await ProductModifier.findById(req.params.id).populate("branchId");
+    const modifier = await ProductModifier.findById(req.params.id).populate("branchId vendor");
 
     if (!modifier) return next(errorHandler(404, "Product modifier not found"));
 
@@ -209,6 +214,7 @@ export const updateProductModifier = async (req: Request, res: Response, next: N
       const branch = await Branch.findById(branchId);
       if (!branch) return next(errorHandler(404, "Branch not found"));
       modifier.branchId = branchId;
+      modifier.vendor = branch.vendorId as any;
     }
 
     await modifier.save();

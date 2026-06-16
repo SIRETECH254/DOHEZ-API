@@ -29,6 +29,11 @@ const variantSchema = new Schema<IVariant>({
     ref: 'Branch',
     required: true
   },
+  vendor: {
+    type: Schema.Types.ObjectId,
+    ref: 'Vendor',
+    required: true
+  },
   sortOrder: {
     type: Number,
     default: 0
@@ -36,6 +41,10 @@ const variantSchema = new Schema<IVariant>({
 }, {
   timestamps: true
 });
+
+// Indexes
+variantSchema.index({ branchId: 1 });
+variantSchema.index({ vendor: 1 });
 
 const Variant = mongoose.model<IVariant>('Variant', variantSchema);
 

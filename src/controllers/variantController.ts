@@ -100,7 +100,7 @@ export const createVariant = async (req: Request, res: Response, next: NextFunct
     const branch = await Branch.findById(branchId);
     if (!branch) return next(errorHandler(404, "Branch not found"));
 
-    const variant = await Variant.create({ name, options, branchId, sortOrder });
+    const variant = await Variant.create({ name, options, branchId, vendor: branch.vendorId, sortOrder });
 
     res.status(201).json({ success: true, data: { variant } });
   } catch (error: any) {
@@ -110,12 +110,21 @@ export const createVariant = async (req: Request, res: Response, next: NextFunct
 
 export const getVariants = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
-    const { page = 1, limit = 10, search } = req.query;
-    const query: any = search ? { name: { $regex: search, $options: "i" } } : {};
+    const { page = 1, limit = 10, search, branch, vendor } = req.query;
+    const query: any = {};
+    
+    if (search) {
+      query.name = { $regex: search, $options: "i" };
+    }
+    
+    if (branch) query.branchId = branch;
+    if (vendor) query.vendor = vendor;
+
     const options = { page: parseInt(page as string) || 1, limit: parseInt(limit as string) || 10 };
 
     const variants = await Variant.find(query)
       .populate("branchId")
+      .populate("vendor")
       .sort({ sortOrder: 1, createdAt: -1 })
       .limit(options.limit)
       .skip((options.page - 1) * options.limit);
@@ -143,7 +152,7 @@ export const getVariants = async (req: Request, res: Response, next: NextFunctio
 
 export const getVariantById = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
-    const variant = await Variant.findById(req.params.id).populate("branchId");
+    const variant = await Variant.findById(req.params.id).populate("branchId vendor");
 
     if (!variant) return next(errorHandler(404, "Variant not found"));
 
@@ -167,6 +176,7 @@ export const updateVariant = async (req: Request, res: Response, next: NextFunct
       const branch = await Branch.findById(branchId);
       if (!branch) return next(errorHandler(404, "Branch not found"));
       variant.branchId = branchId;
+      variant.vendor = branch.vendorId as any;
     }
 
     await variant.save();

@@ -53,7 +53,7 @@ const router = express.Router();
  *       200:
  *         description: List of tickets
  */
-router.get('/', authenticateToken, authorizeRoles(['admin', 'super_admin', 'vendor', 'branch_admin']), getTickets);
+router.get('/', authenticateToken, authorizeRoles(['admin', 'super_admin', 'vendor_admin', 'branch_admin','staff']), getTickets);
 
 /**
  * @swagger
@@ -97,7 +97,7 @@ router.get('/:id', authenticateToken, getTicket);
  *       200:
  *         description: Updated successfully
  */
-router.put('/:id', authenticateToken, authorizeRoles(['admin', 'super_admin', 'vendor', 'branch_admin']), updateTicket);
+router.put('/:id', authenticateToken, authorizeRoles(['admin', 'super_admin', 'vendor_admin', 'branch_admin',"staff"]), updateTicket);
 
 /**
  * @swagger
@@ -115,6 +115,6 @@ router.put('/:id', authenticateToken, authorizeRoles(['admin', 'super_admin', 'v
  *       200:
  *         description: Deleted successfully
  */
-router.delete('/:id', authenticateToken, authorizeRoles(['admin', 'super_admin']), deleteTicket);
+router.delete('/:id', authenticateToken, authorizeRoles(['admin', 'super_admin',"vendor_admin","branch_admin"]), deleteTicket);
 
 export default router;

@@ -254,6 +254,7 @@ export interface IVariant extends Document {
   name: string;
   options: IOption[];
   branchId: Types.ObjectId | IBranch;
+  vendor?: Types.ObjectId | IVendor;
   sortOrder: number;
   createdAt: Date;
   updatedAt: Date;
@@ -268,6 +269,7 @@ export interface IProductModifier extends Document {
   max_selection: number;
   is_required: boolean;
   branchId: Types.ObjectId | IBranch;
+  vendor?: Types.ObjectId | IVendor;
   sortOrder: number;
   createdAt: Date;
   updatedAt: Date;

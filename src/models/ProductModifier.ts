@@ -53,6 +53,11 @@ const productModifierSchema = new Schema<IProductModifier>(
       ref: 'Branch',
       required: true,
     },
+    vendor: {
+      type: Schema.Types.ObjectId,
+      ref: 'Vendor',
+      required: true,
+    },
     sortOrder: {
       type: Number,
       default: 0,
@@ -62,6 +67,10 @@ const productModifierSchema = new Schema<IProductModifier>(
     timestamps: true,
   }
 );
+
+// Indexes
+productModifierSchema.index({ branchId: 1 });
+productModifierSchema.index({ vendor: 1 });
 
 const ProductModifier = mongoose.model<IProductModifier>('ProductModifier', productModifierSchema);
 

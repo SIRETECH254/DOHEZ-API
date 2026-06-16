@@ -32,7 +32,7 @@ const router = express.Router();
  *       200:
  *         description: List of laundry requests
  */
-router.get('/', authenticateToken, authorizeRoles(['admin', 'super_admin', 'staff']), getLaundries);
+router.get('/', authenticateToken, authorizeRoles(['admin', 'super_admin', 'staff','branch_admin','vendor_admin']), getLaundries);
 
 /**
  * @swagger
@@ -104,7 +104,7 @@ router.post('/pay', authenticateToken, payLaundryInvoice);
  *         description: Deleted
  */
 router.get('/:laundryId', authenticateToken, getLaundry);
-router.put('/:laundryId', authenticateToken, authorizeRoles(['admin', 'super_admin', 'staff']), updateLaundry);
-router.delete('/:laundryId', authenticateToken, authorizeRoles(['admin', 'super_admin']), deleteLaundry);
+router.put('/:laundryId', authenticateToken, authorizeRoles(['admin', 'super_admin', 'staff','branch_admin','vendor_admin']), updateLaundry);
+router.delete('/:laundryId', authenticateToken, authorizeRoles(['admin', 'super_admin','branch_admin','vendor_admin']), deleteLaundry);
 
 export default router;

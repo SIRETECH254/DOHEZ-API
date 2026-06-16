@@ -45,7 +45,7 @@ const router = express.Router();
  *       200:
  *         description: List of receipts
  */
-router.get('/', authenticateToken, authorizeRoles(['admin', 'super_admin', 'vendor', 'branch_admin']), getReceipts);
+router.get('/', authenticateToken, authorizeRoles(['admin', 'super_admin', 'vendor_admin', 'branch_admin',"staff"]), getReceipts);
 
 /**
  * @swagger

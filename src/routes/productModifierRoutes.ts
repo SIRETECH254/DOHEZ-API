@@ -33,7 +33,7 @@ const router = express.Router();
  *     responses:
  *       200: { description: Attached }
  */
-router.post('/attach', authenticateToken, authorizeRoles(['admin', 'super_admin']), attachModifier);
+router.post('/attach', authenticateToken, authorizeRoles(['admin', 'super_admin',"vendor_admin",'branch_admin']), attachModifier);
 
 /**
  * @swagger
@@ -55,7 +55,7 @@ router.post('/attach', authenticateToken, authorizeRoles(['admin', 'super_admin'
  *     responses:
  *       200: { description: Detached }
  */
-router.post('/detach', authenticateToken, authorizeRoles(['admin', 'super_admin']), detachModifier);
+router.post('/detach', authenticateToken, authorizeRoles(['admin', 'super_admin',"vendor_admin",'branch_admin']), detachModifier);
 
 /**
  * @swagger
@@ -80,7 +80,7 @@ router.post('/detach', authenticateToken, authorizeRoles(['admin', 'super_admin'
  *     responses:
  *       201: { description: Created }
  */
-router.post('/', authenticateToken, authorizeRoles(['admin', 'super_admin']), createProductModifier);
+router.post('/', authenticateToken, authorizeRoles(['admin', 'super_admin',"vendor_admin",'branch_admin']), createProductModifier);
 
 /**
  * @swagger
@@ -137,7 +137,7 @@ router.get('/:id', getProductModifierById);
  *     responses:
  *       200: { description: Updated }
  */
-router.put('/:id', authenticateToken, authorizeRoles(['admin', 'super_admin']), updateProductModifier);
+router.put('/:id', authenticateToken, authorizeRoles(['admin', 'super_admin',"vendor_admin",'branch_admin']), updateProductModifier);
 
 /**
  * @swagger
@@ -154,6 +154,6 @@ router.put('/:id', authenticateToken, authorizeRoles(['admin', 'super_admin']), 
  *     responses:
  *       200: { description: Deleted }
  */
-router.delete('/:id', authenticateToken, authorizeRoles(['admin', 'super_admin']), deleteProductModifier);
+router.delete('/:id', authenticateToken, authorizeRoles(['admin', 'super_admin',"vendor_admin",'branch_admin']), deleteProductModifier);
 
 export default router;

@@ -1,5 +1,5 @@
 import express from 'express';
-import { authenticateToken, requireAdmin } from '../middleware/auth';
+import { authenticateToken, requireAdmin ,authorizeRoles } from '../middleware/auth';
 import {
   createOrder,
   adminCreateOrder,
@@ -206,7 +206,7 @@ router.post('/admin/create', authenticateToken, requireAdmin, adminCreateOrder);
  *       200:
  *         description: List of orders retrieved successfully
  */
-router.get('/', authenticateToken, requireAdmin, getOrders);
+router.get('/', authenticateToken,authorizeRoles(['admin', 'super_admin', 'vendor_admin', 'branch_admin',"staff"]), getOrders);
 
 /**
  * @swagger
