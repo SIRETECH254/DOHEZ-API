@@ -36,6 +36,7 @@ import appointmentRoutes from "./routes/appointmentRoutes";
 import ticketRoutes from "./routes/ticketRoutes";
 import receiptRoutes from "./routes/receiptRoutes";
 import laundryRoutes from "./routes/laundryRoutes";
+import dashboardRoutes from "./routes/dashboardRoutes";
 
 // Initialize application
 const app = express();
@@ -191,10 +192,7 @@ app.use("/api/receipts", receiptRoutes);
 
 app.use("/api/laundries", laundryRoutes);
 
-
-
-
-
+app.use("/api/dashboard", dashboardRoutes);
 
 // Socket.io setup for real-time features
 const server = createServer(app);
